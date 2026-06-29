@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">JoldiGo</string>
+    <string name="title_activity_main">JoldiGo</string>
+    <string name="package_name">com.joldigo.app</string>
+    <string name="custom_url_scheme">com.joldigo.app</string>
+</resources>
