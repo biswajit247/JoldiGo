@@ -270,10 +270,21 @@ function App() {
                 </button>
               </div>
 
-              {/* Connection Status Badge */}
+              {/* Connection Status Badge & Server Config */}
               <div className="cockpit-status-badge">
                 <ShieldCheck size={14} className="text-emerald-400" />
-                <span>Simulator Engine Active</span>
+                <span style={{ marginRight: '4px' }}>Active Server:</span>
+                <input 
+                  type="text" 
+                  className="cockpit-server-input"
+                  value={serverUrlInput} 
+                  onChange={(e) => {
+                    setServerUrlInput(e.target.value);
+                    localStorage.setItem('joldigo_server_url', e.target.value);
+                  }} 
+                  placeholder="http://localhost:5001"
+                  title="Backend Server Endpoint URL (e.g. https://joldigo.onrender.com)"
+                />
               </div>
             </header>
           )}

@@ -2987,3 +2987,23 @@ body {
   box-shadow: 0 0 0 2px rgba(255, 221, 0, 0.15);
 }
 
+/* Cockpit Header Server Config Input styles */
+.cockpit-server-input {
+  background: #11141a;
+  border: 1px solid #2d3748;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 11px;
+  padding: 3px 8px;
+  width: 190px;
+  margin-left: 4px;
+  outline: none;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+
+.cockpit-server-input:focus {
+  border-color: #ffdd00;
+  box-shadow: 0 0 0 2px rgba(255, 221, 0, 0.15);
+}
+
