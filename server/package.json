@@ -1,0 +1,19 @@
+{
+  "name": "joldigo-backend",
+  "version": "1.0.0",
+  "description": "JoldiGo Node.js backend server with Express and WebSockets",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js",
+    "migrate": "node migrate.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
+    "pg": "^8.11.5",
+    "ws": "^8.18.0"
+  }
+}

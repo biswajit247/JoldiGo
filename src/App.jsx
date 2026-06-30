@@ -80,6 +80,10 @@ function App() {
   const [isStandalone, setIsStandalone] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [showNativeSelector, setShowNativeSelector] = useState(false);
+  const [serverUrlInput, setServerUrlInput] = useState(() => {
+    return (typeof window !== 'undefined' ? localStorage.getItem('joldigo_server_url') : '') || 'http://localhost:5000';
+  });
+
   const [viewMode, setViewMode] = useState('split');
 
   // Detect standalone app overrides based on URL query parameters or Capacitor native app detection
@@ -139,6 +143,7 @@ function App() {
 
   const selectNativePersona = (mode) => {
     localStorage.setItem('joldigo_app_mode', mode);
+    localStorage.setItem('joldigo_server_url', serverUrlInput);
     setIsStandalone(true);
     setViewMode(mode);
     setShowNativeSelector(false);
@@ -160,6 +165,17 @@ function App() {
             </div>
             <h1>JoldiGo Platform</h1>
             <p>Select your native application persona to lock this device's workspace.</p>
+          </div>
+
+          <div className="native-server-config">
+            <label className="config-label">Server Connection URL</label>
+            <input 
+              type="text" 
+              className="config-input"
+              value={serverUrlInput} 
+              onChange={(e) => setServerUrlInput(e.target.value)} 
+              placeholder="e.g. http://192.168.1.100:5000 or https://tunnel.loca.lt" 
+            />
           </div>
 
           <div className="native-selector-options">

@@ -44,7 +44,12 @@ export default function AdminPanel() {
     toggleCongestionZone,
     safetyClaims,
     resolveSafetyClaim,
+    connectAdminSocket,
   } = useSimulator();
+
+  useEffect(() => {
+    connectAdminSocket();
+  }, []);
 
   const [activeTab, setActiveTab] = useState('dashboard'); 
   const [selectedDriverForDoc, setSelectedDriverForDoc] = useState(null);

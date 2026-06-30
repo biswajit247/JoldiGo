@@ -38,11 +38,19 @@ export default function DriverApp({ isStandalone }) {
     safetyClaims,
     fileSafetyClaim,
     insuranceReservePool,
+    connectDriverSocket,
   } = useSimulator();
 
   // Active Simulated Driver
   const [selectedDriverId, setSelectedDriverId] = useState('drv_1');
-  const [tab, setTab] = useState('dashboard'); 
+  const [tab, setTab] = useState('dashboard');
+
+  useEffect(() => {
+    const currentDrv = drivers.find(d => d.id === selectedDriverId);
+    if (currentDrv && currentDrv.status === 'online') {
+      connectDriverSocket(selectedDriverId);
+    }
+  }, [selectedDriverId, drivers]);
   
   // Onboarding Inputs
   const [licenseInput, setLicenseInput] = useState('');

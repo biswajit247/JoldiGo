@@ -42,7 +42,14 @@ export default function PassengerApp({ isStandalone }) {
     congestionZones,
     activeSmsToast,
     triggerSmsToast,
+    connectPassengerSocket,
   } = useSimulator();
+
+  useEffect(() => {
+    if (passenger.isLoggedIn && passenger.phone) {
+      connectPassengerSocket(passenger.phone);
+    }
+  }, [passenger.isLoggedIn, passenger.phone]);
 
   // Navigation & Tabs
   const [tab, setTab] = useState('home'); 
