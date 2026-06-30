@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import L from 'leaflet';
 
-export default function DriverApp() {
+export default function DriverApp({ isStandalone }) {
   const {
     drivers,
     activeRide,
@@ -236,20 +236,22 @@ export default function DriverApp() {
         </div>
       </div>
 
-      {/* Simulator Switcher Controls */}
-      <div className="driver-simulator-picker">
-        <label>Simulate Driver:</label>
-        <select value={selectedDriverId} onChange={(e) => {
-          setSelectedDriverId(e.target.value);
-          setTab('dashboard');
-        }}>
-          {drivers.map((d) => (
-            <option key={d.id} value={d.id}>
-              {d.name} ({getVehicleLabel(d.vehicleType)} - {d.verificationStatus})
-            </option>
-          ))}
-        </select>
-      </div>
+      {/* Simulator Switcher Controls (hidden in standalone native mode) */}
+      {!isStandalone && (
+        <div className="driver-simulator-picker">
+          <label>Simulate Driver:</label>
+          <select value={selectedDriverId} onChange={(e) => {
+            setSelectedDriverId(e.target.value);
+            setTab('dashboard');
+          }}>
+            {drivers.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.name} ({getVehicleLabel(d.vehicleType)} - {d.verificationStatus})
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       <div className="phone-screen-content">
 

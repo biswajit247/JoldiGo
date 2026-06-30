@@ -277,7 +277,7 @@ function App() {
             {(viewMode === 'split' || viewMode === 'driver') && (
               <div className={isStandalone ? "standalone-viewport" : "simulator-phone-wrapper"} key="driver-view">
                 {!isStandalone && <div className="simulator-title-tag">🚗 Driver Partner App</div>}
-                <DriverApp />
+                <DriverApp isStandalone={isStandalone} />
               </div>
             )}
 
