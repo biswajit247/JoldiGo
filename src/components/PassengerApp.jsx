@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import L from 'leaflet';
 
-export default function PassengerApp() {
+export default function PassengerApp({ isStandalone }) {
   const {
     drivers,
     geofence,
@@ -860,16 +860,18 @@ export default function PassengerApp() {
 
   return (
     <div className="mobile-phone-frame">
-      <div className="phone-notch"></div>
+      {!isStandalone && <div className="phone-notch"></div>}
       
-      <div className="phone-status-bar">
-        <span className="phone-time">08:18</span>
-        <div className="phone-icons">
-          <span className="signal">📶</span>
-          <span className="wifi">📶</span>
-          <span className="battery">🔋 94%</span>
+      {!isStandalone && (
+        <div className="phone-status-bar">
+          <span className="phone-time">08:18</span>
+          <div className="phone-icons">
+            <span className="signal">📶</span>
+            <span className="wifi">📶</span>
+            <span className="battery">🔋 94%</span>
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="phone-screen-content">
         

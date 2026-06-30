@@ -226,15 +226,17 @@ export default function DriverApp({ isStandalone }) {
 
   return (
     <div className="mobile-phone-frame driver-theme">
-      <div className="phone-notch"></div>
+      {!isStandalone && <div className="phone-notch"></div>}
       
-      <div className="phone-status-bar">
-        <span className="phone-time">08:18</span>
-        <div className="phone-icons">
-          <span className="signal">📶</span>
-          <span className="battery">🔋 87%</span>
+      {!isStandalone && (
+        <div className="phone-status-bar">
+          <span className="phone-time">08:18</span>
+          <div className="phone-icons">
+            <span className="signal">📶</span>
+            <span className="battery">🔋 87%</span>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Simulator Switcher Controls (hidden in standalone native mode) */}
       {!isStandalone && (

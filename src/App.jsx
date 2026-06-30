@@ -269,7 +269,7 @@ function App() {
             {(viewMode === 'split' || viewMode === 'passenger') && (
               <div className={isStandalone ? "standalone-viewport" : "simulator-phone-wrapper"} key="passenger-view">
                 {!isStandalone && <div className="simulator-title-tag">📱 Passenger Client App</div>}
-                <PassengerApp />
+                <PassengerApp isStandalone={isStandalone} />
               </div>
             )}
 
