@@ -77,13 +77,35 @@ class ErrorBoundary extends React.Component {
 }
 
 function App() {
-  const [viewMode, setViewMode] = useState('split'); // 'split', 'passenger', 'driver', 'admin'
+  const [isMobile, setIsMobile] = useState(() => {
+    return typeof window !== 'undefined' && window.innerWidth < 768;
+  });
+
+  const [viewMode, setViewMode] = useState(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      return 'passenger';
+    }
+    return 'split';
+  });
+
+  // Track window resizing to dynamically toggle mobile layout overrides
+  React.useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      if (mobile && viewMode === 'split') {
+        setViewMode('passenger');
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [viewMode]);
 
   return (
     <SimulatorProvider>
       <ErrorBoundary>
         <div className="cockpit-root">
-          {/* Cockpit Global Header */}
+          {/* Cockpit Global Header (hidden on mobile via CSS) */}
           <header className="cockpit-global-header">
             <div className="cockpit-brand">
               <div className="cockpit-icon-wrapper">
@@ -169,6 +191,33 @@ function App() {
             )}
 
           </main>
+
+          {/* Floating native-style bottom navigation bar on mobile */}
+          {isMobile && (
+            <div className="mobile-bottom-nav">
+              <button 
+                className={`mobile-bottom-nav-btn ${viewMode === 'passenger' ? 'active' : ''}`}
+                onClick={() => setViewMode('passenger')}
+              >
+                <Smartphone size={18} />
+                <span>Passenger App</span>
+              </button>
+              <button 
+                className={`mobile-bottom-nav-btn ${viewMode === 'driver' ? 'active' : ''}`}
+                onClick={() => setViewMode('driver')}
+              >
+                <Smartphone size={18} />
+                <span>Driver App</span>
+              </button>
+              <button 
+                className={`mobile-bottom-nav-btn ${viewMode === 'admin' ? 'active' : ''}`}
+                onClick={() => setViewMode('admin')}
+              >
+                <Monitor size={18} />
+                <span>Admin Operations</span>
+              </button>
+            </div>
+          )}
         </div>
       </ErrorBoundary>
     </SimulatorProvider>

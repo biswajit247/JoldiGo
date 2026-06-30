@@ -2699,3 +2699,82 @@ body {
   padding-top: 24px !important;
 }
 
+/* Mobile Responsive Overrides for Fullscreen App / PWA Launch */
+@media (max-width: 767px) {
+  .cockpit-global-header {
+    display: none !important;
+  }
+  
+  .cockpit-main-view {
+    padding: 0 !important;
+    height: calc(100vh - 56px) !important;
+    height: calc(100svh - 56px) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+  }
+  
+  .simulator-phone-wrapper, .simulator-desktop-wrapper {
+    width: 100vw !important;
+    height: 100% !important;
+    gap: 0 !important;
+    flex: 1 !important;
+  }
+  
+  .simulator-title-tag {
+    display: none !important;
+  }
+  
+  .mobile-phone-frame {
+    width: 100vw !important;
+    height: 100% !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+  
+  .cockpit-root {
+    padding-bottom: 56px !important; /* Make room for mobile bottom nav */
+    height: 100vh !important;
+    height: 100svh !important;
+    overflow: hidden !important;
+    background: #090b0e !important;
+  }
+
+  /* Custom Native-style bottom tab bar for mobile viewports */
+  .mobile-bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 56px;
+    background: #0f1115;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    z-index: 9999;
+  }
+  
+  .mobile-bottom-nav-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #a0aec0;
+    background: none;
+    border: none;
+    font-size: 10px;
+    font-weight: 600;
+    gap: 2px;
+    cursor: pointer;
+    flex: 1;
+    height: 100%;
+    transition: all 0.2s ease;
+  }
+  
+  .mobile-bottom-nav-btn.active {
+    color: var(--color-primary);
+  }
+}
+
