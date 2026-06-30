@@ -77,19 +77,42 @@ class ErrorBoundary extends React.Component {
 }
 
 function App() {
-  const [isMobile, setIsMobile] = useState(() => {
-    return typeof window !== 'undefined' && window.innerWidth < 768;
-  });
+  const [isStandalone, setIsStandalone] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
-  const [viewMode, setViewMode] = useState(() => {
-    if (typeof window !== 'undefined' && window.innerWidth < 768) {
-      return 'passenger';
-    }
-    return 'split';
-  });
+  const [viewMode, setViewMode] = useState('split');
 
-  // Track window resizing to dynamically toggle mobile layout overrides
+  // Detect standalone app overrides based on URL query parameters
   React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const appLock = params.get('app');
+
+      if (appLock && ['passenger', 'driver', 'admin'].includes(appLock)) {
+        setIsStandalone(true);
+        setViewMode(appLock);
+      } else {
+        const path = window.location.pathname.replace(/^\/|\/$/g, '');
+        if (['passenger', 'driver', 'admin'].includes(path)) {
+          setIsStandalone(true);
+          setViewMode(path);
+        } else {
+          setIsStandalone(false);
+          const mobile = window.innerWidth < 768;
+          setIsMobile(mobile);
+          if (mobile) {
+            setViewMode('passenger');
+          } else {
+            setViewMode('split');
+          }
+        }
+      }
+    }
+  }, []);
+
+  // Track window resizing only when NOT locked in standalone mode
+  React.useEffect(() => {
+    if (isStandalone) return;
     const handleResize = () => {
       const mobile = window.innerWidth < 768;
       setIsMobile(mobile);
@@ -99,101 +122,103 @@ function App() {
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, [viewMode]);
+  }, [viewMode, isStandalone]);
 
   return (
     <SimulatorProvider>
       <ErrorBoundary>
-        <div className="cockpit-root">
-          {/* Cockpit Global Header (hidden on mobile via CSS) */}
-          <header className="cockpit-global-header">
-            <div className="cockpit-brand">
-              <div className="cockpit-icon-wrapper">
-                <Cpu size={20} className="cockpit-icon" />
+        <div className={`cockpit-root ${isStandalone ? 'standalone-app' : ''}`}>
+          {/* Cockpit Global Header (hidden in Standalone Mode) */}
+          {!isStandalone && (
+            <header className="cockpit-global-header">
+              <div className="cockpit-brand">
+                <div className="cockpit-icon-wrapper">
+                  <Cpu size={20} className="cockpit-icon" />
+                </div>
+                <div>
+                  <h2>JoldiGo Cockpit Simulator</h2>
+                  <p>Real-time Ride-Hailing Testing & Operations Environment</p>
+                </div>
               </div>
-              <div>
-                <h2>JoldiGo Cockpit Simulator</h2>
-                <p>Real-time Ride-Hailing Testing & Operations Environment</p>
+
+              {/* View Mode Selectors */}
+              <div className="cockpit-view-selectors">
+                <button 
+                  className={`view-btn ${viewMode === 'split' ? 'active' : ''}`}
+                  onClick={() => setViewMode('split')}
+                  title="Show Passenger, Driver, and Admin side-by-side"
+                >
+                  <LayoutGrid size={16} />
+                  <span>Unified Simulator</span>
+                </button>
+
+                <button 
+                  className={`view-btn ${viewMode === 'passenger' ? 'active' : ''}`}
+                  onClick={() => setViewMode('passenger')}
+                  title="Focus Passenger App"
+                >
+                  <Smartphone size={16} />
+                  <span>Passenger App</span>
+                </button>
+
+                <button 
+                  className={`view-btn ${viewMode === 'driver' ? 'active' : ''}`}
+                  onClick={() => setViewMode('driver')}
+                  title="Focus Driver App"
+                >
+                  <Smartphone size={16} />
+                  <span>Driver App</span>
+                </button>
+
+                <button 
+                  className={`view-btn ${viewMode === 'admin' ? 'active' : ''}`}
+                  onClick={() => setViewMode('admin')}
+                  title="Focus Admin Panel Dashboard"
+                >
+                  <Monitor size={16} />
+                  <span>Admin Panel</span>
+                </button>
               </div>
-            </div>
 
-            {/* View Mode Selectors */}
-            <div className="cockpit-view-selectors">
-              <button 
-                className={`view-btn ${viewMode === 'split' ? 'active' : ''}`}
-                onClick={() => setViewMode('split')}
-                title="Show Passenger, Driver, and Admin side-by-side"
-              >
-                <LayoutGrid size={16} />
-                <span>Unified Simulator</span>
-              </button>
-
-              <button 
-                className={`view-btn ${viewMode === 'passenger' ? 'active' : ''}`}
-                onClick={() => setViewMode('passenger')}
-                title="Focus Passenger App"
-              >
-                <Smartphone size={16} />
-                <span>Passenger App</span>
-              </button>
-
-              <button 
-                className={`view-btn ${viewMode === 'driver' ? 'active' : ''}`}
-                onClick={() => setViewMode('driver')}
-                title="Focus Driver App"
-              >
-                <Smartphone size={16} />
-                <span>Driver App</span>
-              </button>
-
-              <button 
-                className={`view-btn ${viewMode === 'admin' ? 'active' : ''}`}
-                onClick={() => setViewMode('admin')}
-                title="Focus Admin Panel Dashboard"
-              >
-                <Monitor size={16} />
-                <span>Admin Panel</span>
-              </button>
-            </div>
-
-            {/* Connection Status Badge */}
-            <div className="cockpit-status-badge">
-              <ShieldCheck size={14} className="text-emerald-400" />
-              <span>Simulator Engine Active</span>
-            </div>
-          </header>
+              {/* Connection Status Badge */}
+              <div className="cockpit-status-badge">
+                <ShieldCheck size={14} className="text-emerald-400" />
+                <span>Simulator Engine Active</span>
+              </div>
+            </header>
+          )}
 
           {/* Cockpit View Area */}
-          <main className={`cockpit-main-view mode-${viewMode}`}>
+          <main className={`cockpit-main-view mode-${viewMode} ${isStandalone ? 'standalone-main' : ''}`}>
             
             {/* Passenger App Mobile Frame - Unique Key added */}
             {(viewMode === 'split' || viewMode === 'passenger') && (
-              <div className="simulator-phone-wrapper" key="passenger-view">
-                <div className="simulator-title-tag">📱 Passenger Client App</div>
+              <div className={isStandalone ? "standalone-viewport" : "simulator-phone-wrapper"} key="passenger-view">
+                {!isStandalone && <div className="simulator-title-tag">📱 Passenger Client App</div>}
                 <PassengerApp />
               </div>
             )}
 
             {/* Driver App Mobile Frame - Unique Key added */}
             {(viewMode === 'split' || viewMode === 'driver') && (
-              <div className="simulator-phone-wrapper" key="driver-view">
-                <div className="simulator-title-tag">🚗 Driver Partner App</div>
+              <div className={isStandalone ? "standalone-viewport" : "simulator-phone-wrapper"} key="driver-view">
+                {!isStandalone && <div className="simulator-title-tag">🚗 Driver Partner App</div>}
                 <DriverApp />
               </div>
             )}
 
             {/* Central Admin Panel Desktop Frame - Unique Key added */}
             {(viewMode === 'split' || viewMode === 'admin') && (
-              <div className="simulator-desktop-wrapper" key="admin-view">
-                <div className="simulator-title-tag">🖥️ Central Operations Admin (admin.joldigo.in)</div>
+              <div className={isStandalone ? "standalone-viewport-admin" : "simulator-desktop-wrapper"} key="admin-view">
+                {!isStandalone && <div className="simulator-title-tag">🖥️ Central Operations Admin (admin.joldigo.in)</div>}
                 <AdminPanel />
               </div>
             )}
 
           </main>
 
-          {/* Floating native-style bottom navigation bar on mobile */}
-          {isMobile && (
+          {/* Floating native-style bottom navigation bar on mobile (hidden in Standalone Mode) */}
+          {isMobile && !isStandalone && (
             <div className="mobile-bottom-nav">
               <button 
                 className={`mobile-bottom-nav-btn ${viewMode === 'passenger' ? 'active' : ''}`}

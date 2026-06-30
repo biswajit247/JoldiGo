@@ -2778,3 +2778,44 @@ body {
   }
 }
 
+/* Standalone Viewport Styling overrides */
+.standalone-app {
+  padding-bottom: 0 !important;
+  height: 100vh !important;
+  height: 100svh !important;
+  overflow: hidden !important;
+}
+
+.standalone-main {
+  padding: 0 !important;
+  height: 100vh !important;
+  height: 100svh !important;
+  display: block !important;
+}
+
+.standalone-viewport {
+  width: 100vw !important;
+  height: 100vh !important;
+  height: 100svh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.standalone-viewport-admin {
+  width: 100vw !important;
+  height: 100vh !important;
+  height: 100svh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  background-color: #0c0e12;
+}
+
+.standalone-viewport .mobile-phone-frame {
+  width: 100vw !important;
+  height: 100vh !important;
+  height: 100svh !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
