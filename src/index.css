@@ -2819,3 +2819,132 @@ body {
   box-shadow: none !important;
 }
 
+/* First boot native persona selector screen styling */
+.native-selector-root {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100vw;
+  height: 100vh;
+  height: 100svh;
+  background: radial-gradient(circle at center, #15181f 0%, #090b0e 100%);
+  color: #fff;
+  font-family: 'Inter', sans-serif;
+  padding: 24px;
+  box-sizing: border-box;
+  z-index: 999999;
+  position: fixed;
+  top: 0;
+  left: 0;
+}
+
+.native-selector-container {
+  max-width: 380px;
+  width: 100%;
+  text-align: center;
+}
+
+.native-selector-header {
+  margin-bottom: 32px;
+}
+
+.native-logo {
+  width: 60px;
+  height: 60px;
+  border-radius: 16px;
+  background: rgba(255, 221, 0, 0.08);
+  border: 1px solid rgba(255, 221, 0, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px auto;
+  box-shadow: 0 8px 24px rgba(255,221,0,0.1);
+}
+
+.native-selector-header h1 {
+  font-size: 24px;
+  font-weight: 800;
+  margin: 0 0 8px 0;
+  letter-spacing: -0.5px;
+  color: #fff;
+}
+
+.native-selector-header p {
+  color: #a0aec0;
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.native-selector-options {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.native-selector-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  background: #11141a;
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 16px;
+  padding: 18px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  width: 100%;
+  color: inherit;
+  font-family: inherit;
+}
+
+.native-selector-card:hover {
+  background: #151922;
+  border-color: rgba(255,221,0,0.4);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+}
+
+.card-icon-wrapper {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.04);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #a0aec0;
+}
+
+.passenger-card:hover .card-icon-wrapper {
+  background: rgba(255,221,0,0.1);
+  color: #ffdd00;
+}
+
+.driver-card:hover .card-icon-wrapper {
+  background: rgba(56,189,248,0.1);
+  color: #38bdf8;
+}
+
+.card-details h3 {
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0 0 4px 0;
+  color: #fff;
+}
+
+.card-details p {
+  color: #718096;
+  font-size: 11px;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.native-selector-footer {
+  color: #4a5568;
+  font-size: 10px;
+  line-height: 1.4;
+}
+

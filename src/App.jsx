@@ -3,7 +3,7 @@ import { SimulatorProvider } from './context/SimulatorContext';
 import PassengerApp from './components/PassengerApp';
 import DriverApp from './components/DriverApp';
 import AdminPanel from './components/AdminPanel';
-import { LayoutGrid, Smartphone, Monitor, ShieldCheck, Cpu } from 'lucide-react';
+import { LayoutGrid, Smartphone, Monitor, ShieldCheck, Cpu, Car, User, RefreshCw } from 'lucide-react';
 import './index.css';
 
 // React Error Boundary to catch and display runtime render crashes
@@ -79,14 +79,17 @@ class ErrorBoundary extends React.Component {
 function App() {
   const [isStandalone, setIsStandalone] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-
+  const [showNativeSelector, setShowNativeSelector] = useState(false);
   const [viewMode, setViewMode] = useState('split');
 
-  // Detect standalone app overrides based on URL query parameters
+  // Detect standalone app overrides based on URL query parameters or Capacitor native app detection
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const appLock = params.get('app');
+
+      // Check if running inside Capacitor native webview
+      const isNative = !!window.Capacitor;
 
       if (appLock && ['passenger', 'driver', 'admin'].includes(appLock)) {
         setIsStandalone(true);
@@ -96,6 +99,16 @@ function App() {
         if (['passenger', 'driver', 'admin'].includes(path)) {
           setIsStandalone(true);
           setViewMode(path);
+        } else if (isNative) {
+          // If native, check if app persona is locked in localStorage
+          const savedMode = localStorage.getItem('joldigo_app_mode');
+          if (savedMode && ['passenger', 'driver', 'admin'].includes(savedMode)) {
+            setIsStandalone(true);
+            setViewMode(savedMode);
+          } else {
+            // First-boot on native device: show launcher persona selector
+            setShowNativeSelector(true);
+          }
         } else {
           setIsStandalone(false);
           const mobile = window.innerWidth < 768;
@@ -123,6 +136,67 @@ function App() {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, [viewMode, isStandalone]);
+
+  const selectNativePersona = (mode) => {
+    localStorage.setItem('joldigo_app_mode', mode);
+    setIsStandalone(true);
+    setViewMode(mode);
+    setShowNativeSelector(false);
+  };
+
+  const resetNativePersona = () => {
+    localStorage.removeItem('joldigo_app_mode');
+    window.location.reload();
+  };
+
+  // Render first-boot native app welcome persona selector
+  if (showNativeSelector) {
+    return (
+      <div className="native-selector-root">
+        <div className="native-selector-container">
+          <div className="native-selector-header">
+            <div className="native-logo">
+              <Cpu size={32} className="text-yellow-400" />
+            </div>
+            <h1>JoldiGo Platform</h1>
+            <p>Select your native application persona to lock this device's workspace.</p>
+          </div>
+
+          <div className="native-selector-options">
+            <button 
+              className="native-selector-card passenger-card"
+              onClick={() => selectNativePersona('passenger')}
+            >
+              <div className="card-icon-wrapper">
+                <User size={28} />
+              </div>
+              <div className="card-details">
+                <h3>Passenger Client App</h3>
+                <p>Book rides, view safety安全 सेफ्टीafetySafety सेफ्टी safety safety pools, receive SMS OTPs, and travel instantly.</p>
+              </div>
+            </button>
+
+            <button 
+              className="native-selector-card driver-card"
+              onClick={() => selectNativePersona('driver')}
+            >
+              <div className="card-icon-wrapper">
+                <Car size={28} />
+              </div>
+              <div className="card-details">
+                <h3>Driver Partner App</h3>
+                <p>Verify documents, search rides on maps, track wallet safety безпека Safety safety Safety safety Safe safety SafetySafetyafety SAFETYSAFETYSafety safety Safety SAFETY SAFETY safety Safety safetySAFETY safety safety safety Safety Safety Safety earnings, and submitSafety Safety safety safetyafety Safety safetySafety claims.</p>
+              </div>
+            </button>
+          </div>
+
+          <div className="native-selector-footer">
+            <p>You can clear your selection anytime by reinstalling or clearing app storage data.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <SimulatorProvider>
@@ -216,6 +290,32 @@ function App() {
             )}
 
           </main>
+
+          {/* Floating Reset Button for testing in Standalone Mode on physical devices */}
+          {isStandalone && !!window.Capacitor && (
+            <button 
+              onClick={resetNativePersona}
+              style={{
+                position: 'fixed',
+                bottom: '16px',
+                right: '16px',
+                width: '32px',
+                height: '32px',
+                borderRadius: '50%',
+                background: 'rgba(15,17,21,0.85)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                color: '#718096',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 99999,
+                cursor: 'pointer'
+              }}
+              title="Reset Persona"
+            >
+              <RefreshCw size={12} />
+            </button>
+          )}
 
           {/* Floating native-style bottom navigation bar on mobile (hidden in Standalone Mode) */}
           {isMobile && !isStandalone && (
