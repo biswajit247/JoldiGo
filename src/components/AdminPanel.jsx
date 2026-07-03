@@ -45,6 +45,9 @@ export default function AdminPanel() {
     updateGeofencingZones,
     fraudAlerts,
     resolveFraudAlert,
+    surgeSchedules,
+    activeScheduledSurge,
+    updateSurgeSchedules,
     resolveSOS,
     resolveDispute,
     fastForwardDisputeSla,
@@ -1811,6 +1814,108 @@ export default function AdminPanel() {
                   Update Pricing Configuration
                 </button>
               </form>
+
+              {/* PEAK SURGE PRICING SCHEDULER WIDGET */}
+              <div className="card-glow p-4 mt-4 bg-indigo-950/10 border border-indigo-500/20 rounded-xl flex flex-col gap-3">
+                <div className="flex justify-between items-center">
+                  <h4 className="text-sm font-bold text-indigo-400">⚡ Scheduled Peak-Hour Surges</h4>
+                  {activeScheduledSurge ? (
+                    <span className="text-[10px] bg-amber-500/20 text-amber-300 font-bold px-2 py-0.5 rounded border border-amber-500/30 animate-pulse">
+                      ⚡ {activeScheduledSurge.name} Active ({activeScheduledSurge.multiplier}x)
+                    </span>
+                  ) : (
+                    <span className="text-[10px] bg-white/5 text-gray-400 font-bold px-2 py-0.5 rounded border border-white/10">
+                      No Scheduled Surge Active
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-gray-400">
+                  Define automated surcharge windows. Active intervals will automatically override standard base surge factors.
+                </p>
+
+                {/* Schedules list */}
+                <div className="flex flex-col gap-2.5 mt-2">
+                  {surgeSchedules.map(sched => (
+                    <div key={sched.id} className="flex justify-between items-center bg-black/40 border border-white/5 p-3 rounded-lg text-xs">
+                      <div className="flex flex-col gap-0.5">
+                        <span className="font-bold text-white">{sched.name}</span>
+                        <span className="text-[10px] text-gray-500 font-mono">Interval: <b>{sched.start}</b> to <b>{sched.end}</b></span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="font-bold text-indigo-400">{sched.multiplier}x</span>
+                        <button 
+                          onClick={async () => {
+                            const updated = surgeSchedules.map(s => s.id === sched.id ? { ...s, active: !s.active } : s);
+                            await updateSurgeSchedules(updated);
+                          }}
+                          className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider transition-all ${
+                            sched.active 
+                              ? 'bg-green-600/20 text-green-400 border border-green-500/30' 
+                              : 'bg-white/5 text-gray-400 border border-white/10'
+                          }`}
+                        >
+                          {sched.active ? 'Active' : 'Inactive'}
+                        </button>
+                        <button 
+                          onClick={async () => {
+                            const updated = surgeSchedules.filter(s => s.id !== sched.id);
+                            await updateSurgeSchedules(updated);
+                          }}
+                          className="text-red-400 hover:text-red-500 font-bold text-xs p-1"
+                          title="Delete Schedule"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Form to add new schedule */}
+                <form 
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    const name = e.target.schedName.value;
+                    const start = e.target.schedStart.value;
+                    const end = e.target.schedEnd.value;
+                    const multiplier = parseFloat(e.target.schedMult.value);
+                    if (!name || !start || !end || isNaN(multiplier)) return;
+
+                    const newSched = {
+                      id: 'sched_' + Date.now(),
+                      name,
+                      start,
+                      end,
+                      multiplier,
+                      active: true
+                    };
+
+                    await updateSurgeSchedules([...surgeSchedules, newSched]);
+                    e.target.reset();
+                  }}
+                  className="grid grid-cols-1 md:grid-cols-4 gap-3 mt-3 border-t border-white/5 pt-3"
+                >
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] text-gray-400">Schedule Name</label>
+                    <input name="schedName" type="text" placeholder="e.g. Rainy Peak" className="text-xs bg-black/40 text-white rounded p-1.5 border border-white/10" required />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] text-gray-400">Start Time</label>
+                    <input name="schedStart" type="time" className="text-xs bg-black/40 text-white rounded p-1.5 border border-white/10" required />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] text-gray-400">End Time</label>
+                    <input name="schedEnd" type="time" className="text-xs bg-black/40 text-white rounded p-1.5 border border-white/10" required />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] text-gray-400">Surge Factor</label>
+                    <div className="flex gap-2">
+                      <input name="schedMult" type="number" step="0.1" min="1.0" max="2.0" defaultValue="1.3" className="text-xs bg-black/40 text-white rounded p-1.5 border border-white/10 w-full" required />
+                      <button type="submit" className="btn-primary py-1 px-3 bg-indigo-600 hover:bg-indigo-700 text-xs text-white">Add</button>
+                    </div>
+                  </div>
+                </form>
+              </div>
             </div>
           )}
 

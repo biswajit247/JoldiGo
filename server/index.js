@@ -64,7 +64,7 @@ const loadPersistedSettings = async () => {
   initClients();
 };
 
-loadPersistedSettings();
+loadPersistedSettings().then(() => evaluateSurgeSchedules());
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -95,6 +95,77 @@ let globalCongestionZones = {
   PARK_STREET: 'medium',
   SALT_LAKE_SEC5: 'medium'
 };
+
+let currentActiveScheduledSurge = null;
+
+const evaluateSurgeSchedules = async (schedulesList = null) => {
+  try {
+    let list = schedulesList;
+    if (!list) {
+      const dbRes = await query("SELECT value FROM system_settings WHERE key = 'SURGE_SCHEDULES'");
+      if (dbRes.rows.length > 0 && dbRes.rows[0].value) {
+        list = JSON.parse(dbRes.rows[0].value);
+      }
+    }
+    if (!list || !Array.isArray(list)) return;
+
+    // Get Kolkata HH:MM
+    const now = new Date();
+    const str = now.toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
+    const localDate = new Date(str);
+    const hh = String(localDate.getHours()).padStart(2, '0');
+    const mm = String(localDate.getMinutes()).padStart(2, '0');
+    const timeStr = `${hh}:${mm}`;
+
+    let maxMultiplier = 1.0;
+    let activeSched = null;
+
+    list.forEach(sched => {
+      if (!sched.active) return;
+      
+      let inRange = false;
+      if (sched.start <= sched.end) {
+        inRange = timeStr >= sched.start && timeStr <= sched.end;
+      } else {
+        inRange = timeStr >= sched.start || timeStr <= sched.end;
+      }
+
+      if (inRange && sched.multiplier > maxMultiplier) {
+        maxMultiplier = sched.multiplier;
+        activeSched = sched;
+      }
+    });
+
+    const hasChanged = !currentActiveScheduledSurge || 
+                       !activeSched || 
+                       currentActiveScheduledSurge.id !== activeSched.id || 
+                       currentActiveScheduledSurge.multiplier !== maxMultiplier;
+
+    const wentToDefault = currentActiveScheduledSurge && !activeSched;
+
+    if (hasChanged || wentToDefault) {
+      currentActiveScheduledSurge = activeSched ? { ...activeSched, multiplier: maxMultiplier } : null;
+      globalSettings.surgeMultiplier = maxMultiplier;
+
+      console.log(`[Surge Scheduler] Active multiplier updated to ${maxMultiplier}x (Active: ${activeSched ? activeSched.name : 'None'})`);
+      
+      broadcastToAll({
+        type: 'settings_updated',
+        settings: globalSettings,
+        fuelPrices: globalFuelPrices,
+        congestionZones: globalCongestionZones,
+        activeScheduledSurge: currentActiveScheduledSurge
+      });
+    }
+  } catch (err) {
+    console.error("[Surge Scheduler Error]", err);
+  }
+};
+
+// Start ticker
+setInterval(() => {
+  evaluateSurgeSchedules();
+}, 10000);
 
 // WebSocket connection mapping: Key = WebSocket object, Value = { role, id }
 const socketClients = new Map();
@@ -581,6 +652,50 @@ app.post('/api/admin/fraud/resolve', async (req, res) => {
     res.json({ success: true, alerts: updatedAlerts.rows });
   } catch (err) {
     res.status(500).json({ error: 'Failed to resolve fraud alert.', details: err.message });
+  }
+});
+
+// Get active surge schedules
+app.get('/api/admin/surge/schedules', async (req, res) => {
+  try {
+    const dbRes = await query("SELECT value FROM system_settings WHERE key = 'SURGE_SCHEDULES'");
+    if (dbRes.rows.length > 0 && dbRes.rows[0].value) {
+      return res.json(JSON.parse(dbRes.rows[0].value));
+    }
+
+    const defaultSchedules = [
+      { id: 'morning_rush', name: 'Morning Rush Hours', start: '09:00', end: '11:00', multiplier: 1.4, active: true },
+      { id: 'evening_rush', name: 'Evening Peak Hours', start: '18:00', end: '21:00', multiplier: 1.5, active: true },
+      { id: 'night_peak', name: 'Late Night Surge', start: '23:00', end: '03:00', multiplier: 1.3, active: true }
+    ];
+
+    await query(
+      "INSERT INTO system_settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = $2",
+      ['SURGE_SCHEDULES', JSON.stringify(defaultSchedules)]
+    );
+
+    res.json(defaultSchedules);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to retrieve surge schedules.', details: err.message });
+  }
+});
+
+// Update surge schedules
+app.post('/api/admin/surge/schedules/update', async (req, res) => {
+  const { schedules } = req.body;
+  if (!schedules) return res.status(400).json({ error: 'Schedules array required.' });
+
+  try {
+    await query(
+      "INSERT INTO system_settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = $2",
+      ['SURGE_SCHEDULES', JSON.stringify(schedules)]
+    );
+
+    await evaluateSurgeSchedules(schedules);
+
+    res.json({ success: true, schedules });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update surge schedules.', details: err.message });
   }
 });
 

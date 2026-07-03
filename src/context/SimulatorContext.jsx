@@ -147,6 +147,8 @@ export const SimulatorProvider = ({ children }) => {
   const [chatMessages, setChatMessages] = useState([]);
   const [safetyClaims, setSafetyClaims] = useState([]);
   const [fraudAlerts, setFraudAlerts] = useState([]);
+  const [surgeSchedules, setSurgeSchedules] = useState([]);
+  const [activeScheduledSurge, setActiveScheduledSurge] = useState(null);
 
   // Server state parameters
   const [fuelPrices, setFuelPrices] = useState({ cng: 95.50, petrol: 104.50, diesel: 92.75 });
@@ -210,6 +212,13 @@ export const SimulatorProvider = ({ children }) => {
       const fraudData = await fraudRes.json();
       if (fraudData.success) {
         setFraudAlerts(fraudData.alerts);
+      }
+
+      // Fetch active surge schedules
+      const schedsRes = await fetch(`${api}/api/admin/surge/schedules`);
+      const schedsData = await schedsRes.json();
+      if (Array.isArray(schedsData)) {
+        setSurgeSchedules(schedsData);
       }
     } catch (err) {
       console.warn("Failed to connect to backend server. Operating in offline simulated mode.", err);
@@ -353,6 +362,14 @@ export const SimulatorProvider = ({ children }) => {
         case 'geofence_zones_updated':
           setGeofencingZones(data.zones);
           break;
+        case 'settings_updated':
+          setSettings(data.settings);
+          setFuelPrices(data.fuelPrices);
+          setCongestionZones(data.congestionZones);
+          if (data.activeScheduledSurge !== undefined) {
+            setActiveScheduledSurge(data.activeScheduledSurge);
+          }
+          break;
       }
     };
     passengerSocketRef.current = ws;
@@ -392,6 +409,14 @@ export const SimulatorProvider = ({ children }) => {
         case 'geofence_zones_updated':
           setGeofencingZones(data.zones);
           break;
+        case 'settings_updated':
+          setSettings(data.settings);
+          setFuelPrices(data.fuelPrices);
+          setCongestionZones(data.congestionZones);
+          if (data.activeScheduledSurge !== undefined) {
+            setActiveScheduledSurge(data.activeScheduledSurge);
+          }
+          break;
       }
     };
     driverSocketsRef.current[driverId] = ws;
@@ -429,6 +454,14 @@ export const SimulatorProvider = ({ children }) => {
         case 'fraud_alerts_updated':
           setFraudAlerts(data.alerts);
           playSound('sos');
+          break;
+        case 'settings_updated':
+          setSettings(data.settings);
+          setFuelPrices(data.fuelPrices);
+          setCongestionZones(data.congestionZones);
+          if (data.activeScheduledSurge !== undefined) {
+            setActiveScheduledSurge(data.activeScheduledSurge);
+          }
           break;
       }
     };
@@ -1278,6 +1311,24 @@ export const SimulatorProvider = ({ children }) => {
     }
   };
 
+  const updateSurgeSchedules = async (updatedSchedules) => {
+    try {
+      const { api } = getServerEndpoints();
+      const res = await fetch(`${api}/api/admin/surge/schedules/update`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ schedules: updatedSchedules })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSurgeSchedules(data.schedules);
+        addLog("Surge schedules updated and recalculated.", "success");
+      }
+    } catch (err) {
+      console.error("Failed to update surge schedules:", err);
+    }
+  };
+
   return (
     <SimulatorContext.Provider
       value={{
@@ -1287,6 +1338,9 @@ export const SimulatorProvider = ({ children }) => {
         updateGeofencingZones,
         fraudAlerts,
         resolveFraudAlert,
+        surgeSchedules,
+        activeScheduledSurge,
+        updateSurgeSchedules,
         activeRide,
         sosAlerts,
         settings,
