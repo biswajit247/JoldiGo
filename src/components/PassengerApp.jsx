@@ -158,9 +158,13 @@ export default function PassengerApp({ isStandalone }) {
     if (markersRef.current.pickup) map.removeLayer(markersRef.current.pickup);
     if (markersRef.current.dropoff) map.removeLayer(markersRef.current.dropoff);
     if (markersRef.current.driver) map.removeLayer(markersRef.current.driver);
-    if (markersRef.current.routePolyline) {
-      map.removeLayer(markersRef.current.routePolyline);
-      markersRef.current.routePolyline = null;
+    if (markersRef.current.traveledPolyline) {
+      map.removeLayer(markersRef.current.traveledPolyline);
+      markersRef.current.traveledPolyline = null;
+    }
+    if (markersRef.current.remainingPolyline) {
+      map.removeLayer(markersRef.current.remainingPolyline);
+      markersRef.current.remainingPolyline = null;
     }
     markersRef.current.otherDrivers.forEach(m => map.removeLayer(m));
     markersRef.current.otherDrivers = [];
@@ -221,15 +225,29 @@ export default function PassengerApp({ isStandalone }) {
       markersRef.current.pickup = L.marker([activeRide.pickup.lat, activeRide.pickup.lng], { icon: pickupIcon }).addTo(map);
       markersRef.current.dropoff = L.marker([activeRide.dropoff.lat, activeRide.dropoff.lng], { icon: dropoffIcon }).addTo(map);
 
-      // Draw route polyline
+      // Draw route polylines (split trail: traveled green vs remaining yellow)
       if (activeRide.route) {
-        const latlngs = activeRide.route.map(p => [p.lat, p.lng]);
-        markersRef.current.routePolyline = L.polyline(latlngs, {
-          color: '#ffdd00',
-          weight: 4,
-          opacity: 0.8,
-          dashArray: '5, 10'
-        }).addTo(map);
+        const idx = activeRide.routeIndex || 0;
+        const traveledCoords = activeRide.route.slice(0, idx + 1).map(p => [p.lat, p.lng]);
+        const remainingCoords = activeRide.route.slice(idx).map(p => [p.lat, p.lng]);
+
+        if (traveledCoords.length > 1) {
+          markersRef.current.traveledPolyline = L.polyline(traveledCoords, {
+            color: '#00ff66',
+            weight: 5,
+            opacity: 0.9,
+            className: 'glowing-green-trail'
+          }).addTo(map);
+        }
+
+        if (remainingCoords.length > 0) {
+          markersRef.current.remainingPolyline = L.polyline(remainingCoords, {
+            color: '#ffdd00',
+            weight: 5,
+            opacity: 0.8,
+            className: 'animated-route-path'
+          }).addTo(map);
+        }
       }
 
       if (activeRide.status !== 'searching') {

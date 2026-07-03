@@ -3007,3 +3007,20 @@ body {
   box-shadow: 0 0 0 2px rgba(255, 221, 0, 0.15);
 }
 
+/* Animated glowing route trails */
+@keyframes dash {
+  to {
+    stroke-dashoffset: -40;
+  }
+}
+
+.animated-route-path {
+  stroke-dasharray: 8, 12;
+  animation: dash 1.5s linear infinite;
+  filter: drop-shadow(0 0 4px rgba(255, 221, 0, 0.9));
+}
+
+.glowing-green-trail {
+  filter: drop-shadow(0 0 4px rgba(0, 255, 102, 0.9));
+}
+

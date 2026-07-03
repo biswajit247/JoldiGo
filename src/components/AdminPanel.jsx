@@ -140,9 +140,13 @@ export default function AdminPanel() {
     Object.values(markersRef.current.drivers).forEach(m => map.removeLayer(m));
     markersRef.current.drivers = {};
 
-    if (markersRef.current.activeRide) {
-      map.removeLayer(markersRef.current.activeRide);
-      markersRef.current.activeRide = null;
+    if (markersRef.current.traveledPolyline) {
+      map.removeLayer(markersRef.current.traveledPolyline);
+      markersRef.current.traveledPolyline = null;
+    }
+    if (markersRef.current.remainingPolyline) {
+      map.removeLayer(markersRef.current.remainingPolyline);
+      markersRef.current.remainingPolyline = null;
     }
 
     // Clear old SOS elements
@@ -209,14 +213,29 @@ export default function AdminPanel() {
       markersRef.current.drivers[d.id] = m;
     });
 
-    // Render active ride route lines
+    // Render active ride route lines (split trail: traveled green vs remaining yellow)
     if (activeRide && activeRide.route && activeRide.status !== 'searching') {
-      const polyCoords = activeRide.route.map(pt => [pt.lat, pt.lng]);
-      markersRef.current.activeRide = L.polyline(polyCoords, {
-        color: '#ffaa00',
-        weight: 3.5,
-        opacity: 0.8,
-      }).addTo(map);
+      const idx = activeRide.routeIndex || 0;
+      const traveledCoords = activeRide.route.slice(0, idx + 1).map(p => [p.lat, p.lng]);
+      const remainingCoords = activeRide.route.slice(idx).map(p => [p.lat, p.lng]);
+
+      if (traveledCoords.length > 1) {
+        markersRef.current.traveledPolyline = L.polyline(traveledCoords, {
+          color: '#00ff66',
+          weight: 5,
+          opacity: 0.9,
+          className: 'glowing-green-trail'
+        }).addTo(map);
+      }
+
+      if (remainingCoords.length > 0) {
+        markersRef.current.remainingPolyline = L.polyline(remainingCoords, {
+          color: '#ffdd00',
+          weight: 5,
+          opacity: 0.8,
+          className: 'animated-route-path'
+        }).addTo(map);
+      }
     }
 
     // Render active SOS danger zones & animated police vehicles
