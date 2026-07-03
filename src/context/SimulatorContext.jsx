@@ -40,7 +40,7 @@ const CHAT_TRANSLATIONS = {
 
 // Dynamic URL parser for tunnels / local IP / production hosts
 export const getServerEndpoints = () => {
-  let api = 'https://fast-parts-love.loca.lt';
+  let api = 'https://joldigo-backend.onrender.com';
   if (typeof window !== 'undefined') {
     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
       api = 'http://localhost:5001';
@@ -48,15 +48,15 @@ export const getServerEndpoints = () => {
       let saved = localStorage.getItem('joldigo_server_url');
       if (saved) {
         const normalized = saved.trim().replace(/\/$/, '');
-        if (normalized === 'http://localhost:5000' || normalized === 'http://localhost:5001' || normalized === 'https://full-vans-jog.loca.lt' || normalized === 'https://polite-heads-chew.loca.lt' || normalized === 'https://lovely-radios-glow.loca.lt') {
-          localStorage.setItem('joldigo_server_url', 'https://fast-parts-love.loca.lt');
-          saved = 'https://fast-parts-love.loca.lt';
+        if (normalized === 'http://localhost:5000' || normalized === 'http://localhost:5001' || normalized.includes('loca.lt') || normalized.includes('localhost')) {
+          localStorage.setItem('joldigo_server_url', 'https://joldigo-backend.onrender.com');
+          saved = 'https://joldigo-backend.onrender.com';
         }
       }
       if (saved) {
         api = saved;
       } else if (window.location.hostname !== 'localhost' && window.location.protocol !== 'file:') {
-        api = 'https://fast-parts-love.loca.lt';
+        api = 'https://joldigo-backend.onrender.com';
       }
     }
   }

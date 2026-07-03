@@ -88,14 +88,14 @@ function App() {
       let saved = localStorage.getItem('joldigo_server_url');
       if (saved) {
         const normalized = saved.trim().replace(/\/$/, '');
-        if (normalized === 'http://localhost:5000' || normalized === 'http://localhost:5001' || normalized === 'https://full-vans-jog.loca.lt' || normalized === 'https://polite-heads-chew.loca.lt' || normalized === 'https://lovely-radios-glow.loca.lt') {
-          localStorage.setItem('joldigo_server_url', 'https://fast-parts-love.loca.lt');
-          saved = 'https://fast-parts-love.loca.lt';
+        if (normalized === 'http://localhost:5000' || normalized === 'http://localhost:5001' || normalized.includes('loca.lt') || normalized.includes('localhost')) {
+          localStorage.setItem('joldigo_server_url', 'https://joldigo-backend.onrender.com');
+          saved = 'https://joldigo-backend.onrender.com';
         }
         return saved;
       }
     }
-    return 'https://fast-parts-love.loca.lt';
+    return 'https://joldigo-backend.onrender.com';
   });
 
   const [viewMode, setViewMode] = useState('split');
