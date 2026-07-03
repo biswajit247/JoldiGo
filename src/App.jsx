@@ -81,7 +81,18 @@ function App() {
   const [isMobile, setIsMobile] = useState(false);
   const [showNativeSelector, setShowNativeSelector] = useState(false);
   const [serverUrlInput, setServerUrlInput] = useState(() => {
-    return (typeof window !== 'undefined' ? localStorage.getItem('joldigo_server_url') : '') || 'http://localhost:5000';
+    if (typeof window !== 'undefined') {
+      let saved = localStorage.getItem('joldigo_server_url');
+      if (saved) {
+        const normalized = saved.trim().replace(/\/$/, '');
+        if (normalized === 'http://localhost:5000' || normalized === 'http://localhost:5001') {
+          localStorage.setItem('joldigo_server_url', 'https://full-vans-jog.loca.lt');
+          saved = 'https://full-vans-jog.loca.lt';
+        }
+        return saved;
+      }
+    }
+    return 'https://full-vans-jog.loca.lt';
   });
 
   const [viewMode, setViewMode] = useState('split');

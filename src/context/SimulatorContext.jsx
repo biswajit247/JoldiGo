@@ -40,17 +40,20 @@ const CHAT_TRANSLATIONS = {
 
 // Dynamic URL parser for tunnels / local IP / production hosts
 export const getServerEndpoints = () => {
-  let api = 'http://localhost:5001';
+  let api = 'https://full-vans-jog.loca.lt';
   if (typeof window !== 'undefined') {
     let saved = localStorage.getItem('joldigo_server_url');
-    if (saved === 'http://localhost:5000') {
-      localStorage.setItem('joldigo_server_url', 'http://localhost:5001');
-      saved = 'http://localhost:5001';
+    if (saved) {
+      const normalized = saved.trim().replace(/\/$/, '');
+      if (normalized === 'http://localhost:5000' || normalized === 'http://localhost:5001') {
+        localStorage.setItem('joldigo_server_url', 'https://full-vans-jog.loca.lt');
+        saved = 'https://full-vans-jog.loca.lt';
+      }
     }
     if (saved) {
       api = saved;
     } else if (window.location.hostname !== 'localhost' && window.location.protocol !== 'file:') {
-      api = window.location.origin;
+      api = 'https://full-vans-jog.loca.lt';
     }
   }
   
