@@ -14,7 +14,7 @@ dotenv.config({ path: fileURLToPath(new URL('./.env', import.meta.url)) });
 // Initialize Twilio client if keys exist in environment
 const twilioSid = process.env.TWILIO_ACCOUNT_SID;
 const twilioAuthToken = process.env.TWILIO_AUTH_TOKEN;
-const twilioPhoneNumber = process.env.TWILIO_PHONE_NUMBER;
+let twilioPhoneNumber = process.env.TWILIO_PHONE_NUMBER;
 let twilioClient = null;
 if (twilioSid && twilioAuthToken) {
   twilioClient = twilio(twilioSid, twilioAuthToken);
@@ -412,12 +412,18 @@ app.post('/api/admin/env/update', async (req, res) => {
     
     fs.writeFileSync(envPath, envLines.join('\n'), 'utf-8');
     
-    // Reload dotenv
-    dotenv.config({ path: envPath });
+    // Explicitly overwrite process.env variables in-memory (dotenv.config does not overwrite already loaded keys)
+    if (nextDb) process.env.DATABASE_URL = nextDb;
+    if (nextTwilioSid) process.env.TWILIO_ACCOUNT_SID = nextTwilioSid;
+    if (nextTwilioAuthToken) process.env.TWILIO_AUTH_TOKEN = nextTwilioAuthToken;
+    if (nextTwilioPhone) process.env.TWILIO_PHONE_NUMBER = nextTwilioPhone;
+    if (nextRzpId) process.env.RAZORPAY_KEY_ID = nextRzpId;
+    if (nextRzpSecret) process.env.RAZORPAY_KEY_SECRET = nextRzpSecret;
     
-    // Re-initialize clients in-memory
+    // Re-initialize clients in-memory with new keys
     if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
       twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+      twilioPhoneNumber = process.env.TWILIO_PHONE_NUMBER; // update local twilioPhoneNumber variable
     } else {
       twilioClient = null;
     }
