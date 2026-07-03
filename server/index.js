@@ -495,6 +495,31 @@ app.post('/api/admin/driver/verify', async (req, res) => {
   }
 });
 
+// Execute batch driver weekly payout
+app.post('/api/admin/driver/payout', async (req, res) => {
+  const { driverId } = req.body;
+  if (!driverId) return res.status(400).json({ error: 'Driver ID is required.' });
+
+  try {
+    const driverRes = await query('SELECT earnings_weekly, name FROM drivers WHERE id = $1', [driverId]);
+    if (driverRes.rows.length === 0) return res.status(404).json({ error: 'Driver not found.' });
+
+    const payoutAmount = parseFloat(driverRes.rows[0].earnings_weekly);
+    
+    // Reset weekly earnings and commission owed to zero as payout completes
+    await query('UPDATE drivers SET earnings_weekly = 0, commission_owed = 0 WHERE id = $1', [driverId]);
+
+    // Log payout activity in server console
+    console.log(`[PAYOUT COMPLETED] Transferred net ₹${payoutAmount} weekly earnings to partner ${driverRes.rows[0].name}.`);
+
+    broadcastToAll({ type: 'ledger_update' });
+
+    res.json({ success: true, driverId, payoutAmount });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to process driver payout.', details: err.message });
+  }
+});
+
 // Get all claims (Pending & History)
 app.get('/api/admin/claims', async (req, res) => {
   try {

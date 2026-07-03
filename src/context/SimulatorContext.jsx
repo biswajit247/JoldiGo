@@ -1033,6 +1033,24 @@ export const SimulatorProvider = ({ children }) => {
     }
   };
 
+  const payoutDriver = async (driverId) => {
+    try {
+      const { api } = getServerEndpoints();
+      const res = await fetch(`${api}/api/admin/driver/payout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ driverId })
+      });
+      const data = await res.json();
+      if (data.success) {
+        addLog(`Processed net ₹${data.payoutAmount} payout to partner.`, 'success');
+        fetchInitialData();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const updateSettings = async (newSettings) => {
     try {
       const { api } = getServerEndpoints();
@@ -1142,6 +1160,7 @@ export const SimulatorProvider = ({ children }) => {
         toggleDriverStatus,
         uploadDriverDocs,
         verifyDriverStatus,
+        payoutDriver,
         updateSettings,
         updateGeofence: setGeofence,
         bookRide,

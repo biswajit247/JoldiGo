@@ -2455,7 +2455,7 @@ body {
 
 .payout-header {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: 1.5fr 1.2fr 1fr 1fr 1fr 1fr;
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
@@ -2466,10 +2466,11 @@ body {
 
 .payout-row {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: 1.5fr 1.2fr 1fr 1fr 1fr 1fr;
   font-size: 12px;
   padding: 8px 0;
   border-bottom: 1px solid rgba(255,255,255,0.03);
+  align-items: center;
 }
 
 /* BILINGUAL CHAT DRAWER PANEL OVERLAYS */

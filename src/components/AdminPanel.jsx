@@ -36,6 +36,7 @@ export default function AdminPanel() {
     isNightMode,
     setIsNightMode,
     verifyDriverStatus,
+    payoutDriver,
     updateSettings,
     updateGeofence,
     resolveSOS,
@@ -1960,8 +1961,9 @@ export default function AdminPanel() {
                     <span>Partner Name</span>
                     <span>License</span>
                     <span>Total Bookings</span>
-                    <span>Platform commission (5%)</span>
-                    <span>Net Paid Payout (95%)</span>
+                    <span>Commission (5%)</span>
+                    <span>Net Weekly Owed</span>
+                    <span>Action</span>
                   </div>
 
                   {drivers.map(d => {
@@ -1973,6 +1975,15 @@ export default function AdminPanel() {
                         <span>₹{gross.toFixed(0)}</span>
                         <span className="text-red-400">₹{d.earnings.commission.toFixed(0)}</span>
                         <span className="text-green-400 font-semibold">₹{d.earnings.weekly.toFixed(0)}</span>
+                        <span>
+                          <button 
+                            disabled={d.earnings.weekly <= 0}
+                            onClick={() => payoutDriver(d.id)}
+                            className="bg-emerald-500 hover:bg-emerald-400 disabled:opacity-30 disabled:cursor-not-allowed text-black font-bold px-2 py-0.5 rounded text-[10px] uppercase transition-all"
+                          >
+                            Payout
+                          </button>
+                        </span>
                       </div>
                     );
                   })}
