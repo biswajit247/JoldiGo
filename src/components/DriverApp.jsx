@@ -39,6 +39,9 @@ export default function DriverApp({ isStandalone }) {
     fileSafetyClaim,
     insuranceReservePool,
     connectDriverSocket,
+    startGpsTracking,
+    stopGpsTracking,
+    isGpsActive
   } = useSimulator();
 
   // Active Simulated Driver
@@ -598,9 +601,19 @@ export default function DriverApp({ isStandalone }) {
                   </div>
 
                   {tab === 'dashboard' && (
-                    <div className="standby-dashboard-text py-2">
+                    <div className="standby-dashboard-text py-2 flex flex-col items-center justify-center gap-2">
                       {currentDriver.status === 'online' ? (
-                        <p className="status-tip text-green-400">👋 Online ({getVehicleLabel(currentDriver.vehicleType)}) & searching rides...</p>
+                        <>
+                          <p className="status-tip text-green-400">👋 Online ({getVehicleLabel(currentDriver.vehicleType)}) & searching rides...</p>
+                          <button
+                            type="button"
+                            onClick={() => isGpsActive ? stopGpsTracking() : startGpsTracking(currentDriver.id)}
+                            className={`px-3 py-1 rounded-full text-[10px] font-bold tracking-wide uppercase transition-all duration-300 flex items-center gap-1.5 ${isGpsActive ? 'bg-[#00ff66] text-black shadow-[0_0_10px_rgba(0,255,102,0.4)]' : 'bg-white/5 text-gray-300 border border-white/10 hover:bg-white/10'}`}
+                          >
+                            <span>🛰️</span>
+                            {isGpsActive ? 'Active GPS Tracking' : 'Use Real Device GPS'}
+                          </button>
+                        </>
                       ) : (
                         <p className="status-tip text-gray-400">💤 Go Online to start receiving ride alerts.</p>
                       )}

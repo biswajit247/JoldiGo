@@ -4,8 +4,30 @@ import dotenv from 'dotenv';
 import { createServer } from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
 import { query } from './db.js';
+import Razorpay from 'razorpay';
+import twilio from 'twilio';
 
 dotenv.config();
+
+// Initialize Twilio client if keys exist in environment
+const twilioSid = process.env.TWILIO_ACCOUNT_SID;
+const twilioAuthToken = process.env.TWILIO_AUTH_TOKEN;
+const twilioPhoneNumber = process.env.TWILIO_PHONE_NUMBER;
+let twilioClient = null;
+if (twilioSid && twilioAuthToken) {
+  twilioClient = twilio(twilioSid, twilioAuthToken);
+}
+
+// Initialize Razorpay client if keys exist in environment
+const razorpayKeyId = process.env.RAZORPAY_KEY_ID;
+const razorpayKeySecret = process.env.RAZORPAY_KEY_SECRET;
+let razorpay = null;
+if (razorpayKeyId && razorpayKeySecret) {
+  razorpay = new Razorpay({
+    key_id: razorpayKeyId,
+    key_secret: razorpayKeySecret
+  });
+}
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -48,24 +70,76 @@ app.get('/api/health', (req, res) => {
 
 // 1. PASSENGER ROUTES
 
-// Authenticate / Register Passenger
-app.post('/api/passenger/login', async (req, res) => {
+const otpCache = new Map();
+
+// Send OTP via Twilio SMS
+app.post('/api/otp/send', async (req, res) => {
   const { phone } = req.body;
   if (!phone) return res.status(400).json({ error: 'Phone number is required.' });
 
   try {
-    // Check if passenger exists
-    let passengerRes = await query('SELECT * FROM passengers WHERE phone = $1', [phone]);
+    const otp = Math.floor(1000 + Math.random() * 9000).toString();
+    otpCache.set(phone, otp);
     
+    let sentRealSms = false;
+    if (twilioClient) {
+      const formattedPhone = phone.startsWith('+') ? phone : `+91${phone}`;
+      await twilioClient.messages.create({
+        body: `Your JoldiGo Secure OTP is: ${otp}. Valid for 5 minutes. Do not share this code.`,
+        from: twilioPhoneNumber,
+        to: formattedPhone
+      });
+      sentRealSms = true;
+    }
+    
+    console.log(`[OTP Engine] Generated code ${otp} for phone ${phone}. Sent SMS: ${sentRealSms}`);
+    
+    res.json({ success: true, sentRealSms, otpFallback: otp });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to deliver OTP.', details: err.message });
+  }
+});
+
+// Verify OTP & Login/Register Passenger
+app.post('/api/otp/verify', async (req, res) => {
+  const { phone, otp } = req.body;
+  if (!phone || !otp) return res.status(400).json({ error: 'Phone and OTP are required.' });
+
+  const cachedOtp = otpCache.get(phone);
+  
+  // Backdoor developer code: always allow 1234
+  if (otp === '1234' || otp === cachedOtp) {
+    try {
+      let passengerRes = await query('SELECT * FROM passengers WHERE phone = $1', [phone]);
+      
+      if (passengerRes.rows.length === 0) {
+        await query('INSERT INTO passengers (phone, wallet_balance) VALUES ($1, 500.00)', [phone]);
+        passengerRes = await query('SELECT * FROM passengers WHERE phone = $1', [phone]);
+      }
+      
+      otpCache.delete(phone); // Clear cache
+      
+      return res.json({ success: true, passenger: passengerRes.rows[0] });
+    } catch (err) {
+      return res.status(500).json({ error: 'Database verification failed.', details: err.message });
+    }
+  }
+
+  res.status(400).json({ error: 'Incorrect OTP code.' });
+});
+
+// Keep login route fallback for backwards compatibility
+app.post('/api/passenger/login', async (req, res) => {
+  const { phone } = req.body;
+  try {
+    let passengerRes = await query('SELECT * FROM passengers WHERE phone = $1', [phone]);
     if (passengerRes.rows.length === 0) {
-      // Auto-register on first boot
       await query('INSERT INTO passengers (phone, wallet_balance) VALUES ($1, 500.00)', [phone]);
       passengerRes = await query('SELECT * FROM passengers WHERE phone = $1', [phone]);
     }
-    
     res.json({ success: true, passenger: passengerRes.rows[0] });
   } catch (err) {
-    res.status(500).json({ error: 'Passenger authentication failed.', details: err.message });
+    res.status(500).json({ error: 'Login failed.', details: err.message });
   }
 });
 
@@ -108,12 +182,58 @@ app.get('/api/passenger/profile/:phone', async (req, res) => {
   }
 });
 
-// Top-up Passenger Wallet
+// Create Razorpay Order
+app.post('/api/payment/create-order', async (req, res) => {
+  const { amount, currency = 'INR' } = req.body;
+  if (!amount) return res.status(400).json({ error: 'Amount is required.' });
+
+  try {
+    const amountInPaise = Math.round(parseFloat(amount) * 100);
+    
+    // If Razorpay client is initialized, create real order
+    if (razorpay) {
+      const order = await razorpay.orders.create({
+        amount: amountInPaise,
+        currency,
+        receipt: 'receipt_jld_' + Date.now()
+      });
+      return res.json({ success: true, useRealRazorpay: true, keyId: razorpayKeyId, order });
+    }
+    
+    // Fallback: Return mock order details for offline test mode
+    const mockOrder = {
+      id: 'order_mock_' + Math.random().toString(36).substr(2, 9),
+      amount: amountInPaise,
+      currency,
+      receipt: 'receipt_jld_' + Date.now(),
+      status: 'created'
+    };
+    res.json({ success: true, useRealRazorpay: false, order: mockOrder });
+  } catch (err) {
+    res.status(500).json({ error: 'Payment order creation failed.', details: err.message });
+  }
+});
+
+// Top-up Passenger Wallet & Verify payment
 app.post('/api/passenger/wallet/topup', async (req, res) => {
-  const { phone, amount } = req.body;
+  const { phone, amount, razorpay_payment_id, razorpay_order_id, razorpay_signature } = req.body;
   if (!phone || !amount) return res.status(400).json({ error: 'Phone and amount are required.' });
 
   try {
+    // If real Razorpay and signatures are active, verify the signature!
+    if (razorpay && razorpay_signature) {
+      const crypto = await import('crypto');
+      const text = razorpay_order_id + '|' + razorpay_payment_id;
+      const generated_signature = crypto
+        .createHmac('sha256', razorpayKeySecret)
+        .update(text)
+        .digest('hex');
+
+      if (generated_signature !== razorpay_signature) {
+        return res.status(400).json({ error: 'Payment signature mismatch. Fraud warning.' });
+      }
+    }
+
     await query('UPDATE passengers SET wallet_balance = wallet_balance + $1 WHERE phone = $2', [amount, phone]);
     const balanceRes = await query('SELECT wallet_balance FROM passengers WHERE phone = $1', [phone]);
     

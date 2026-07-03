@@ -43,6 +43,7 @@ export default function PassengerApp({ isStandalone }) {
     activeSmsToast,
     triggerSmsToast,
     connectPassengerSocket,
+    sendOtpRequest,
   } = useSimulator();
 
   useEffect(() => {
@@ -277,7 +278,7 @@ export default function PassengerApp({ isStandalone }) {
   }, [activeRide, drivers, pickupKey, dropoffKey, tab, congestionZones]);
 
   // Login handlers
-  const handleSendOtp = (e) => {
+  const handleSendOtp = async (e) => {
     e.preventDefault();
     if (!phoneInput || phoneInput.length < 10) {
       setOtpError('Please enter a valid 10-digit mobile number.');
@@ -285,19 +286,19 @@ export default function PassengerApp({ isStandalone }) {
     }
     setOtpError('');
     setIsOtpSent(true);
-    triggerSmsToast(`JoldiGo Secure OTP: 1234. Valid for 5 minutes. Do not share this code with anyone.`);
+    await sendOtpRequest(phoneInput);
   };
 
-  const handleVerifyOtp = (e) => {
+  const handleVerifyOtp = async (e) => {
     e.preventDefault();
-    if (otpInput === '1234' || otpInput.length === 4) {
-      loginPassenger(phoneInput);
+    const res = await loginPassenger(phoneInput, otpInput);
+    if (res.success) {
       setTab('home');
       setIsOtpSent(false);
       setPhoneInput('');
       setOtpInput('');
     } else {
-      setOtpError('Incorrect OTP. Try "1234" for testing.');
+      setOtpError(res.error || 'Incorrect OTP. Try "1234" for testing.');
     }
   };
 

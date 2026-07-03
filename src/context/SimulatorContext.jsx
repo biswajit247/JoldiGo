@@ -385,24 +385,102 @@ export const SimulatorProvider = ({ children }) => {
 
   // --- CLIENT ACTIONS BINDINGS ---
 
-  const loginPassenger = async (phone) => {
+  const watchIdRef = useRef(null);
+  const [isGpsActive, setIsGpsActive] = useState(false);
+
+  const startGpsTracking = (driverId) => {
+    if (watchIdRef.current) return;
+    if (!navigator.geolocation) {
+      alert("Geolocation is not supported by this device.");
+      return;
+    }
+    
+    setIsGpsActive(true);
+    const watchId = navigator.geolocation.watchPosition(
+      (position) => {
+        const { latitude: lat, longitude: lng } = position.coords;
+        const nextLoc = { lat, lng };
+        
+        setDrivers(prev => prev.map(d => d.id === driverId ? { ...d, location: nextLoc } : d));
+        
+        const ws = driverSocketsRef.current[driverId];
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: 'driver_location_update', location: nextLoc }));
+        }
+
+        setActiveRide(prev => {
+          if (prev && prev.driverId === driverId) {
+            return { ...prev, location: nextLoc };
+          }
+          return prev;
+        });
+      },
+      (err) => {
+        console.error("GPS Tracking Error:", err);
+      },
+      { enableHighAccuracy: true, maximumAge: 0 }
+    );
+    
+    watchIdRef.current = watchId;
+    addLog(`🛰️ GPS Tracking enabled for Driver Partner ${driverId}`, 'success');
+  };
+
+  const stopGpsTracking = () => {
+    if (watchIdRef.current !== null) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
+    }
+    setIsGpsActive(false);
+    addLog(`GPS Tracking disabled. Switched back to OSRM simulator mode.`, 'warning');
+  };
+
+  const sendOtpRequest = async (phone) => {
     try {
       const { api } = getServerEndpoints();
-      const res = await fetch(`${api}/api/passenger/login`, {
+      const res = await fetch(`${api}/api/otp/send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone })
       });
       const data = await res.json();
       if (data.success) {
+        triggerSmsToast(`JoldiGo Secure OTP: ${data.otpFallback}. Valid for 5 minutes. Do not share this code.`);
+        return data.otpFallback;
+      }
+    } catch (err) {
+      console.warn("Offline OTP dispatcher fallback.", err);
+      triggerSmsToast(`JoldiGo Secure OTP: 1234. Valid for 5 minutes. (Offline Fallback)`);
+      return '1234';
+    }
+  };
+
+  const loginPassenger = async (phone, otp) => {
+    try {
+      const { api } = getServerEndpoints();
+      const res = await fetch(`${api}/api/otp/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, otp })
+      });
+      const data = await res.json();
+      if (data.success) {
         setPassenger({ phone, isLoggedIn: true, rideHistory: [] });
         await refreshPassengerProfile(phone);
         connectPassengerSocket(phone);
-        addLog(`Passenger logged in with phone: ${phone}`, 'success');
+        addLog(`Passenger verified and logged in.`, 'success');
+        return { success: true };
+      } else {
+        return { success: false, error: data.error };
       }
     } catch (err) {
-      // Offline fallback
-      setPassenger({ phone, isLoggedIn: true, rideHistory: [] });
+      console.warn("Offline verification fallback.", err);
+      if (otp === '1234' || otp.length === 4) {
+        setPassenger({ phone, isLoggedIn: true, rideHistory: [] });
+        connectPassengerSocket(phone);
+        addLog(`Passenger logged in with phone: ${phone} (Offline verification)`, 'success');
+        return { success: true };
+      }
+      return { success: false, error: 'Incorrect OTP or connection failed.' };
     }
   };
 
@@ -417,17 +495,73 @@ export const SimulatorProvider = ({ children }) => {
   const topUpPassengerWallet = async (amount) => {
     try {
       const { api } = getServerEndpoints();
-      const res = await fetch(`${api}/api/passenger/wallet/topup`, {
+      const orderRes = await fetch(`${api}/api/payment/create-order`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: passenger.phone, amount })
+        body: JSON.stringify({ amount })
       });
-      const data = await res.json();
-      if (data.success) {
-        setPassengerWalletBalance(data.wallet_balance);
-        addLog(`Wallet topped up by ₹${amount}`, 'success');
+      const orderData = await orderRes.json();
+      if (!orderData.success) {
+        alert("Payment order creation failed!");
+        return;
+      }
+      
+      const order = orderData.order;
+      
+      const options = {
+        key: orderData.useRealRazorpay ? orderData.keyId : 'rzp_test_mockKey',
+        amount: order.amount,
+        currency: order.currency,
+        name: 'JoldiGo',
+        description: 'Commuter Wallet Top-up',
+        order_id: orderData.useRealRazorpay ? order.id : undefined,
+        handler: async (response) => {
+          const verifyRes = await fetch(`${api}/api/passenger/wallet/topup`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              phone: passenger.phone,
+              amount,
+              razorpay_payment_id: response.razorpay_payment_id || 'pay_mock_' + Math.random().toString(36).substr(2, 9),
+              razorpay_order_id: response.razorpay_order_id || order.id,
+              razorpay_signature: response.razorpay_signature
+            })
+          });
+          const verifyData = await verifyRes.json();
+          if (verifyData.success) {
+            setPassengerWalletBalance(verifyData.wallet_balance);
+            addLog(`Wallet topped up by ₹${amount} via Razorpay Checkout.`, 'success');
+          } else {
+            alert("Payment signature verification failed!");
+          }
+        },
+        prefill: {
+          contact: passenger.phone,
+          email: 'commuter@joldigo.in'
+        },
+        theme: {
+          color: '#ffdd00'
+        }
+      };
+      
+      if (typeof window.Razorpay !== 'undefined') {
+        const rzp = new window.Razorpay(options);
+        rzp.open();
+      } else {
+        console.warn("Razorpay script not found. Executing mock topup.");
+        const verifyRes = await fetch(`${api}/api/passenger/wallet/topup`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone: passenger.phone, amount })
+        });
+        const verifyData = await verifyRes.json();
+        if (verifyData.success) {
+          setPassengerWalletBalance(verifyData.wallet_balance);
+          addLog(`Wallet topped up by ₹${amount} (Mock top-up fallback)`, 'success');
+        }
       }
     } catch (err) {
+      console.error(err);
       setPassengerWalletBalance(prev => prev + amount);
     }
   };
@@ -971,7 +1105,11 @@ export const SimulatorProvider = ({ children }) => {
         playSound,
         connectPassengerSocket,
         connectDriverSocket,
-        connectAdminSocket
+        connectAdminSocket,
+        sendOtpRequest,
+        startGpsTracking,
+        stopGpsTracking,
+        isGpsActive
       }}
     >
       {children}
