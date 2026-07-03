@@ -149,6 +149,7 @@ export const SimulatorProvider = ({ children }) => {
   const [fraudAlerts, setFraudAlerts] = useState([]);
   const [surgeSchedules, setSurgeSchedules] = useState([]);
   const [activeScheduledSurge, setActiveScheduledSurge] = useState(null);
+  const [demandHotspots, setDemandHotspots] = useState([]);
 
   // Server state parameters
   const [fuelPrices, setFuelPrices] = useState({ cng: 95.50, petrol: 104.50, diesel: 92.75 });
@@ -219,6 +220,13 @@ export const SimulatorProvider = ({ children }) => {
       const schedsData = await schedsRes.json();
       if (Array.isArray(schedsData)) {
         setSurgeSchedules(schedsData);
+      }
+
+      // Fetch demand hotspots
+      const hotspotsRes = await fetch(`${api}/api/admin/demand/hotspots`);
+      const hotspotsData = await hotspotsRes.json();
+      if (hotspotsData.success) {
+        setDemandHotspots(hotspotsData.hotspots);
       }
     } catch (err) {
       console.warn("Failed to connect to backend server. Operating in offline simulated mode.", err);
@@ -454,6 +462,9 @@ export const SimulatorProvider = ({ children }) => {
         case 'fraud_alerts_updated':
           setFraudAlerts(data.alerts);
           playSound('sos');
+          break;
+        case 'demand_updated':
+          fetchInitialData();
           break;
         case 'settings_updated':
           setSettings(data.settings);
@@ -1341,6 +1352,7 @@ export const SimulatorProvider = ({ children }) => {
         surgeSchedules,
         activeScheduledSurge,
         updateSurgeSchedules,
+        demandHotspots,
         activeRide,
         sosAlerts,
         settings,

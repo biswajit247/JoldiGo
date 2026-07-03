@@ -48,6 +48,7 @@ export default function AdminPanel() {
     surgeSchedules,
     activeScheduledSurge,
     updateSurgeSchedules,
+    demandHotspots,
     resolveSOS,
     resolveDispute,
     fastForwardDisputeSla,
@@ -65,6 +66,7 @@ export default function AdminPanel() {
   }, []);
 
   const [activeTab, setActiveTab] = useState('dashboard'); 
+  const [showDemandHeatmap, setShowDemandHeatmap] = useState(false);
   const [selectedDriverForDoc, setSelectedDriverForDoc] = useState(null);
   const [selectedDocTab, setSelectedDocTab] = useState('license');
   const [dlChecked, setDlChecked] = useState(false);
@@ -104,6 +106,7 @@ export default function AdminPanel() {
     geofencePolygon: null,
     sosElements: [], 
     trafficCircles: [], // Keep track of traffic overlays
+    demandCircles: [], // Keep track of heatmap circles
   });
 
   // Geofence map elements
@@ -235,6 +238,12 @@ export default function AdminPanel() {
     // Clear old driver and ride markers
     Object.values(markersRef.current.drivers).forEach(m => map.removeLayer(m));
     markersRef.current.drivers = {};
+
+    // Clear old demand circles
+    if (markersRef.current.demandCircles) {
+      markersRef.current.demandCircles.forEach(c => map.removeLayer(c));
+    }
+    markersRef.current.demandCircles = [];
 
     if (markersRef.current.traveledPolyline) {
       map.removeLayer(markersRef.current.traveledPolyline);
@@ -388,7 +397,20 @@ export default function AdminPanel() {
       }
     });
 
-  }, [drivers, activeRide, sosAlerts, activeTab, congestionZones]);
+    // Render demand heatmap circles
+    if (showDemandHeatmap && demandHotspots) {
+      demandHotspots.forEach(pt => {
+        const circle = L.circle([pt.lat, pt.lng], {
+          stroke: false,
+          fillColor: '#ef4444',
+          fillOpacity: 0.18 * pt.weight,
+          radius: 500 * pt.weight
+        }).addTo(map);
+        markersRef.current.demandCircles.push(circle);
+      });
+    }
+
+  }, [drivers, activeRide, sosAlerts, activeTab, congestionZones, showDemandHeatmap, demandHotspots]);
 
   // Form handlers
   const handleSaveSettings = (e) => {
@@ -729,11 +751,23 @@ export default function AdminPanel() {
                 <div className="ops-map-card card-glow" style={{ height: '320px' }}>
                   <div className="card-header-flex">
                     <h4>Kolkata Real-time Operations Map</h4>
-                    <div className="map-legend">
-                      <span className="leg-item"><span className="dot green"></span> Free</span>
-                      <span className="leg-item"><span className="dot orange"></span> In Ride</span>
-                      <span className="leg-item"><span className="dot red"></span> SOS</span>
-                      <span className="leg-item"><span className="dot blue"></span> 🚔 Patrol</span>
+                    <div className="flex items-center gap-4">
+                      <button 
+                        onClick={() => setShowDemandHeatmap(!showDemandHeatmap)}
+                        className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
+                          showDemandHeatmap 
+                            ? 'bg-red-600/20 text-red-400 border-red-500/40 shadow-[0_0_10px_rgba(239,68,68,0.1)]' 
+                            : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'
+                        }`}
+                      >
+                        🔥 Demand Heatmap: {showDemandHeatmap ? 'ON' : 'OFF'}
+                      </button>
+                      <div className="map-legend">
+                        <span className="leg-item"><span className="dot green"></span> Free</span>
+                        <span className="leg-item"><span className="dot orange"></span> In Ride</span>
+                        <span className="leg-item"><span className="dot red"></span> SOS</span>
+                        <span className="leg-item"><span className="dot blue"></span> 🚔 Patrol</span>
+                      </div>
                     </div>
                   </div>
                   <div ref={mapContainerRef} className="admin-leaflet-map-container"></div>
