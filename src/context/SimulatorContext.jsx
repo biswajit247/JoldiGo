@@ -739,6 +739,11 @@ export const SimulatorProvider = ({ children }) => {
       paymentMethod, vehicleType, distance: dist,
       totalFare: fareDetails.totalFare, takeHome: fareDetails.takeHome, commission: fareDetails.commission,
       gstAmount: fareDetails.gstAmount, insurancePremium: fareDetails.insurancePremium,
+      grossBaseRideFare: fareDetails.grossBaseRideFare,
+      destinationZone: dropoff.zone,
+      estimatedRouteFriction: fareDetails.trafficMultiplier > 1.0 ? 'High (Heavy Traffic)' : 'Normal (Clear Flow)',
+      tollEstimate: fareDetails.tollEstimate,
+      timer: 15,
       contractHash: fareDetails.contractHash, surgeMultiplier: fareDetails.surgeMultiplier,
       status: 'searching', driverId: closestDriver.id
     };
