@@ -16,7 +16,8 @@ import {
   AlertTriangle,
   Moon,
   ToggleLeft,
-  ToggleRight
+  ToggleRight,
+  Key
 } from 'lucide-react';
 import L from 'leaflet';
 
@@ -45,6 +46,8 @@ export default function AdminPanel() {
     safetyClaims,
     resolveSafetyClaim,
     connectAdminSocket,
+    fetchEnvKeys,
+    updateEnvKeys
   } = useSimulator();
 
   useEffect(() => {
@@ -453,6 +456,14 @@ export default function AdminPanel() {
             >
               <DollarSign size={18} />
               <span>Financial Ledger</span>
+            </button>
+
+            <button 
+              className={`nav-item ${activeTab === 'env' ? 'active' : ''}`}
+              onClick={() => setActiveTab('env')}
+            >
+              <Key size={18} />
+              <span>API Credentials</span>
             </button>
           </nav>
 
@@ -1456,7 +1467,172 @@ export default function AdminPanel() {
             </div>
           )}
 
+          {activeTab === 'env' && (
+            <EnvSettingsPanel fetchEnvKeys={fetchEnvKeys} updateEnvKeys={updateEnvKeys} />
+          )}
+
         </main>
+      </div>
+    </div>
+  );
+}
+
+function EnvSettingsPanel({ fetchEnvKeys, updateEnvKeys }) {
+  const [keys, setKeys] = useState({
+    databaseUrl: '',
+    twilioSid: '',
+    twilioAuthToken: '',
+    twilioPhoneNumber: '',
+    razorpayKeyId: '',
+    razorpayKeySecret: ''
+  });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState(null);
+
+  useEffect(() => {
+    let active = true;
+    const loadKeys = async () => {
+      const data = await fetchEnvKeys();
+      if (active) {
+        setKeys(data);
+        setLoading(false);
+      }
+    };
+    loadKeys();
+    return () => { active = false; };
+  }, []);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setKeys(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    setMessage(null);
+    const res = await updateEnvKeys(keys);
+    setSaving(false);
+    if (res.success) {
+      setMessage({ type: 'success', text: 'Server configuration updated and clients reloaded successfully!' });
+      const data = await fetchEnvKeys();
+      setKeys(data);
+    } else {
+      setMessage({ type: 'error', text: res.error || 'Failed to update configuration.' });
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="history-screen text-center" style={{ padding: '120px 20px 20px 20px', color: '#888' }}>
+        Loading credentials from server environment...
+      </div>
+    );
+  }
+
+  return (
+    <div className="history-screen" style={{ padding: '90px 20px 20px 20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <div className="payouts-section card-glow text-left">
+        <h3 className="text-sm font-bold uppercase tracking-wider text-yellow-400 mb-1 flex items-center gap-1.5">
+          <span>⚙️</span> API Keys & Environmental Credentials Manager
+        </h3>
+        <p className="text-[10px] text-gray-400 mb-4 leading-relaxed">
+          Configure active server credentials dynamically. These parameters write directly back to the database environment variables on disk. Leave secret codes masked (showing ****) to preserve their active states.
+        </p>
+
+        {message && (
+          <div className={`p-3 rounded text-[11px] mb-4 font-bold border ${
+            message.type === 'success' ? 'bg-green-500/10 border-green-500/20 text-green-400' : 'bg-red-500/10 border-red-500/20 text-red-400'
+          }`}>
+            {message.text}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[9px] uppercase tracking-wider text-gray-500 font-extrabold">Neon Serverless PostgreSQL connection URL</label>
+            <input 
+              type="text" 
+              name="databaseUrl" 
+              value={keys.databaseUrl} 
+              onChange={handleChange}
+              placeholder="postgresql://user:password@host/db"
+              className="w-full bg-black/40 border border-white/10 rounded px-3 py-2 text-xs text-white font-mono placeholder:text-gray-600 focus:outline-none focus:border-yellow-400"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[9px] uppercase tracking-wider text-gray-500 font-extrabold">Twilio Account SID</label>
+              <input 
+                type="text" 
+                name="twilioSid" 
+                value={keys.twilioSid} 
+                onChange={handleChange}
+                placeholder="ACXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+                className="bg-black/40 border border-white/10 rounded px-3 py-2 text-xs text-white font-mono placeholder:text-gray-600 focus:outline-none focus:border-yellow-400"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[9px] uppercase tracking-wider text-gray-500 font-extrabold">Twilio Auth Token</label>
+              <input 
+                type="password" 
+                name="twilioAuthToken" 
+                value={keys.twilioAuthToken} 
+                onChange={handleChange}
+                placeholder="••••••••••••••••••••••••••••••••"
+                className="bg-black/40 border border-white/10 rounded px-3 py-2 text-xs text-white font-mono placeholder:text-gray-600 focus:outline-none focus:border-yellow-400"
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[9px] uppercase tracking-wider text-gray-500 font-extrabold">Twilio Registered Sender Phone Number</label>
+            <input 
+              type="text" 
+              name="twilioPhoneNumber" 
+              value={keys.twilioPhoneNumber} 
+              onChange={handleChange}
+              placeholder="+1234567890"
+              className="w-full bg-black/40 border border-white/10 rounded px-3 py-2 text-xs text-white font-mono placeholder:text-gray-600 focus:outline-none focus:border-yellow-400"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[9px] uppercase tracking-wider text-gray-500 font-extrabold">Razorpay Client Key ID</label>
+              <input 
+                type="text" 
+                name="razorpayKeyId" 
+                value={keys.razorpayKeyId} 
+                onChange={handleChange}
+                placeholder="rzp_test_XXXXXXXXXXXXXX"
+                className="bg-black/40 border border-white/10 rounded px-3 py-2 text-xs text-white font-mono placeholder:text-gray-600 focus:outline-none focus:border-yellow-400"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[9px] uppercase tracking-wider text-gray-500 font-extrabold">Razorpay Client Key Secret</label>
+              <input 
+                type="password" 
+                name="razorpayKeySecret" 
+                value={keys.razorpayKeySecret} 
+                onChange={handleChange}
+                placeholder="••••••••••••••••••••••••"
+                className="bg-black/40 border border-white/10 rounded px-3 py-2 text-xs text-white font-mono placeholder:text-gray-600 focus:outline-none focus:border-yellow-400"
+              />
+            </div>
+          </div>
+
+          <button 
+            type="submit" 
+            disabled={saving}
+            className="w-full bg-[#ffdd00] hover:bg-[#e6c700] text-black font-extrabold uppercase py-2.5 rounded text-[10px] tracking-widest mt-2 transition-all duration-300 disabled:opacity-50"
+            style={{ width: '100%' }}
+          >
+            {saving ? 'Reloading Server Configuration...' : 'Save & Hot-Reload Credentials'}
+          </button>
+        </form>
       </div>
     </div>
   );

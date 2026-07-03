@@ -1051,6 +1051,40 @@ export const SimulatorProvider = ({ children }) => {
     }
   };
 
+  const fetchEnvKeys = async () => {
+    try {
+      const { api } = getServerEndpoints();
+      const res = await fetch(`${api}/api/admin/env/get`);
+      const data = await res.json();
+      if (data.success) {
+        return data;
+      }
+    } catch (err) {
+      console.error(err);
+    }
+    return { databaseUrl: '', twilioSid: '', twilioAuthToken: '', twilioPhoneNumber: '', razorpayKeyId: '', razorpayKeySecret: '' };
+  };
+
+  const updateEnvKeys = async (keys) => {
+    try {
+      const { api } = getServerEndpoints();
+      const res = await fetch(`${api}/api/admin/env/update`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(keys)
+      });
+      const data = await res.json();
+      if (data.success) {
+        addLog(`Server API Keys and Secrets updated.`, 'success');
+        return { success: true };
+      }
+      return { success: false, error: data.error };
+    } catch (err) {
+      console.error(err);
+      return { success: false, error: 'Connection failure.' };
+    }
+  };
+
   return (
     <SimulatorContext.Provider
       value={{
@@ -1109,7 +1143,9 @@ export const SimulatorProvider = ({ children }) => {
         sendOtpRequest,
         startGpsTracking,
         stopGpsTracking,
-        isGpsActive
+        isGpsActive,
+        fetchEnvKeys,
+        updateEnvKeys
       }}
     >
       {children}

@@ -1,4 +1,5 @@
 import express from 'express';
+import fs from 'fs';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { createServer } from 'http';
@@ -363,6 +364,78 @@ app.post('/api/driver/claim', async (req, res) => {
 });
 
 // 3. ADMIN ROUTES
+
+// Read masked environment configurations
+app.get('/api/admin/env/get', (req, res) => {
+  const mask = (str) => {
+    if (!str) return '';
+    if (str.length <= 8) return '****';
+    return str.substring(0, 4) + '****' + str.substring(str.length - 4);
+  };
+  
+  res.json({
+    success: true,
+    databaseUrl: process.env.DATABASE_URL || '',
+    twilioSid: mask(process.env.TWILIO_ACCOUNT_SID),
+    twilioAuthToken: mask(process.env.TWILIO_AUTH_TOKEN),
+    twilioPhoneNumber: process.env.TWILIO_PHONE_NUMBER || '',
+    razorpayKeyId: mask(process.env.RAZORPAY_KEY_ID),
+    razorpayKeySecret: mask(process.env.RAZORPAY_KEY_SECRET)
+  });
+});
+
+// Update environment variables dynamically
+app.post('/api/admin/env/update', async (req, res) => {
+  const { databaseUrl, twilioSid, twilioAuthToken, twilioPhoneNumber, razorpayKeyId, razorpayKeySecret } = req.body;
+  
+  try {
+    const envPath = fileURLToPath(new URL('./.env', import.meta.url));
+    const envLines = [];
+    
+    envLines.push(`PORT=${port}`);
+    envLines.push(`NODE_ENV=${process.env.NODE_ENV || 'development'}`);
+    
+    const nextDb = databaseUrl && !databaseUrl.includes('****') ? databaseUrl : process.env.DATABASE_URL;
+    const nextTwilioSid = twilioSid && !twilioSid.includes('****') ? twilioSid : process.env.TWILIO_ACCOUNT_SID;
+    const nextTwilioAuthToken = twilioAuthToken && !twilioAuthToken.includes('****') ? twilioAuthToken : process.env.TWILIO_AUTH_TOKEN;
+    const nextTwilioPhone = twilioPhoneNumber ? twilioPhoneNumber : process.env.TWILIO_PHONE_NUMBER;
+    const nextRzpId = razorpayKeyId && !razorpayKeyId.includes('****') ? razorpayKeyId : process.env.RAZORPAY_KEY_ID;
+    const nextRzpSecret = razorpayKeySecret && !razorpayKeySecret.includes('****') ? razorpayKeySecret : process.env.RAZORPAY_KEY_SECRET;
+
+    if (nextDb) envLines.push(`DATABASE_URL=${nextDb}`);
+    if (nextTwilioSid) envLines.push(`TWILIO_ACCOUNT_SID=${nextTwilioSid}`);
+    if (nextTwilioAuthToken) envLines.push(`TWILIO_AUTH_TOKEN=${nextTwilioAuthToken}`);
+    if (nextTwilioPhone) envLines.push(`TWILIO_PHONE_NUMBER=${nextTwilioPhone}`);
+    if (nextRzpId) envLines.push(`RAZORPAY_KEY_ID=${nextRzpId}`);
+    if (nextRzpSecret) envLines.push(`RAZORPAY_KEY_SECRET=${nextRzpSecret}`);
+    
+    fs.writeFileSync(envPath, envLines.join('\n'), 'utf-8');
+    
+    // Reload dotenv
+    dotenv.config({ path: envPath });
+    
+    // Re-initialize clients in-memory
+    if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
+      twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+    } else {
+      twilioClient = null;
+    }
+    
+    if (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
+      razorpay = new Razorpay({
+        key_id: process.env.RAZORPAY_KEY_ID,
+        key_secret: process.env.RAZORPAY_KEY_SECRET
+      });
+    } else {
+      razorpay = null;
+    }
+    
+    console.log(`[Env Manager] Environment variables updated & clients reloaded successfully.`);
+    res.json({ success: true, message: 'Environment configuration reloaded.' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to rewrite env configuration.', details: err.message });
+  }
+});
 
 // Get operational ledger statistics
 app.get('/api/admin/stats', async (req, res) => {
