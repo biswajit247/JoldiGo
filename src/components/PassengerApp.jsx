@@ -16,7 +16,8 @@ import {
   PlusCircle,
   Wallet,
   MessageSquare,
-  Send
+  Send,
+  Volume2
 } from 'lucide-react';
 import L from 'leaflet';
 
@@ -74,6 +75,19 @@ export default function PassengerApp({ isStandalone }) {
     connectPassengerSocket,
     sendOtpRequest,
   } = useSimulator();
+
+  const speakText = (text, langCode) => {
+    if (!window.speechSynthesis) return;
+    try {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = langCode || 'en-US';
+      console.log(`[TTS Speech] Speaking: "${text}" in ${utterance.lang}`);
+      window.speechSynthesis.speak(utterance);
+    } catch (e) {
+      console.error("Text-to-speech failed:", e);
+    }
+  };
 
   useEffect(() => {
     if (passenger.isLoggedIn && passenger.phone) {
@@ -870,12 +884,28 @@ export default function PassengerApp({ isStandalone }) {
                     const isSelf = msg.sender === 'passenger';
                     return (
                       <div key={msg.id} className={`chat-row ${isSelf ? 'self' : 'peer'}`}>
-                        <div className={`chat-bubble ${isSelf ? 'chat-bubble-self' : 'chat-bubble-peer'}`}>
-                          {msg.text}
+                        <div className={`chat-bubble ${isSelf ? 'chat-bubble-self' : 'chat-bubble-peer'} flex items-center justify-between gap-1.5`}>
+                          <span>{msg.text}</span>
+                          <button 
+                            onClick={() => speakText(msg.text, msg.originalLang || 'en-US')}
+                            className="tts-play-btn cursor-pointer p-0.5 opacity-60 hover:opacity-100 transition-all"
+                            title="Speak original text out loud"
+                            style={{ background: 'none', border: 'none' }}
+                          >
+                            <Volume2 size={11} className="text-indigo-400" />
+                          </button>
                         </div>
-                        <div className="chat-meta">
+                        <div className="chat-meta flex items-center gap-1">
                           <span>🌐</span>
                           <span className="italic">{msg.translation}</span>
+                          <button 
+                            onClick={() => speakText(msg.translation, msg.translationLang || 'bn-IN')}
+                            className="tts-play-btn cursor-pointer p-0.5 opacity-60 hover:opacity-100 transition-all"
+                            title="Speak translation out loud"
+                            style={{ background: 'none', border: 'none' }}
+                          >
+                            <Volume2 size={10} className="text-emerald-400" />
+                          </button>
                           <span>• {msg.time}</span>
                         </div>
                       </div>

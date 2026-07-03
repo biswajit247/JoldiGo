@@ -952,6 +952,8 @@ wss.on('connection', (ws) => {
                 sender: clientMeta.role,
                 text: data.text,
                 translation: data.translation,
+                originalLang: data.originalLang || 'en-US',
+                translationLang: data.translationLang || 'bn-IN',
                 time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
               }
             }));

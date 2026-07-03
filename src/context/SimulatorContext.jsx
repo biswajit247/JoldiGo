@@ -956,8 +956,17 @@ export const SimulatorProvider = ({ children }) => {
     }
 
     const msgId = 'msg_' + Date.now();
+    const isBengaliOriginal = /[\u0980-\u09FF]/.test(text);
+    const originalLang = isBengaliOriginal ? 'bn-IN' : 'en-US';
+    const translationLang = isBengaliOriginal ? 'en-US' : 'bn-IN';
+
     const message = {
-      id: msgId, sender, text, translation,
+      id: msgId, 
+      sender, 
+      text, 
+      translation,
+      originalLang,
+      translationLang,
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
 
@@ -974,7 +983,9 @@ export const SimulatorProvider = ({ children }) => {
           receiverRole: sender === 'passenger' ? 'driver' : 'passenger',
           receiverId: sender === 'passenger' ? activeRide.driverId : activeRide.passengerPhone,
           text,
-          translation
+          translation,
+          originalLang,
+          translationLang
         }));
       }
     }
