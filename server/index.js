@@ -489,6 +489,8 @@ app.post('/api/admin/driver/verify', async (req, res) => {
       targetDriverWs.send(JSON.stringify({ type: 'verification_updated', status: nextStatus }));
     }
 
+    broadcastToAll({ type: 'ledger_update' });
+
     res.json({ success: true, driverId, status: nextStatus });
   } catch (err) {
     res.status(500).json({ error: 'Driver verification update failed.', details: err.message });
@@ -518,6 +520,22 @@ app.post('/api/admin/driver/payout', async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: 'Failed to process driver payout.', details: err.message });
   }
+});
+
+// Broadcast custom SMS/Push alert to all active simulators
+app.post('/api/admin/broadcast-notification', (req, res) => {
+  const { target, message } = req.body;
+  if (!message) return res.status(400).json({ error: 'Message content is required.' });
+
+  broadcastToAll({
+    type: 'system_broadcast',
+    target: target || 'all',
+    message,
+    timestamp: new Date().toLocaleTimeString()
+  });
+
+  console.log(`[BROADCAST DEPLOYED] Sent system-wide alert to ${target || 'all'}: "${message}"`);
+  res.json({ success: true, target, message });
 });
 
 // Get all claims (Pending & History)
