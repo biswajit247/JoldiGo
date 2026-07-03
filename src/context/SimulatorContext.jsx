@@ -303,7 +303,7 @@ export const SimulatorProvider = ({ children }) => {
           }
           break;
         case 'chat_receive':
-          setChatMessages(prev => [...prev, data.message]);
+          setChatMessages(prev => prev.some(m => m.id === data.message.id) ? prev : [...prev, data.message]);
           playSound('chat');
           break;
         case 'driver_location_broadcast':
@@ -344,7 +344,7 @@ export const SimulatorProvider = ({ children }) => {
           addLog(`Safety Claim Approved! Payout of ₹${data.amount} credited.`, 'success');
           break;
         case 'chat_receive':
-          setChatMessages(prev => [...prev, data.message]);
+          setChatMessages(prev => prev.some(m => m.id === data.message.id) ? prev : [...prev, data.message]);
           playSound('chat');
           break;
       }
