@@ -85,14 +85,14 @@ function App() {
       let saved = localStorage.getItem('joldigo_server_url');
       if (saved) {
         const normalized = saved.trim().replace(/\/$/, '');
-        if (normalized === 'http://localhost:5000' || normalized === 'http://localhost:5001' || normalized === 'https://full-vans-jog.loca.lt') {
-          localStorage.setItem('joldigo_server_url', 'https://polite-heads-chew.loca.lt');
-          saved = 'https://polite-heads-chew.loca.lt';
+        if (normalized === 'http://localhost:5000' || normalized === 'http://localhost:5001' || normalized === 'https://full-vans-jog.loca.lt' || normalized === 'https://polite-heads-chew.loca.lt') {
+          localStorage.setItem('joldigo_server_url', 'https://lovely-radios-glow.loca.lt');
+          saved = 'https://lovely-radios-glow.loca.lt';
         }
         return saved;
       }
     }
-    return 'https://polite-heads-chew.loca.lt';
+    return 'https://lovely-radios-glow.loca.lt';
   });
 
   const [viewMode, setViewMode] = useState('split');
