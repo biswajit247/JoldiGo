@@ -52,6 +52,7 @@ export default function PassengerApp({ isStandalone }) {
   const {
     drivers,
     geofence,
+    geofencingZones,
     activeRide,
     settings,
     passenger,
@@ -152,6 +153,7 @@ export default function PassengerApp({ isStandalone }) {
     dropoff: null,
     driver: null,
     geofencePolygon: null,
+    geofencePolygons: [],
     trafficCircles: [], 
     otherDrivers: [],
   });
@@ -225,6 +227,10 @@ export default function PassengerApp({ isStandalone }) {
     if (markersRef.current.pickup) map.removeLayer(markersRef.current.pickup);
     if (markersRef.current.dropoff) map.removeLayer(markersRef.current.dropoff);
     if (markersRef.current.driver) map.removeLayer(markersRef.current.driver);
+    if (markersRef.current.geofencePolygons) {
+      markersRef.current.geofencePolygons.forEach(p => map.removeLayer(p));
+    }
+    markersRef.current.geofencePolygons = [];
     if (markersRef.current.traveledPolyline) {
       map.removeLayer(markersRef.current.traveledPolyline);
       markersRef.current.traveledPolyline = null;
@@ -264,6 +270,30 @@ export default function PassengerApp({ isStandalone }) {
 
       markersRef.current.trafficCircles.push(circle);
     });
+
+    // Draw active geofencing zones
+    if (geofencingZones) {
+      geofencingZones.forEach(zone => {
+        if (zone.active) {
+          const color = zone.type === 'ban' ? '#ef4444' : '#f59e0b';
+          const fillOpacity = zone.type === 'ban' ? 0.15 : 0.08;
+          const poly = L.polygon(zone.points, {
+            color: color,
+            weight: 1.5,
+            fillColor: color,
+            fillOpacity: fillOpacity,
+            dashArray: '3, 5'
+          }).addTo(map);
+
+          const label = zone.type === 'ban' 
+            ? `<b>⛔ ${zone.name}</b><br/><span style="color:#ef4444;font-weight:bold;">SERVICE TEMPORARILY SUSPENDED</span>`
+            : `<b>⚡ ${zone.name}</b><br/><span style="color:#f59e0b;font-weight:bold;">Active Surge: ${zone.multiplier}x Surcharge</span>`;
+          poly.bindPopup(label);
+
+          markersRef.current.geofencePolygons.push(poly);
+        }
+      });
+    }
 
     const pickupIcon = L.divIcon({
       className: 'custom-map-marker pickup-marker',
@@ -360,7 +390,7 @@ export default function PassengerApp({ isStandalone }) {
         }
       });
     }
-  }, [activeRide, drivers, pickupKey, dropoffKey, tab, congestionZones]);
+  }, [activeRide, drivers, pickupKey, dropoffKey, tab, congestionZones, geofencingZones]);
 
   // Login handlers
   const handleSendOtp = async (e) => {

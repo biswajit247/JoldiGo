@@ -495,6 +495,53 @@ app.post('/api/admin/env/update', async (req, res) => {
   }
 });
 
+// Get active geofencing zones
+app.get('/api/geofence/zones', async (req, res) => {
+  try {
+    const dbRes = await query("SELECT value FROM system_settings WHERE key = 'GEOFENCING_ZONES'");
+    if (dbRes.rows.length > 0 && dbRes.rows[0].value) {
+      return res.json(JSON.parse(dbRes.rows[0].value));
+    }
+
+    // Default seeded zones
+    const defaultZones = [
+      { id: 'zone_airport', name: 'Kolkata CCU Airport Zone', points: [ [22.63, 88.42], [22.66, 88.45], [22.65, 88.47], [22.61, 88.43] ], type: 'surge', multiplier: 1.5, active: true },
+      { id: 'zone_howrah', name: 'Howrah Bridge VIP Restriction Zone', points: [ [22.58, 88.33], [22.59, 88.35], [22.57, 88.36], [22.56, 88.34] ], type: 'ban', multiplier: 1.0, active: false },
+      { id: 'zone_saltlake', name: 'Salt Lake IT Core Surge Zone', points: [ [22.56, 88.41], [22.58, 88.44], [22.56, 88.46], [22.54, 88.42] ], type: 'surge', multiplier: 1.3, active: true }
+    ];
+
+    // Persist default zones
+    await query(
+      "INSERT INTO system_settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = $2",
+      ['GEOFENCING_ZONES', JSON.stringify(defaultZones)]
+    );
+
+    res.json(defaultZones);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to retrieve geofence zones.', details: err.message });
+  }
+});
+
+// Update geofencing zones properties
+app.post('/api/admin/geofence/update', async (req, res) => {
+  const { zones } = req.body;
+  if (!zones) return res.status(400).json({ error: 'Zones configuration required.' });
+
+  try {
+    await query(
+      "INSERT INTO system_settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = $2",
+      ['GEOFENCING_ZONES', JSON.stringify(zones)]
+    );
+
+    // Broadcast update to all connected maps and passengers
+    broadcastToAll({ type: 'geofence_zones_updated', zones });
+
+    res.json({ success: true, zones });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update geofence zones.', details: err.message });
+  }
+});
+
 // Get operational ledger statistics
 app.get('/api/admin/stats', async (req, res) => {
   try {

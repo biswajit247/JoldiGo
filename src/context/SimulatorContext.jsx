@@ -95,6 +95,18 @@ export const isPointInPolygon = (point, polygon) => {
   return inside;
 };
 
+export const isPointInZone = (point, zonePoints) => {
+  if (!point || !zonePoints) return false;
+  // Convert [lat, lng] array format to [{ lat, lng }] format if needed
+  const formattedPolygon = zonePoints.map(pt => {
+    if (Array.isArray(pt)) {
+      return { lat: pt[0], lng: pt[1] };
+    }
+    return pt;
+  });
+  return isPointInPolygon(point, formattedPolygon);
+};
+
 const generateRoutePoints = (start, end, steps = 30) => {
   const points = [];
   for (let i = 0; i <= steps; i++) {
@@ -123,6 +135,11 @@ const getRouteCoordinates = async (start, end) => {
 export const SimulatorProvider = ({ children }) => {
   const [drivers, setDrivers] = useState([]);
   const [geofence, setGeofence] = useState(INITIAL_GEOFENCE);
+  const [geofencingZones, setGeofencingZones] = useState([
+    { id: 'zone_airport', name: 'Kolkata CCU Airport Zone', points: [ [22.63, 88.42], [22.66, 88.45], [22.65, 88.47], [22.61, 88.43] ], type: 'surge', multiplier: 1.5, active: true },
+    { id: 'zone_howrah', name: 'Howrah Bridge VIP Restriction Zone', points: [ [22.58, 88.33], [22.59, 88.35], [22.57, 88.36], [22.56, 88.34] ], type: 'ban', multiplier: 1.0, active: false },
+    { id: 'zone_saltlake', name: 'Salt Lake IT Core Surge Zone', points: [ [22.56, 88.41], [22.58, 88.44], [22.56, 88.46], [22.54, 88.42] ], type: 'surge', multiplier: 1.3, active: true }
+  ]);
   const [activeRide, setActiveRide] = useState(null);
   const [sosAlerts, setSosAlerts] = useState([]);
   const [logs, setLogs] = useState([]);
@@ -178,6 +195,13 @@ export const SimulatorProvider = ({ children }) => {
       const ledgerData = await ledgerRes.json();
       if (ledgerData.success) {
         setInsuranceReservePool(ledgerData.stats.safetyPoolBalance);
+      }
+
+      // Fetch dynamic geofencing zones
+      const geofenceRes = await fetch(`${api}/api/geofence/zones`);
+      const geofenceData = await geofenceRes.json();
+      if (Array.isArray(geofenceData)) {
+        setGeofencingZones(geofenceData);
       }
     } catch (err) {
       console.warn("Failed to connect to backend server. Operating in offline simulated mode.", err);
@@ -318,6 +342,9 @@ export const SimulatorProvider = ({ children }) => {
         case 'system_broadcast':
           triggerSmsToast(data.message, '⚠️ JoldiGo Control Room');
           break;
+        case 'geofence_zones_updated':
+          setGeofencingZones(data.zones);
+          break;
       }
     };
     passengerSocketRef.current = ws;
@@ -354,6 +381,9 @@ export const SimulatorProvider = ({ children }) => {
         case 'system_broadcast':
           triggerSmsToast(data.message, '⚠️ JoldiGo Control Room');
           break;
+        case 'geofence_zones_updated':
+          setGeofencingZones(data.zones);
+          break;
       }
     };
     driverSocketsRef.current[driverId] = ws;
@@ -384,6 +414,9 @@ export const SimulatorProvider = ({ children }) => {
           break;
         case 'system_broadcast':
           triggerSmsToast(data.message, '⚠️ Control Room Loopback');
+          break;
+        case 'geofence_zones_updated':
+          setGeofencingZones(data.zones);
           break;
       }
     };
@@ -677,7 +710,22 @@ export const SimulatorProvider = ({ children }) => {
     else if (settings.weather === 'waterlogged') weatherMultiplier = 1.25;
 
     const baseSurge = isNightMode ? 1.20 : 1.00;
-    const finalSurgeMultiplier = parseFloat(Math.min(1.50, Math.max(baseSurge, settings.surgeMultiplier) * trafficMultiplier * weatherMultiplier).toFixed(2));
+    
+    // Geofencing Surge Zones checks
+    let geofenceSurgeMultiplier = 1.0;
+    if (pickup && dropoff) {
+      geofencingZones.forEach(zone => {
+        if (zone.active && zone.type === 'surge') {
+          const isPickupInZone = isPointInZone(pickup, zone.points);
+          const isDropoffInZone = isPointInZone(dropoff, zone.points);
+          if (isPickupInZone || isDropoffInZone) {
+            geofenceSurgeMultiplier = Math.max(geofenceSurgeMultiplier, zone.multiplier);
+          }
+        }
+      });
+    }
+
+    const finalSurgeMultiplier = parseFloat(Math.min(2.50, Math.max(baseSurge, settings.surgeMultiplier) * trafficMultiplier * weatherMultiplier * geofenceSurgeMultiplier).toFixed(2));
     const grossBaseRideFare = parseFloat((baseRideFareBeforeSurge * finalSurgeMultiplier).toFixed(2));
     
     const gstAmount = parseFloat((grossBaseRideFare * 0.05).toFixed(2));
@@ -722,6 +770,20 @@ export const SimulatorProvider = ({ children }) => {
     if (!isPointInPolygon(pickup, geofence) || !isPointInPolygon(dropoff, geofence)) {
       alert("Service Unavailable: Locations lie outside Operational Geofences.");
       return;
+    }
+
+    // Geofencing active ban zones check
+    if (pickup && dropoff) {
+      for (const zone of geofencingZones) {
+        if (zone.active && zone.type === 'ban') {
+          const isPickupInZone = isPointInZone(pickup, zone.points);
+          const isDropoffInZone = isPointInZone(dropoff, zone.points);
+          if (isPickupInZone || isDropoffInZone) {
+            alert(`Booking Rejected: The location falls inside a restricted security geofence: "${zone.name}". Service is temporarily suspended in this sector.`);
+            return;
+          }
+        }
+      }
     }
 
     const dist = calculateDistance(pickup.lat, pickup.lng, dropoff.lat, dropoff.lng);
@@ -1156,11 +1218,31 @@ export const SimulatorProvider = ({ children }) => {
     }
   };
 
+  const updateGeofencingZones = async (updatedZones) => {
+    try {
+      const { api } = getServerEndpoints();
+      const res = await fetch(`${api}/api/admin/geofence/update`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ zones: updatedZones })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setGeofencingZones(data.zones);
+        addLog("Geofencing operational zones updated and synchronized.", "info");
+      }
+    } catch (err) {
+      console.error("Failed to update geofence zones:", err);
+    }
+  };
+
   return (
     <SimulatorContext.Provider
       value={{
         drivers,
         geofence,
+        geofencingZones,
+        updateGeofencingZones,
         activeRide,
         sosAlerts,
         settings,

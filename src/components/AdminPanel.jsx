@@ -41,6 +41,8 @@ export default function AdminPanel() {
     broadcastNotification,
     updateSettings,
     updateGeofence,
+    geofencingZones,
+    updateGeofencingZones,
     resolveSOS,
     resolveDispute,
     fastForwardDisputeSla,
@@ -99,6 +101,11 @@ export default function AdminPanel() {
     trafficCircles: [], // Keep track of traffic overlays
   });
 
+  // Geofence map elements
+  const geofenceMapContainerRef = useRef(null);
+  const geofenceMapRef = useRef(null);
+  const geofencePolygonsRef = useRef({});
+
   // Sync settings inputs with global settings changes
   useEffect(() => {
     setBaseFareCarAC(settings.baseFareCarAC || 50);
@@ -152,6 +159,68 @@ export default function AdminPanel() {
       }
     };
   }, [activeTab, geofence]);
+
+  // Geofence Map Initialization & Redraw Hook
+  useEffect(() => {
+    if (activeTab !== 'geofence' || !geofenceMapContainerRef.current) return;
+
+    // 1. Initialize Map instance
+    const map = L.map(geofenceMapContainerRef.current, {
+      zoomControl: true,
+      attributionControl: false,
+    }).setView([22.5726, 88.3639], 12);
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+    geofenceMapRef.current = map;
+
+    // 2. Draw standard geofence boundary (green dash polygon)
+    const geofenceCoords = geofence.map(c => [c.lat, c.lng]);
+    L.polygon(geofenceCoords, {
+      color: '#22c55e',
+      weight: 1.5,
+      fillColor: '#22c55e',
+      fillOpacity: 0.02,
+      dashArray: '5, 5'
+    }).addTo(map).bindPopup("<b>Standard Operational boundary</b>");
+
+    // 3. Draw active/inactive geofencing zones
+    const zonePolygons = {};
+    geofencingZones.forEach(zone => {
+      const color = zone.type === 'ban' ? '#ef4444' : '#f59e0b';
+      const fillOpacity = zone.active ? (zone.type === 'ban' ? 0.20 : 0.12) : 0.02;
+      const weight = zone.active ? 2.0 : 1.0;
+      const dashArray = zone.active ? '' : '3, 6';
+
+      const poly = L.polygon(zone.points, {
+        color: color,
+        weight: weight,
+        fillColor: color,
+        fillOpacity: fillOpacity,
+        dashArray: dashArray
+      }).addTo(map);
+
+      // Tooltip label
+      const label = `
+        <div style="font-family:sans-serif;font-size:11px;color:#fff;">
+          <b style="font-size:12px;color:${color}">${zone.name}</b><br/>
+          Type: <b>${zone.type.toUpperCase()}</b><br/>
+          Status: <b style="color:${zone.active ? '#22c55e' : '#9ca3af'}">${zone.active ? 'ACTIVE' : 'INACTIVE'}</b><br/>
+          ${zone.type === 'surge' ? `Surge Rate: <b>${zone.multiplier}x</b>` : 'Ride dispatch suspended'}
+        </div>
+      `;
+      poly.bindPopup(label);
+      zonePolygons[zone.id] = poly;
+    });
+    geofencePolygonsRef.current = zonePolygons;
+
+    // Cleanup on unmount or tab change
+    return () => {
+      if (geofenceMapRef.current) {
+        geofenceMapRef.current.remove();
+        geofenceMapRef.current = null;
+      }
+    };
+  }, [activeTab, geofencingZones, geofence]);
 
   // Update Map Markers (including dynamic SOS police dispatches and congestion zones)
   useEffect(() => {
@@ -1230,55 +1299,104 @@ export default function AdminPanel() {
 
           {/* TAB 4: GEOFENCING ZONES */}
           {activeTab === 'geofence' && (
-            <div className="admin-tab-content">
+            <div className="admin-tab-content flex flex-col gap-4">
               <div className="section-title-flex">
-                <h3>Geofencing Boundaries Manager</h3>
-                <p className="text-gray-400 text-sm">Draw dynamic bounds to toggle operating territories in Kolkata.</p>
+                <div>
+                  <h3 className="text-lg font-bold text-white">Geofencing & Dynamic Surge Zones Manager</h3>
+                  <p className="text-gray-400 text-xs mt-0.5">Control active operational territories, dynamic pricing zones, and restricted flight security blockades in real-time.</p>
+                </div>
               </div>
 
-              <div className="geofence-layout mt-3">
-                <div className="geofence-controls card-glow p-4">
-                  <h4>Operational Territory Controls</h4>
-                  <p className="text-xs text-gray-400 mt-1">Restrict where rides can be booked or started.</p>
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch min-h-[480px]">
+                {/* Geofence Zones Controls Column (Left) */}
+                <div className="lg:col-span-5 flex flex-col gap-4 flex-1">
+                  <div className="card-glow p-4 flex flex-col gap-3">
+                    <h4 className="text-sm font-bold text-gray-200">Active Geofencing Polygons</h4>
+                    <p className="text-[11px] text-gray-500">Toggle zones to alter ride dispatch pricing or temporarily suspend bookings in specific sectors.</p>
+                    
+                    <div className="flex flex-col gap-3 mt-1">
+                      {geofencingZones.map((zone) => {
+                        const isBan = zone.type === 'ban';
+                        const themeColor = isBan ? 'border-red-500/20 bg-red-950/10' : 'border-amber-500/20 bg-amber-950/10';
+                        const nameColor = isBan ? 'text-red-400' : 'text-amber-400';
+                        return (
+                          <div key={zone.id} className={`border rounded-xl p-3 flex flex-col gap-2 transition-all ${themeColor}`}>
+                            <div className="flex items-center justify-between">
+                              <span className={`text-xs font-semibold ${nameColor}`}>{zone.name}</span>
+                              <button 
+                                onClick={async () => {
+                                  const updated = geofencingZones.map(z => z.id === zone.id ? { ...z, active: !z.active } : z);
+                                  await updateGeofencingZones(updated);
+                                }}
+                                className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider transition-all ${
+                                  zone.active 
+                                    ? 'bg-green-600/20 text-green-400 border border-green-500/30' 
+                                    : 'bg-white/5 text-gray-400 border border-white/10'
+                                }`}
+                              >
+                                {zone.active ? 'Active' : 'Inactive'}
+                              </button>
+                            </div>
 
-                  <div className="preset-buttons-col mt-4">
-                    <button className="btn-secondary full-width text-left justify-between" onClick={() => handleGeofencePreset('default')}>
-                      <span>Kolkata Standard Core (Default)</span>
-                      <span className="text-xs text-gray-500">4 Coordinates</span>
-                    </button>
+                            <div className="flex items-center justify-between text-[11px] text-gray-400">
+                              <span>Type: <b className="uppercase">{zone.type}</b></span>
+                              <span>Coordinates: <b>{zone.points.length} vertices</b></span>
+                            </div>
 
-                    <button className="btn-secondary full-width text-left justify-between mt-2" onClick={() => handleGeofencePreset('strict')}>
-                      <span>Contract: Park Street & Victoria (Strict)</span>
-                      <span className="text-xs text-yellow-500">Tight Core</span>
-                    </button>
-
-                    <button className="btn-secondary full-width text-left justify-between mt-2" onClick={() => handleGeofencePreset('expanded')}>
-                      <span>Expand: Salt Lake & CCU Airport (Broad)</span>
-                      <span className="text-xs text-green-500">Broad Coverage</span>
-                    </button>
+                            {zone.type === 'surge' && zone.active && (
+                              <div className="flex flex-col gap-1 mt-1 border-t border-white/5 pt-2">
+                                <div className="flex justify-between text-[10px] text-gray-400">
+                                  <span>Zone Surge Surcharge Rate:</span>
+                                  <span className="font-bold text-amber-400">{zone.multiplier}x</span>
+                                </div>
+                                <input 
+                                  type="range"
+                                  min="1.0"
+                                  max="2.2"
+                                  step="0.1"
+                                  value={zone.multiplier}
+                                  onChange={async (e) => {
+                                    const val = parseFloat(e.target.value);
+                                    const updated = geofencingZones.map(z => z.id === zone.id ? { ...z, multiplier: val } : z);
+                                    await updateGeofencingZones(updated);
+                                  }}
+                                  className="w-full h-1 bg-black/40 rounded-lg appearance-none cursor-pointer accent-amber-500"
+                                />
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
 
-                  <div className="polygon-points-list mt-4">
-                    <h5 className="font-semibold text-xs text-gray-400 uppercase tracking-wider">Active Boundary Polygon</h5>
-                    <div className="poly-list-box mt-2">
-                      {geofence.map((pt, idx) => (
-                        <div key={idx} className="poly-point-row font-mono text-xs text-gray-300">
-                          <span>Point {idx + 1}:</span>
-                          <span>{pt.lat.toFixed(5)}, {pt.lng.toFixed(5)}</span>
-                        </div>
-                      ))}
+                  <div className="card-glow p-4 flex flex-col gap-2">
+                    <h5 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Territory Guidelines</h5>
+                    <div className="flex flex-col gap-1.5 text-[10px] text-gray-500">
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                        <span><b>Green Dash:</b> Operational base limits (Kolkata Municipal)</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                        <span><b>Amber Solid:</b> Surcharge region (multiplies base ride fares)</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-red-500"></span>
+                        <span><b>Red Solid:</b> Dispatch embargo (bookings strictly banned)</span>
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="geofence-preview-card card-glow">
-                  <div className="info-alert text-xs mb-2 text-center text-gray-400">
-                    💡 The Passenger App queries this boundary in real-time before matches are allowed.
-                  </div>
-                  <div className="map-placeholder-text">
-                    <Map size={32} className="text-amber-500" />
-                    <span className="font-semibold mt-2">Geofence Boundary Activated</span>
-                    <span className="text-xs text-gray-400">Map displays orange boundary constraints during simulation.</span>
+                {/* Leaflet Map Preview Column (Right) */}
+                <div className="lg:col-span-7 flex flex-col flex-1 h-[480px]">
+                  <div className="card-glow p-2 flex flex-col flex-1 relative h-full">
+                    <div 
+                      ref={geofenceMapContainerRef} 
+                      className="w-full h-full rounded-lg border border-white/5 overflow-hidden" 
+                      style={{ minHeight: '460px', zIndex: 1 }}
+                    />
                   </div>
                 </div>
               </div>
