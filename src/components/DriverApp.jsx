@@ -82,23 +82,6 @@ export default function DriverApp({ isStandalone }) {
 
   const currentDriver = drivers.find((d) => d.id === selectedDriverId) || drivers[0];
 
-  if (!currentDriver) {
-    return (
-      <div className="driver-dashboard" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: '400px', backgroundColor: '#0d0d0d', color: '#888', padding: '24px', textAlign: 'center' }}>
-        <div style={{ width: '40px', height: '40px', border: '3px solid #ffdd00', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite', marginBottom: '16px' }}></div>
-        <h4 style={{ color: '#fff', margin: '0 0 8px 0', fontSize: '14px', fontWeight: 'bold' }}>📡 Connecting to JoldiGo Backend Services</h4>
-        <p style={{ margin: '0 0 16px 0', fontSize: '11px', lineHeight: '1.5' }}>
-          Waiting for active driver profile. Make sure your local Express server is running on port 5001 or set the correct address in the Cockpit header.
-        </p>
-        <style>{`
-          @keyframes spin {
-            to { transform: rotate(360deg); }
-          }
-        `}</style>
-      </div>
-    );
-  }
-
   // Scroll chat drawer to bottom on new messages
   useEffect(() => {
     if (showChat && chatEndRef.current) {
@@ -115,7 +98,7 @@ export default function DriverApp({ isStandalone }) {
 
   // Leaflet Map Initialization
   useEffect(() => {
-    if (!mapContainerRef.current) return;
+    if (!mapContainerRef.current || !currentDriver) return;
 
     const map = L.map(mapContainerRef.current, {
       zoomControl: false,
@@ -132,12 +115,12 @@ export default function DriverApp({ isStandalone }) {
         mapRef.current = null;
       }
     };
-  }, [selectedDriverId, currentDriver.verificationStatus, currentDriver.status]);
+  }, [selectedDriverId, currentDriver?.verificationStatus, currentDriver?.status]);
 
   // Update map markers reactively
   useEffect(() => {
     const map = mapRef.current;
-    if (!map) return;
+    if (!map || !currentDriver) return;
 
     if (markersRef.current.driver) map.removeLayer(markersRef.current.driver);
     if (markersRef.current.pickup) map.removeLayer(markersRef.current.pickup);
@@ -185,12 +168,12 @@ export default function DriverApp({ isStandalone }) {
         }).addTo(map);
       }
     }
-  }, [activeRide, currentDriver.location, selectedDriverId]);
+  }, [activeRide, currentDriver, selectedDriverId]);
 
   // Handle doc upload form
   const handleOnboardingSubmit = (e) => {
     e.preventDefault();
-    if (!licenseInput || !aadharInput || !rcInput) {
+    if (!licenseInput || !aadharInput || !rcInput || !currentDriver) {
       alert('Please fill out all document fields.');
       return;
     }
@@ -224,7 +207,7 @@ export default function DriverApp({ isStandalone }) {
 
   // Determine current active navigation details
   const getNavText = () => {
-    if (!activeRide || activeRide.driverId !== currentDriver.id) return '';
+    if (!activeRide || !currentDriver || activeRide.driverId !== currentDriver.id) return '';
     if (activeRide.status === 'accepted') {
       return `Navigate to Pickup: ${activeRide.pickup.name}`;
     }
@@ -241,7 +224,7 @@ export default function DriverApp({ isStandalone }) {
   };
 
   // Get disputes specific to this simulated driver
-  const driverDisputes = disputes.filter(d => d.driverId === currentDriver.id);
+  const driverDisputes = disputes.filter(d => d.driverId === currentDriver?.id);
 
   const getVehicleLabel = (type) => {
     if (type === 'car_ac') return '4-Wheeler AC';
@@ -251,6 +234,23 @@ export default function DriverApp({ isStandalone }) {
 
   // Check if passenger sent a message recently while driver chat is closed
   const hasUnreadMessages = chatMessages.some(m => m.sender === 'passenger') && !showChat;
+
+  if (!currentDriver) {
+    return (
+      <div className="driver-dashboard" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: '400px', backgroundColor: '#0d0d0d', color: '#888', padding: '24px', textAlign: 'center' }}>
+        <div style={{ width: '40px', height: '40px', border: '3px solid #ffdd00', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite', marginBottom: '16px' }}></div>
+        <h4 style={{ color: '#fff', margin: '0 0 8px 0', fontSize: '14px', fontWeight: 'bold' }}>📡 Connecting to JoldiGo Backend Services</h4>
+        <p style={{ margin: '0 0 16px 0', fontSize: '11px', lineHeight: '1.5' }}>
+          Waiting for active driver profile. Make sure your local Express server is running on port 5001 or set the correct address in the Cockpit header.
+        </p>
+        <style>{`
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+        `}</style>
+      </div>
+    );
+  }
 
   return (
     <div className="mobile-phone-frame driver-theme">
