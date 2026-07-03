@@ -11,25 +11,60 @@ import { fileURLToPath } from 'url';
 
 dotenv.config({ path: fileURLToPath(new URL('./.env', import.meta.url)) });
 
-// Initialize Twilio client if keys exist in environment
-const twilioSid = process.env.TWILIO_ACCOUNT_SID;
-const twilioAuthToken = process.env.TWILIO_AUTH_TOKEN;
+// Initialize client references
 let twilioPhoneNumber = process.env.TWILIO_PHONE_NUMBER;
 let twilioClient = null;
-if (twilioSid && twilioAuthToken) {
-  twilioClient = twilio(twilioSid, twilioAuthToken);
-}
-
-// Initialize Razorpay client if keys exist in environment
-const razorpayKeyId = process.env.RAZORPAY_KEY_ID;
-const razorpayKeySecret = process.env.RAZORPAY_KEY_SECRET;
 let razorpay = null;
-if (razorpayKeyId && razorpayKeySecret) {
-  razorpay = new Razorpay({
-    key_id: razorpayKeyId,
-    key_secret: razorpayKeySecret
-  });
-}
+
+const initClients = () => {
+  const twilioSid = process.env.TWILIO_ACCOUNT_SID;
+  const twilioAuthToken = process.env.TWILIO_AUTH_TOKEN;
+  twilioPhoneNumber = process.env.TWILIO_PHONE_NUMBER;
+
+  if (twilioSid && twilioAuthToken) {
+    twilioClient = twilio(twilioSid, twilioAuthToken);
+    console.log("[Clients Init] Twilio client initialized successfully.");
+  } else {
+    twilioClient = null;
+  }
+
+  const rzpId = process.env.RAZORPAY_KEY_ID;
+  const rzpSecret = process.env.RAZORPAY_KEY_SECRET;
+  if (rzpId && rzpSecret) {
+    razorpay = new Razorpay({
+      key_id: rzpId,
+      key_secret: rzpSecret
+    });
+    console.log("[Clients Init] Razorpay client initialized successfully.");
+  } else {
+    razorpay = null;
+  }
+};
+
+// Load persisted settings from database and initialize clients
+const loadPersistedSettings = async () => {
+  try {
+    await query(`
+      CREATE TABLE IF NOT EXISTS system_settings (
+        key VARCHAR(255) PRIMARY KEY,
+        value TEXT
+      )
+    `);
+
+    const res = await query("SELECT * FROM system_settings");
+    res.rows.forEach(row => {
+      if (row.value) {
+        process.env[row.key] = row.value;
+      }
+    });
+    console.log("[Settings Loader] Loaded persisted configurations from database.");
+  } catch (err) {
+    console.warn("[Settings Loader] Could not load persisted configurations from database:", err.message);
+  }
+  initClients();
+};
+
+loadPersistedSettings();
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -411,6 +446,22 @@ app.post('/api/admin/env/update', async (req, res) => {
     if (nextRzpSecret) envLines.push(`RAZORPAY_KEY_SECRET=${nextRzpSecret}`);
     
     fs.writeFileSync(envPath, envLines.join('\n'), 'utf-8');
+
+    // Save to Postgres settings table for persistence across restarts
+    const saveKey = async (k, v) => {
+      if (v) {
+        await query(
+          "INSERT INTO system_settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = $2",
+          [k, v]
+        );
+      }
+    };
+    await saveKey('DATABASE_URL', nextDb);
+    await saveKey('TWILIO_ACCOUNT_SID', nextTwilioSid);
+    await saveKey('TWILIO_AUTH_TOKEN', nextTwilioAuthToken);
+    await saveKey('TWILIO_PHONE_NUMBER', nextTwilioPhone);
+    await saveKey('RAZORPAY_KEY_ID', nextRzpId);
+    await saveKey('RAZORPAY_KEY_SECRET', nextRzpSecret);
     
     // Explicitly overwrite process.env variables in-memory (dotenv.config does not overwrite already loaded keys)
     if (nextDb) process.env.DATABASE_URL = nextDb;
