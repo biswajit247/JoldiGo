@@ -2,6 +2,8 @@
 
 JoldiGo (joldigo.in) is a legally compliant, transparent ride-hailing cockpit simulation tailored for Kolkata. This platform shifts the traditional aggregator power dynamic from hidden pricing algorithms to transparently negotiated fare contracts.
 
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/biswajit247/JoldiGo)
+
 ---
 
 ## 🚀 Key Modules & Compliance Features

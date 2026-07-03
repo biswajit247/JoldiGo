@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: joldigo-backend
+    env: node
+    plan: free
+    rootDir: server
+    buildCommand: npm install
+    startCommand: node index.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
