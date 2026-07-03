@@ -56,6 +56,10 @@ export default function AdminPanel() {
 
   const [activeTab, setActiveTab] = useState('dashboard'); 
   const [selectedDriverForDoc, setSelectedDriverForDoc] = useState(null);
+  const [selectedDocTab, setSelectedDocTab] = useState('license');
+  const [dlChecked, setDlChecked] = useState(false);
+  const [aadharChecked, setAadharChecked] = useState(false);
+  const [rcChecked, setRcChecked] = useState(false);
 
   // Form states for settings
   const [baseFareCarAC, setBaseFareCarAC] = useState(settings.baseFareCarAC || 50);
@@ -102,6 +106,14 @@ export default function AdminPanel() {
   useEffect(() => {
     setLocalFuelPrices(fuelPrices);
   }, [fuelPrices]);
+
+  // Reset compliance checklist for new documents review session
+  useEffect(() => {
+    setDlChecked(false);
+    setAadharChecked(false);
+    setRcChecked(false);
+    setSelectedDocTab('license');
+  }, [selectedDriverForDoc]);
 
   // Leaflet Map Initialization
   useEffect(() => {
@@ -743,36 +755,215 @@ export default function AdminPanel() {
                       <button className="close-modal-btn" onClick={() => setSelectedDriverForDoc(null)}>×</button>
                     </div>
 
-                    <div className="modal-body-content mt-3">
-                      <p className="text-gray-400 text-sm mb-4">
-                        Reviewing files for partner applicant: <b>{selectedDriverForDoc.name}</b>
+                    <div className="modal-body-content mt-3 text-left">
+                      <p className="text-gray-400 text-xs mb-3">
+                        Applicant Name: <span className="text-white font-semibold">{selectedDriverForDoc.name}</span>
                       </p>
 
-                      <div className="doc-preview-stacked">
-                        <div className="doc-item">
-                          <label>Driving License (DL)</label>
-                          <div className="doc-value-box font-mono">{selectedDriverForDoc.documents?.license}</div>
-                        </div>
+                      {/* Mock Scans Tabs */}
+                      <div className="flex gap-1 mb-3 border-b border-white/10 pb-1 text-[11px]">
+                        <button 
+                          className={`px-3 py-1 font-bold rounded-t-lg transition-all ${
+                            selectedDocTab === 'license' 
+                              ? 'bg-blue-600/20 text-blue-400 border-b-2 border-blue-500' 
+                              : 'text-gray-400 hover:text-white hover:bg-white/5'
+                          }`}
+                          onClick={() => setSelectedDocTab('license')}
+                        >
+                          🪪 Driving License
+                        </button>
+                        <button 
+                          className={`px-3 py-1 font-bold rounded-t-lg transition-all ${
+                            selectedDocTab === 'aadhar' 
+                              ? 'bg-emerald-600/20 text-emerald-400 border-b-2 border-emerald-500' 
+                              : 'text-gray-400 hover:text-white hover:bg-white/5'
+                          }`}
+                          onClick={() => setSelectedDocTab('aadhar')}
+                        >
+                          🇮🇳 Aadhar Card
+                        </button>
+                        <button 
+                          className={`px-3 py-1 font-bold rounded-t-lg transition-all ${
+                            selectedDocTab === 'rc' 
+                              ? 'bg-fuchsia-600/20 text-fuchsia-400 border-b-2 border-fuchsia-500' 
+                              : 'text-gray-400 hover:text-white hover:bg-white/5'
+                          }`}
+                          onClick={() => setSelectedDocTab('rc')}
+                        >
+                          📄 Vehicle RC
+                        </button>
+                      </div>
 
-                        <div className="doc-item mt-2">
-                          <label>Aadhar Identity No.</label>
-                          <div className="doc-value-box font-mono">{selectedDriverForDoc.documents?.aadhar}</div>
-                        </div>
+                      {/* Mock Scan Display Box */}
+                      <div className="flex justify-center mb-4 p-2 bg-black/40 rounded-xl border border-white/5">
+                        {selectedDocTab === 'license' && (
+                          <div className="w-full max-w-[320px] p-4 rounded-xl relative overflow-hidden" style={{
+                            background: 'linear-gradient(135deg, #1e293b, #0f172a)',
+                            border: '1.5px solid #3b82f6',
+                            color: '#fff',
+                            aspectRatio: '1.586',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'space-between',
+                            boxShadow: '0 8px 16px rgba(0,0,0,0.4)'
+                          }}>
+                            <div className="flex justify-between items-start">
+                              <div className="text-left">
+                                <span className="text-[7px] uppercase tracking-wider text-blue-400 block font-bold">UNION OF INDIA</span>
+                                <span className="text-[10px] font-bold text-white block">DRIVING LICENSE</span>
+                              </div>
+                              <span className="text-[7px] bg-blue-500/20 text-blue-300 font-bold px-1.5 py-0.5 rounded border border-blue-500/30">WEST BENGAL</span>
+                            </div>
 
-                        <div className="doc-item mt-2">
-                          <label>Vehicle Registration Book (RC)</label>
-                          <div className="doc-value-box font-mono">{selectedDriverForDoc.documents?.rc}</div>
+                            <div className="flex gap-3 my-2 items-center">
+                              <div className="w-10 h-12 bg-gray-800 rounded border border-gray-700 flex items-center justify-center text-xl flex-shrink-0">
+                                {selectedDriverForDoc.avatar || '👤'}
+                              </div>
+                              <div className="flex-1 text-left">
+                                <span className="text-[7px] text-gray-400 block">Name / नाम:</span>
+                                <span className="text-[9px] font-bold block">{selectedDriverForDoc.name}</span>
+                                <span className="text-[7px] text-gray-400 block mt-1">License No:</span>
+                                <span className="text-[9px] font-mono font-bold block text-blue-400">{selectedDriverForDoc.documents?.license || 'N/A'}</span>
+                              </div>
+                            </div>
+
+                            <div className="flex justify-between items-center text-[7px] text-gray-400 border-t border-gray-800 pt-1">
+                              <span>Class: LMV, MCWG</span>
+                              <span>Auth: WB RTO KOLKATA</span>
+                            </div>
+                          </div>
+                        )}
+
+                        {selectedDocTab === 'aadhar' && (
+                          <div className="w-full max-w-[320px] p-4 rounded-xl relative overflow-hidden" style={{
+                            background: 'linear-gradient(135deg, #f8fafc, #f1f5f9)',
+                            border: '1.5px solid #22c55e',
+                            color: '#0f172a',
+                            aspectRatio: '1.586',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'space-between',
+                            boxShadow: '0 8px 16px rgba(0,0,0,0.4)'
+                          }}>
+                            <div className="flex justify-between items-center border-b border-gray-200 pb-1">
+                              <span className="text-[7px] font-bold text-red-600">भारत सरकार / Govt of India</span>
+                              <span className="text-[7px] font-bold text-emerald-600">AADHAR CARD</span>
+                            </div>
+
+                            <div className="flex gap-3 my-2 items-center">
+                              <div className="w-10 h-12 bg-gray-200 rounded border border-gray-300 flex items-center justify-center text-xl flex-shrink-0">
+                                {selectedDriverForDoc.avatar || '👤'}
+                              </div>
+                              <div className="flex-1 text-left">
+                                <span className="text-[7px] text-gray-500 block">Name:</span>
+                                <span className="text-[9px] font-bold block text-gray-900">{selectedDriverForDoc.name}</span>
+                                <span className="text-[7px] text-gray-500 block mt-1">Aadhar Number:</span>
+                                <span className="text-[11px] font-mono font-bold block text-gray-900 tracking-wider text-left">
+                                  {selectedDriverForDoc.documents?.aadhar || 'N/A'}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="flex justify-between items-center text-[7px] text-gray-500 border-t border-gray-200 pt-1">
+                              <span>mera aadhar, meri pehchan</span>
+                              <span className="font-bold text-red-600 font-mono">UIDAI</span>
+                            </div>
+                          </div>
+                        )}
+
+                        {selectedDocTab === 'rc' && (
+                          <div className="w-full max-w-[320px] p-4 rounded-xl relative overflow-hidden" style={{
+                            background: 'linear-gradient(135deg, #1e1b4b, #311042)',
+                            border: '1.5px solid #d946ef',
+                            color: '#fff',
+                            aspectRatio: '1.586',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'space-between',
+                            boxShadow: '0 8px 16px rgba(0,0,0,0.4)'
+                          }}>
+                            <div className="flex justify-between items-start">
+                              <div className="text-left">
+                                <span className="text-[7px] uppercase tracking-wider text-fuchsia-400 block font-bold">STATE OF WEST BENGAL</span>
+                                <span className="text-[10px] font-bold text-white block">REGISTRATION CERTIFICATE</span>
+                              </div>
+                              <span className="text-[7px] bg-fuchsia-500/20 text-fuchsia-300 font-bold px-1.5 py-0.5 rounded border border-fuchsia-500/30">FORM 23</span>
+                            </div>
+
+                            <div className="my-2 text-left">
+                              <div className="grid grid-cols-2 gap-x-2 gap-y-1">
+                                <div>
+                                  <span className="text-[6px] text-gray-400 block">Reg. Number:</span>
+                                  <span className="text-[8px] font-mono font-bold text-fuchsia-300">{selectedDriverForDoc.documents?.rc || 'N/A'}</span>
+                                </div>
+                                <div>
+                                  <span className="text-[6px] text-gray-400 block">Owner:</span>
+                                  <span className="text-[8px] font-bold text-white">{selectedDriverForDoc.name}</span>
+                                </div>
+                                <div>
+                                  <span className="text-[6px] text-gray-400 block">Vehicle Class:</span>
+                                  <span className="text-[8px] font-bold text-white capitalize">{selectedDriverForDoc.vehicleType}</span>
+                                </div>
+                                <div>
+                                  <span className="text-[6px] text-gray-400 block">Maker/Model:</span>
+                                  <span className="text-[8px] font-bold text-white">{selectedDriverForDoc.vehicleName}</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex justify-between items-center text-[7px] text-gray-400 border-t border-gray-800 pt-1">
+                              <span>Issued: RTO WEST BENGAL</span>
+                              <span>Fuel: PETROL/CNG</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Compliance Checklist */}
+                      <div className="kyc-checklist bg-black/30 border border-white/5 rounded-lg p-3">
+                        <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block mb-2">Legal Compliance Checklist</span>
+                        
+                        <div className="flex flex-col gap-2">
+                          <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
+                            <input 
+                              type="checkbox" 
+                              checked={dlChecked} 
+                              onChange={(e) => setDlChecked(e.target.checked)} 
+                              className="w-3.5 h-3.5 accent-amber-500"
+                            />
+                            <span>Driving License matches West Bengal transport directives.</span>
+                          </label>
+
+                          <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
+                            <input 
+                              type="checkbox" 
+                              checked={aadharChecked} 
+                              onChange={(e) => setAadharChecked(e.target.checked)} 
+                              className="w-3.5 h-3.5 accent-amber-500"
+                            />
+                            <span>Aadhar No. matches national biometric records (UIDAI).</span>
+                          </label>
+
+                          <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
+                            <input 
+                              type="checkbox" 
+                              checked={rcChecked} 
+                              onChange={(e) => setRcChecked(e.target.checked)} 
+                              className="w-3.5 h-3.5 accent-amber-500"
+                            />
+                            <span>Vehicle Registration (RC) matches active insurance pool.</span>
+                          </label>
                         </div>
                       </div>
 
-                      <div className="kyc-disclaimer mt-4 p-3 bg-amber-500/10 border border-amber-500/20 text-xs rounded text-amber-300">
-                        🛡️ By approving, you verify that these mock details comply with the West Bengal aggregators guidelines.
+                      <div className="kyc-disclaimer mt-3 p-2 bg-amber-500/10 border border-amber-500/20 text-[10px] rounded text-amber-300">
+                        🛡️ Approve partner only if all cards match West Bengal aggregators guidelines.
                       </div>
                     </div>
 
-                    <div className="modal-footer-actions mt-4">
+                    <div className="modal-footer-actions mt-4 flex gap-2">
                       <button 
-                        className="btn-modal-reject"
+                        className="btn-modal-reject flex-1 py-2 bg-red-600/10 hover:bg-red-600/20 border border-red-500/30 text-red-400 font-semibold rounded-lg text-xs transition-all"
                         onClick={() => {
                           verifyDriverStatus(selectedDriverForDoc.id, false);
                           setSelectedDriverForDoc(null);
@@ -781,11 +972,19 @@ export default function AdminPanel() {
                         Reject Documents
                       </button>
                       <button 
-                        className="btn-modal-approve"
+                        className={`flex-1 py-2 font-semibold rounded-lg text-xs transition-all border ${
+                          (dlChecked && aadharChecked && rcChecked)
+                            ? 'bg-amber-500 border-amber-600 text-black hover:bg-amber-400 cursor-pointer'
+                            : 'bg-gray-800 border-gray-700 text-gray-500 cursor-not-allowed'
+                        }`}
                         onClick={() => {
-                          verifyDriverStatus(selectedDriverForDoc.id, true);
-                          setSelectedDriverForDoc(null);
+                          if (dlChecked && aadharChecked && rcChecked) {
+                            verifyDriverStatus(selectedDriverForDoc.id, true);
+                            setSelectedDriverForDoc(null);
+                          }
                         }}
+                        disabled={!(dlChecked && aadharChecked && rcChecked)}
+                        title={!(dlChecked && aadharChecked && rcChecked) ? "Please check all compliance ticks first" : "Authorize Driver Account"}
                       >
                         Approve Partner Account
                       </button>
