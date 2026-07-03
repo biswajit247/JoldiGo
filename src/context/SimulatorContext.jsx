@@ -146,6 +146,7 @@ export const SimulatorProvider = ({ children }) => {
   const [disputes, setDisputes] = useState([]);
   const [chatMessages, setChatMessages] = useState([]);
   const [safetyClaims, setSafetyClaims] = useState([]);
+  const [fraudAlerts, setFraudAlerts] = useState([]);
 
   // Server state parameters
   const [fuelPrices, setFuelPrices] = useState({ cng: 95.50, petrol: 104.50, diesel: 92.75 });
@@ -202,6 +203,13 @@ export const SimulatorProvider = ({ children }) => {
       const geofenceData = await geofenceRes.json();
       if (Array.isArray(geofenceData)) {
         setGeofencingZones(geofenceData);
+      }
+
+      // Fetch active fraud alerts
+      const fraudRes = await fetch(`${api}/api/admin/fraud/alerts`);
+      const fraudData = await fraudRes.json();
+      if (fraudData.success) {
+        setFraudAlerts(fraudData.alerts);
       }
     } catch (err) {
       console.warn("Failed to connect to backend server. Operating in offline simulated mode.", err);
@@ -417,6 +425,10 @@ export const SimulatorProvider = ({ children }) => {
           break;
         case 'geofence_zones_updated':
           setGeofencingZones(data.zones);
+          break;
+        case 'fraud_alerts_updated':
+          setFraudAlerts(data.alerts);
+          playSound('sos');
           break;
       }
     };
@@ -1247,6 +1259,25 @@ export const SimulatorProvider = ({ children }) => {
     }
   };
 
+  const resolveFraudAlert = async (alertId, action) => {
+    try {
+      const { api } = getServerEndpoints();
+      const res = await fetch(`${api}/api/admin/fraud/resolve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ alertId, action })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setFraudAlerts(data.alerts);
+        fetchInitialData();
+        addLog(`Security Alert resolved: ${action.toUpperCase()}`, 'warning');
+      }
+    } catch (err) {
+      console.error("Failed to resolve fraud alert:", err);
+    }
+  };
+
   return (
     <SimulatorContext.Provider
       value={{
@@ -1254,6 +1285,8 @@ export const SimulatorProvider = ({ children }) => {
         geofence,
         geofencingZones,
         updateGeofencingZones,
+        fraudAlerts,
+        resolveFraudAlert,
         activeRide,
         sosAlerts,
         settings,

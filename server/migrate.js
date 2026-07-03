@@ -7,6 +7,7 @@ DROP TABLE IF EXISTS claims CASCADE;
 DROP TABLE IF EXISTS rides CASCADE;
 DROP TABLE IF EXISTS drivers CASCADE;
 DROP TABLE IF EXISTS passengers CASCADE;
+DROP TABLE IF EXISTS fraud_alerts CASCADE;
 
 -- 1. Create passengers table
 CREATE TABLE passengers (
@@ -85,6 +86,17 @@ CREATE TABLE disputes (
   evidence TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- 6. Create fraud_alerts table
+CREATE TABLE fraud_alerts (
+  id VARCHAR(100) PRIMARY KEY,
+  passenger_phone VARCHAR(50) NOT NULL,
+  driver_id VARCHAR(100) NOT NULL,
+  alert_type VARCHAR(50) NOT NULL,
+  severity VARCHAR(20) DEFAULT 'medium',
+  status VARCHAR(50) DEFAULT 'pending',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 `;
 
 const seedDataSql = `
@@ -120,6 +132,13 @@ ON CONFLICT (id) DO NOTHING;
 INSERT INTO claims (id, driver_id, claim_type, amount, description, status, created_at) VALUES
 (
   'claim_init_1', 'drv_1', 'health', 150.00, 'Outpatient medical checkup cover for seasonal fever at local clinic.', 'approved', CURRENT_TIMESTAMP
+)
+ON CONFLICT (id) DO NOTHING;
+
+-- Seed initial fraud alert
+INSERT INTO fraud_alerts (id, passenger_phone, driver_id, alert_type, severity, status) VALUES
+(
+  'alert_init_1', '+91 99030 99030', 'drv_1', 'co_location', 'high', 'pending'
 )
 ON CONFLICT (id) DO NOTHING;
 `;

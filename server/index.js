@@ -542,6 +542,48 @@ app.post('/api/admin/geofence/update', async (req, res) => {
   }
 });
 
+// Get active fraud alerts
+app.get('/api/admin/fraud/alerts', async (req, res) => {
+  try {
+    const alertsRes = await query("SELECT * FROM fraud_alerts ORDER BY created_at DESC");
+    res.json({ success: true, alerts: alertsRes.rows });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to retrieve fraud alerts.', details: err.message });
+  }
+});
+
+// Resolve fraud alert (Suspend driver or dismiss)
+app.post('/api/admin/fraud/resolve', async (req, res) => {
+  const { alertId, action } = req.body;
+  if (!alertId || !action) return res.status(400).json({ error: 'Alert ID and Action required.' });
+
+  try {
+    if (action === 'suspend') {
+      const alertRes = await query("SELECT driver_id FROM fraud_alerts WHERE id = $1", [alertId]);
+      if (alertRes.rows.length > 0) {
+        const driverId = alertRes.rows[0].driver_id;
+        await query("UPDATE drivers SET verification_status = 'suspended', status = 'offline' WHERE id = $1", [driverId]);
+        
+        // Notify driver of suspension
+        const driverWs = findWsClient('driver', driverId);
+        if (driverWs) {
+          driverWs.send(JSON.stringify({ type: 'verification_updated', status: 'suspended' }));
+        }
+      }
+      await query("UPDATE fraud_alerts SET status = 'resolved_suspended' WHERE id = $1", [alertId]);
+    } else if (action === 'dismiss') {
+      await query("UPDATE fraud_alerts SET status = 'dismissed' WHERE id = $1", [alertId]);
+    }
+
+    const updatedAlerts = await query("SELECT * FROM fraud_alerts ORDER BY created_at DESC");
+    broadcastToAll({ type: 'fraud_alerts_updated', alerts: updatedAlerts.rows });
+
+    res.json({ success: true, alerts: updatedAlerts.rows });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to resolve fraud alert.', details: err.message });
+  }
+});
+
 // Get operational ledger statistics
 app.get('/api/admin/stats', async (req, res) => {
   try {
@@ -858,6 +900,58 @@ wss.on('connection', (ws) => {
           break;
 
         case 'book_ride':
+          // Automated Fraud Monitor Collision & Frequency checks
+          try {
+            const drvInfoRes = await query("SELECT location_lat, location_lng FROM drivers WHERE id = $1", [data.ride.driverId]);
+            if (drvInfoRes.rows.length > 0) {
+              const drvLat = parseFloat(drvInfoRes.rows[0].location_lat);
+              const drvLng = parseFloat(drvInfoRes.rows[0].location_lng);
+              const passLat = parseFloat(data.ride.pickup.lat);
+              const passLng = parseFloat(data.ride.pickup.lng);
+              
+              // Haversine formula for distance in meters
+              const R = 6371000;
+              const dLat = (passLat - drvLat) * Math.PI / 180;
+              const dLng = (passLng - drvLng) * Math.PI / 180;
+              const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                        Math.cos(drvLat * Math.PI / 180) * Math.cos(passLat * Math.PI / 180) *
+                        Math.sin(dLng/2) * Math.sin(dLng/2);
+              const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+              const colocationDistance = R * c;
+
+              // Co-location check: less than 50 meters
+              if (colocationDistance < 50) {
+                const alertId = 'alert_' + Date.now();
+                await query(
+                  "INSERT INTO fraud_alerts (id, passenger_phone, driver_id, alert_type, severity, status) VALUES ($1, $2, $3, $4, $5, $6)",
+                  [alertId, data.ride.passengerPhone, data.ride.driverId, 'co_location', 'high', 'pending']
+                );
+                const allAlerts = await query("SELECT * FROM fraud_alerts ORDER BY created_at DESC");
+                broadcastToRole('admin', { type: 'fraud_alerts_updated', alerts: allAlerts.rows });
+                console.log(`[Fraud Monitor] Flagged co-location collusion alert ${alertId} (Distance: ${colocationDistance.toFixed(2)}m)`);
+              }
+            }
+
+            // Frequency check: 2+ bookings in last 1 hour
+            const frequencyCheck = await query(
+              "SELECT COUNT(*) FROM rides WHERE passenger_phone = $1 AND driver_id = $2 AND created_at > NOW() - INTERVAL '1 hour'",
+              [data.ride.passengerPhone, data.ride.driverId]
+            );
+            const recentTripsCount = parseInt(frequencyCheck.rows[0].count || 0);
+            if (recentTripsCount >= 2) {
+              const alertId = 'alert_freq_' + Date.now();
+              await query(
+                "INSERT INTO fraud_alerts (id, passenger_phone, driver_id, alert_type, severity, status) VALUES ($1, $2, $3, $4, $5, $6)",
+                [alertId, data.ride.passengerPhone, data.ride.driverId, 'frequency_abuse', 'medium', 'pending']
+              );
+              const allAlerts = await query("SELECT * FROM fraud_alerts ORDER BY created_at DESC");
+              broadcastToRole('admin', { type: 'fraud_alerts_updated', alerts: allAlerts.rows });
+              console.log(`[Fraud Monitor] Flagged frequency abuse alert ${alertId} (Count: ${recentTripsCount})`);
+            }
+          } catch (fraudErr) {
+            console.error("[Fraud Monitor Error]", fraudErr);
+          }
+
           // Create database ride record
           await query(
             `INSERT INTO rides (

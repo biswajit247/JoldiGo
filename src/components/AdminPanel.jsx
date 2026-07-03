@@ -43,6 +43,8 @@ export default function AdminPanel() {
     updateGeofence,
     geofencingZones,
     updateGeofencingZones,
+    fraudAlerts,
+    resolveFraudAlert,
     resolveSOS,
     resolveDispute,
     fastForwardDisputeSla,
@@ -579,6 +581,19 @@ export default function AdminPanel() {
             >
               <Map size={18} />
               <span>Geofencing Zones</span>
+            </button>
+
+            <button 
+              className={`nav-item ${activeTab === 'fraud' ? 'active' : ''}`}
+              onClick={() => setActiveTab('fraud')}
+            >
+              <AlertTriangle size={18} className="text-amber-500" />
+              <span>Security & Fraud</span>
+              {fraudAlerts.filter(a => a.status === 'pending').length > 0 && (
+                <span className="pending-badge bg-amber-600 text-white">
+                  {fraudAlerts.filter(a => a.status === 'pending').length}
+                </span>
+              )}
             </button>
 
             <button 
@@ -1294,6 +1309,119 @@ export default function AdminPanel() {
                   })}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* TAB: SECURITY & FRAUD DETECTION */}
+          {activeTab === 'fraud' && (
+            <div className="admin-tab-content flex flex-col gap-4">
+              <div className="section-title-flex">
+                <div>
+                  <h3 className="text-lg font-bold text-white">Security & Anti-Collusion Dashboard</h3>
+                  <p className="text-gray-400 text-xs mt-0.5">Automated detection checks to flag promo farming, self-booking, and driver-passenger coordinate collusion.</p>
+                </div>
+              </div>
+
+              {/* Summary Stats */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="card-glow p-4 bg-red-950/10 border border-red-500/20 rounded-xl">
+                  <span className="text-[10px] text-gray-400 uppercase font-semibold">Total Flagged Violations</span>
+                  <h4 className="text-2xl font-bold text-red-500 mt-1">{fraudAlerts.length} Alerts</h4>
+                  <span className="text-[10px] text-gray-500">Real-time alerts processed via OSRM & GPS containment</span>
+                </div>
+                <div className="card-glow p-4 bg-amber-950/10 border border-amber-500/20 rounded-xl">
+                  <span className="text-[10px] text-gray-400 uppercase font-semibold">Pending Action</span>
+                  <h4 className="text-2xl font-bold text-amber-500 mt-1">{fraudAlerts.filter(a => a.status === 'pending').length} Unresolved</h4>
+                  <span className="text-[10px] text-gray-500">Awaiting operational audit / account freeze</span>
+                </div>
+                <div className="card-glow p-4 bg-emerald-950/10 border border-emerald-500/20 rounded-xl">
+                  <span className="text-[10px] text-gray-400 uppercase font-semibold">Suspended Partner Accounts</span>
+                  <h4 className="text-2xl font-bold text-emerald-400 mt-1">
+                    {drivers.filter(d => d.verificationStatus === 'suspended').length} Suspensions
+                  </h4>
+                  <span className="text-[10px] text-gray-500">Drivers blocked from accepting passenger offers</span>
+                </div>
+              </div>
+
+              {/* Alerts List */}
+              <div className="card-glow p-4">
+                <h4 className="text-sm font-bold text-gray-200 mb-3">Security Log Audits</h4>
+                {fraudAlerts.length === 0 ? (
+                  <div className="text-center py-10">
+                    <Shield size={32} className="text-emerald-500 mx-auto" />
+                    <h5 className="font-semibold text-gray-300 mt-2 text-xs">All Passenger & Partner Activity Clean</h5>
+                    <p className="text-[10px] text-gray-500 mt-0.5">Automated collision scanners report zero anomalies in matching coordinates.</p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    {fraudAlerts.map(alert => {
+                      const isPending = alert.status === 'pending';
+                      const isHigh = alert.severity === 'high';
+                      
+                      let typeLabel = "Anomalous Activity";
+                      let desc = "";
+                      if (alert.alert_type === 'co_location') {
+                        typeLabel = "Co-location Collusion Flag";
+                        desc = "Driver and Passenger coordinates matched within <50m radius during ride offer booking (suspected promo/cashout farming).";
+                      } else if (alert.alert_type === 'frequency_abuse') {
+                        typeLabel = "High-Frequency Matching Abuse";
+                        desc = "Same driver and passenger pair matched 2+ times in less than an hour (suspected repetitive booking collusion).";
+                      }
+
+                      return (
+                        <div key={alert.id} className="border border-white/5 bg-white/5 rounded-xl p-3 flex flex-col md:flex-row md:items-center justify-between gap-3 transition-all hover:bg-white/[0.07]">
+                          <div className="flex flex-col gap-1 max-w-xl">
+                            <div className="flex items-center gap-2">
+                              <span className={`px-2 py-0.5 rounded text-[9px] uppercase font-bold tracking-wider ${
+                                isHigh ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                              }`}>
+                                {alert.severity} severity
+                              </span>
+                              <span className="text-xs font-bold text-white">{typeLabel}</span>
+                              <span className="text-[10px] text-gray-500 font-mono">({alert.id})</span>
+                            </div>
+
+                            <p className="text-[11px] text-gray-400 mt-1">{desc}</p>
+
+                            <div className="flex items-center gap-4 text-[10px] text-gray-500 mt-1 font-mono">
+                              <span>Passenger: <b>{alert.passenger_phone}</b></span>
+                              <span>Driver ID: <b>{alert.driver_id}</b></span>
+                              <span>Time: <b>{new Date(alert.created_at).toLocaleString()}</b></span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            {isPending ? (
+                              <>
+                                <button 
+                                  onClick={() => resolveFraudAlert(alert.id, 'suspend')}
+                                  className="btn-danger text-[10px] font-semibold px-2.5 py-1"
+                                >
+                                  ⛔ Freeze Account
+                                </button>
+                                <button 
+                                  onClick={() => resolveFraudAlert(alert.id, 'dismiss')}
+                                  className="btn-secondary text-[10px] font-semibold px-2.5 py-1"
+                                >
+                                  Dismiss
+                                </button>
+                              </>
+                            ) : (
+                              <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded ${
+                                alert.status === 'resolved_suspended' 
+                                  ? 'bg-red-950/20 text-red-400 border border-red-500/10' 
+                                  : 'bg-white/5 text-gray-400 border border-white/5'
+                              }`}>
+                                {alert.status.replace('_', ' ')}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
