@@ -6,8 +6,9 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { query } from './db.js';
 import Razorpay from 'razorpay';
 import twilio from 'twilio';
+import { fileURLToPath } from 'url';
 
-dotenv.config();
+dotenv.config({ path: fileURLToPath(new URL('./.env', import.meta.url)) });
 
 // Initialize Twilio client if keys exist in environment
 const twilioSid = process.env.TWILIO_ACCOUNT_SID;
