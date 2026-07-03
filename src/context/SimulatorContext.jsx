@@ -43,20 +43,21 @@ export const getServerEndpoints = () => {
   let api = 'https://lovely-radios-glow.loca.lt';
   if (typeof window !== 'undefined') {
     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-      return 'http://localhost:5001';
-    }
-    let saved = localStorage.getItem('joldigo_server_url');
-    if (saved) {
-      const normalized = saved.trim().replace(/\/$/, '');
-      if (normalized === 'http://localhost:5000' || normalized === 'http://localhost:5001' || normalized === 'https://full-vans-jog.loca.lt' || normalized === 'https://polite-heads-chew.loca.lt') {
-        localStorage.setItem('joldigo_server_url', 'https://lovely-radios-glow.loca.lt');
-        saved = 'https://lovely-radios-glow.loca.lt';
+      api = 'http://localhost:5001';
+    } else {
+      let saved = localStorage.getItem('joldigo_server_url');
+      if (saved) {
+        const normalized = saved.trim().replace(/\/$/, '');
+        if (normalized === 'http://localhost:5000' || normalized === 'http://localhost:5001' || normalized === 'https://full-vans-jog.loca.lt' || normalized === 'https://polite-heads-chew.loca.lt') {
+          localStorage.setItem('joldigo_server_url', 'https://lovely-radios-glow.loca.lt');
+          saved = 'https://lovely-radios-glow.loca.lt';
+        }
       }
-    }
-    if (saved) {
-      api = saved;
-    } else if (window.location.hostname !== 'localhost' && window.location.protocol !== 'file:') {
-      api = 'https://lovely-radios-glow.loca.lt';
+      if (saved) {
+        api = saved;
+      } else if (window.location.hostname !== 'localhost' && window.location.protocol !== 'file:') {
+        api = 'https://lovely-radios-glow.loca.lt';
+      }
     }
   }
   
