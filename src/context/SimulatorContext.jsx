@@ -142,7 +142,8 @@ export const SimulatorProvider = ({ children }) => {
     baseFareCarAC: 50, perKmCarAC: 20,
     baseFareCarNonAC: 30, perKmCarNonAC: 15,
     baseFareBike: 20, perKmBike: 7,
-    surgeMultiplier: 1.0
+    surgeMultiplier: 1.0,
+    weather: 'clear'
   });
 
   const [passenger, setPassenger] = useState({ phone: '', isLoggedIn: false, rideHistory: [] });
@@ -661,8 +662,13 @@ export const SimulatorProvider = ({ children }) => {
       });
     }
 
+    // Weather surge multiplier & safety controls
+    let weatherMultiplier = 1.0;
+    if (settings.weather === 'rain') weatherMultiplier = 1.15;
+    else if (settings.weather === 'waterlogged') weatherMultiplier = 1.25;
+
     const baseSurge = isNightMode ? 1.20 : 1.00;
-    const finalSurgeMultiplier = parseFloat(Math.min(1.50, Math.max(baseSurge, settings.surgeMultiplier) * trafficMultiplier).toFixed(2));
+    const finalSurgeMultiplier = parseFloat(Math.min(1.50, Math.max(baseSurge, settings.surgeMultiplier) * trafficMultiplier * weatherMultiplier).toFixed(2));
     const grossBaseRideFare = parseFloat((baseRideFareBeforeSurge * finalSurgeMultiplier).toFixed(2));
     
     const gstAmount = parseFloat((grossBaseRideFare * 0.05).toFixed(2));
@@ -670,7 +676,10 @@ export const SimulatorProvider = ({ children }) => {
     const driverPayout = parseFloat((grossBaseRideFare * 0.95).toFixed(2));
     const tollEstimate = distance > 8 ? 35 : 0;
     const insurancePremium = 2.00; 
-    const totalFare = parseFloat((grossBaseRideFare + gstAmount + tollEstimate + insurancePremium).toFixed(2));
+    
+    const totalFare = (settings.weather === 'waterlogged' && vehicleType === 'bike')
+      ? 0
+      : parseFloat((grossBaseRideFare + gstAmount + tollEstimate + insurancePremium).toFixed(2));
 
     const hashSeed = `${vehicleType}-${distance}-${totalFare}-${fuelPrices.petrol}-${finalSurgeMultiplier}`;
     let charCodeSum = 0;

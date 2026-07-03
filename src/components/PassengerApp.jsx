@@ -20,6 +20,34 @@ import {
 } from 'lucide-react';
 import L from 'leaflet';
 
+const RainOverlay = ({ weather }) => {
+  if (!weather || weather === 'clear') return null;
+  const dropCount = weather === 'waterlogged' ? 40 : 20;
+  const drops = Array.from({ length: dropCount }).map((_, i) => ({
+    id: i,
+    left: Math.random() * 100,
+    delay: Math.random() * 1.5,
+    duration: 0.5 + Math.random() * 0.7
+  }));
+
+  return (
+    <div className={`rain-overlay ${weather === 'waterlogged' ? 'waterlogged' : ''}`}>
+      {drops.map(d => (
+        <div 
+          key={d.id} 
+          className="rain-drop" 
+          style={{ 
+            left: `${d.left}%`, 
+            animationDelay: `${d.delay}s`, 
+            animationDuration: `${d.duration}s` 
+          }} 
+        />
+      ))}
+      {weather === 'waterlogged' && <div className="waterlogging-flood-bar"></div>}
+    </div>
+  );
+};
+
 export default function PassengerApp({ isStandalone }) {
   const {
     drivers,
@@ -116,6 +144,13 @@ export default function PassengerApp({ isStandalone }) {
       setShowChat(false);
     }
   }, [activeRide]);
+
+  // Fallback vehicle selection if weather changes to waterlogged
+  useEffect(() => {
+    if (settings.weather === 'waterlogged' && vehicleType === 'bike') {
+      setVehicleType('car_ac');
+    }
+  }, [settings.weather, vehicleType]);
 
   // Leaflet Map Initialization
   useEffect(() => {
@@ -397,6 +432,21 @@ export default function PassengerApp({ isStandalone }) {
           
           <h3 className="panel-title">Where to?</h3>
 
+          {settings.weather !== 'clear' && (
+            <div className={`weather-banner-msg mb-3 p-2 rounded-lg text-[10px] flex items-center gap-2 border ${
+              settings.weather === 'rain' 
+                ? 'bg-blue-500/10 border-blue-500/20 text-blue-300' 
+                : 'bg-red-500/10 border-red-500/20 text-red-300'
+            }`}>
+              <span className="text-xs">{settings.weather === 'rain' ? '🌧️' : '🌊'}</span>
+              <span>
+                {settings.weather === 'rain' 
+                  ? 'Monsoon Rain Alert: Dynamic 1.15x surge applied on standard ride fares.'
+                  : 'Severe Waterlogging: 1.25x surge active. Bike bookings suspended for safety compliance.'}
+              </span>
+            </div>
+          )}
+
           {/* Location Selector */}
           <div className="location-picker-group">
             <div className="picker-row">
@@ -459,17 +509,19 @@ export default function PassengerApp({ isStandalone }) {
             </button>
 
             <button 
-              className={`vehicle-card ${vehicleType === 'bike' ? 'selected' : ''}`}
-              onClick={() => setVehicleType('bike')}
+              className={`vehicle-card ${vehicleType === 'bike' ? 'selected' : ''} ${bikeMetrics.totalFare === 0 ? 'opacity-40 cursor-not-allowed' : ''}`}
+              onClick={() => bikeMetrics.totalFare > 0 && setVehicleType('bike')}
+              disabled={bikeMetrics.totalFare === 0}
+              title={bikeMetrics.totalFare === 0 ? 'Bikes suspended due to heavy flooding/waterlogging' : 'Select Bike'}
             >
               <div className="vehicle-icon-bg bike-bg">
                 <Bike className="vh-icon" />
               </div>
               <div className="vehicle-info">
                 <span className="vh-name">JoldiGo Bike</span>
-                <span className="vh-eta">Fast & nimble bike commute</span>
+                <span className="vh-eta">{bikeMetrics.totalFare === 0 ? 'Safety Suspended (Flooding)' : 'Fast & nimble bike commute'}</span>
               </div>
-              <span className="vh-price">₹{bikeMetrics.totalFare}</span>
+              <span className="vh-price">{bikeMetrics.totalFare === 0 ? 'Suspended' : `₹${bikeMetrics.totalFare}`}</span>
             </button>
           </div>
 
@@ -915,6 +967,7 @@ export default function PassengerApp({ isStandalone }) {
       )}
 
       <div className="phone-screen-content">
+        <RainOverlay weather={settings.weather} />
         
         {/* Floating SMS Gateway Toast Alert */}
         {activeSmsToast && (

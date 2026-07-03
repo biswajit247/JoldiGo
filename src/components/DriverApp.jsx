@@ -20,9 +20,38 @@ import {
 } from 'lucide-react';
 import L from 'leaflet';
 
+const RainOverlay = ({ weather }) => {
+  if (!weather || weather === 'clear') return null;
+  const dropCount = weather === 'waterlogged' ? 40 : 20;
+  const drops = Array.from({ length: dropCount }).map((_, i) => ({
+    id: i,
+    left: Math.random() * 100,
+    delay: Math.random() * 1.5,
+    duration: 0.5 + Math.random() * 0.7
+  }));
+
+  return (
+    <div className={`rain-overlay ${weather === 'waterlogged' ? 'waterlogged' : ''}`}>
+      {drops.map(d => (
+        <div 
+          key={d.id} 
+          className="rain-drop" 
+          style={{ 
+            left: `${d.left}%`, 
+            animationDelay: `${d.delay}s`, 
+            animationDuration: `${d.duration}s` 
+          }} 
+        />
+      ))}
+      {weather === 'waterlogged' && <div className="waterlogging-flood-bar"></div>}
+    </div>
+  );
+};
+
 export default function DriverApp({ isStandalone }) {
   const {
     drivers,
+    settings,
     activeRide,
     logs,
     disputes,
@@ -306,6 +335,7 @@ export default function DriverApp({ isStandalone }) {
       )}
 
       <div className="phone-screen-content">
+        <RainOverlay weather={settings.weather} />
 
         {/* 1. Unverified Onboarding Portal */}
         {currentDriver.verificationStatus !== 'verified' && (

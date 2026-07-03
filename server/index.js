@@ -45,7 +45,8 @@ let globalSettings = {
   perKmCarNonAC: 15,
   baseFareBike: 20,
   perKmBike: 7,
-  surgeMultiplier: 1.0
+  surgeMultiplier: 1.0,
+  weather: 'clear'
 };
 
 let globalFuelPrices = {

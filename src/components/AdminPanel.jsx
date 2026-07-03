@@ -65,6 +65,7 @@ export default function AdminPanel() {
   const [baseFareBike, setBaseFareBike] = useState(settings.baseFareBike || 20);
   const [perKmBike, setPerKmBike] = useState(settings.perKmBike || 7);
   const [surgeMultiplier, setSurgeMultiplier] = useState(settings.surgeMultiplier || 1.0);
+  const [weather, setWeather] = useState(settings.weather || 'clear');
   const [localFuelPrices, setLocalFuelPrices] = useState(fuelPrices);
 
   // Chart interactivity states
@@ -95,6 +96,7 @@ export default function AdminPanel() {
     setBaseFareBike(settings.baseFareBike || 20);
     setPerKmBike(settings.perKmBike || 7);
     setSurgeMultiplier(settings.surgeMultiplier || 1.0);
+    setWeather(settings.weather || 'clear');
   }, [settings]);
 
   useEffect(() => {
@@ -290,6 +292,7 @@ export default function AdminPanel() {
       baseFareBike: parseFloat(baseFareBike),
       perKmBike: parseFloat(perKmBike),
       surgeMultiplier: parseFloat(surgeMultiplier),
+      weather: weather
     });
   };
 
@@ -1190,6 +1193,61 @@ export default function AdminPanel() {
                       onChange={(e) => setSurgeMultiplier(parseFloat(e.target.value))}
                       className="surge-slider-range"
                     />
+                  </div>
+                </div>
+
+                {/* MONSOON WEATHER SURCHARGE CONTROLLER */}
+                <div className="settings-card-group surge-settings-card mt-3">
+                  <div className="flex justify-between items-center">
+                    <h4>🌧️ Monsoon Weather Controller</h4>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
+                      weather === 'clear' 
+                        ? 'bg-emerald-950/40 text-emerald-400 border-emerald-500/20' 
+                        : (weather === 'rain' 
+                            ? 'bg-blue-950/40 text-blue-400 border-blue-500/20' 
+                            : 'bg-red-950/40 text-red-400 border-red-500/20')
+                    }`}>
+                      {weather.toUpperCase()}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Adjust pricing multipliers based on real-time monsoon conditions. Flooding bans app bikes dynamically for safety.
+                  </p>
+
+                  <div className="flex gap-2 mt-4">
+                    <button
+                      type="button"
+                      onClick={() => setWeather('clear')}
+                      className={`flex-1 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 border transition-all ${
+                        weather === 'clear'
+                          ? 'bg-emerald-500/10 border-emerald-400 text-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.15)]'
+                          : 'bg-black/30 border-white/5 text-gray-400 hover:bg-white/5'
+                      }`}
+                    >
+                      ☀️ Clear Sky (1.0x)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setWeather('rain')}
+                      className={`flex-1 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 border transition-all ${
+                        weather === 'rain'
+                          ? 'bg-blue-500/10 border-blue-400 text-blue-300 shadow-[0_0_10px_rgba(59,130,246,0.15)]'
+                          : 'bg-black/30 border-white/5 text-gray-400 hover:bg-white/5'
+                      }`}
+                    >
+                      🌧️ Heavy Rain (1.15x)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setWeather('waterlogged')}
+                      className={`flex-1 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 border transition-all ${
+                        weather === 'waterlogged'
+                          ? 'bg-red-500/10 border-red-400 text-red-300 shadow-[0_0_10px_rgba(239,68,68,0.15)]'
+                          : 'bg-black/30 border-white/5 text-gray-400 hover:bg-white/5'
+                      }`}
+                    >
+                      🌊 Flooding (1.25x • 🚫 Bike)
+                    </button>
                   </div>
                 </div>
 
