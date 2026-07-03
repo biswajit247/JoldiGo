@@ -157,6 +157,10 @@ export default function PassengerApp({ isStandalone }) {
     if (markersRef.current.pickup) map.removeLayer(markersRef.current.pickup);
     if (markersRef.current.dropoff) map.removeLayer(markersRef.current.dropoff);
     if (markersRef.current.driver) map.removeLayer(markersRef.current.driver);
+    if (markersRef.current.routePolyline) {
+      map.removeLayer(markersRef.current.routePolyline);
+      markersRef.current.routePolyline = null;
+    }
     markersRef.current.otherDrivers.forEach(m => map.removeLayer(m));
     markersRef.current.otherDrivers = [];
 
@@ -215,6 +219,17 @@ export default function PassengerApp({ isStandalone }) {
     if (activeRide) {
       markersRef.current.pickup = L.marker([activeRide.pickup.lat, activeRide.pickup.lng], { icon: pickupIcon }).addTo(map);
       markersRef.current.dropoff = L.marker([activeRide.dropoff.lat, activeRide.dropoff.lng], { icon: dropoffIcon }).addTo(map);
+
+      // Draw route polyline
+      if (activeRide.route) {
+        const latlngs = activeRide.route.map(p => [p.lat, p.lng]);
+        markersRef.current.routePolyline = L.polyline(latlngs, {
+          color: '#ffdd00',
+          weight: 4,
+          opacity: 0.8,
+          dashArray: '5, 10'
+        }).addTo(map);
+      }
 
       if (activeRide.status !== 'searching') {
         const assignedDriver = drivers.find(d => d.id === activeRide.driverId);

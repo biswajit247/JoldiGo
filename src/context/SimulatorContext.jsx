@@ -95,6 +95,20 @@ const generateRoutePoints = (start, end, steps = 30) => {
   return points;
 };
 
+const getRouteCoordinates = async (start, end) => {
+  try {
+    const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${start.lng},${start.lat};${end.lng},${end.lat}?overview=full&geometries=geojson`);
+    const data = await res.json();
+    if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
+      const coords = data.routes[0].geometry.coordinates;
+      return coords.map(coord => ({ lat: coord[1], lng: coord[0] }));
+    }
+  } catch (err) {
+    console.warn("OSRM routing API failed, falling back to straight-line interpolation.", err);
+  }
+  return generateRoutePoints(start, end, 30);
+};
+
 export const SimulatorProvider = ({ children }) => {
   const [drivers, setDrivers] = useState([]);
   const [geofence, setGeofence] = useState(INITIAL_GEOFENCE);
@@ -592,16 +606,19 @@ export const SimulatorProvider = ({ children }) => {
     }
   };
 
-  const acceptRide = (driverId) => {
+  const acceptRide = async (driverId) => {
     const ws = driverSocketsRef.current[driverId];
     if (ws && ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify({ type: 'driver_accept', rideId: activeRide.id, passengerPhone: activeRide.passengerPhone }));
     }
 
+    const driver = drivers.find(d => d.id === driverId);
+    if (!driver || !activeRide) return;
+
+    const pickupRoute = await getRouteCoordinates(driver.location, activeRide.pickup);
+
     setActiveRide(prev => {
       if (!prev) return null;
-      const driver = drivers.find(d => d.id === driverId);
-      const pickupRoute = generateRoutePoints(driver.location, prev.pickup, 20);
       animateDriverMovement(driverId, pickupRoute, 'pickup');
       return { ...prev, status: 'accepted', route: pickupRoute, routeIndex: 0 };
     });
@@ -662,14 +679,18 @@ export const SimulatorProvider = ({ children }) => {
     }, 400);
   };
 
-  const startRide = () => {
+  const startRide = async () => {
+    if (!activeRide || activeRide.status !== 'arrived') return;
+
+    const ws = driverSocketsRef.current[activeRide.driverId];
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: 'update_ride_status', rideId: activeRide.id, status: 'in_progress', passengerPhone: activeRide.passengerPhone }));
+    }
+
+    const tripRoute = await getRouteCoordinates(activeRide.pickup, activeRide.dropoff);
+
     setActiveRide(prev => {
-      if (!prev || prev.status !== 'arrived') return prev;
-      const ws = driverSocketsRef.current[prev.driverId];
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: 'update_ride_status', rideId: prev.id, status: 'in_progress', passengerPhone: prev.passengerPhone }));
-      }
-      const tripRoute = generateRoutePoints(prev.pickup, prev.dropoff, 30);
+      if (!prev) return null;
       animateDriverMovement(prev.driverId, tripRoute, 'trip');
       return { ...prev, status: 'in_progress', route: tripRoute, routeIndex: 0 };
     });
