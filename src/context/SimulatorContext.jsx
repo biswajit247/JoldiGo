@@ -921,9 +921,9 @@ export const SimulatorProvider = ({ children }) => {
   };
 
   // SOS police interceptor local visual rendering for admin panel
-  const triggerPatrolDispatch = (driverId, location) => {
+  const triggerPatrolDispatch = async (driverId, location) => {
     const policeStationLoc = { lat: location.lat + 0.015, lng: location.lng - 0.018 };
-    const policeRoute = generateRoutePoints(policeStationLoc, location, 15);
+    const policeRoute = await getRouteCoordinates(policeStationLoc, location);
     const newAlert = {
       id: 'sos_' + Date.now(),
       driverId,
@@ -933,7 +933,7 @@ export const SimulatorProvider = ({ children }) => {
       policeLocation: policeStationLoc,
       policeRoute,
       policeRouteIndex: 0,
-      eta: 15
+      eta: Math.ceil(policeRoute.length * 0.8)
     };
 
     setSosAlerts(prev => [newAlert, ...prev]);

@@ -269,13 +269,28 @@ export default function AdminPanel() {
         markersRef.current.sosElements.push(threatRing);
 
         if (alert.policeRoute) {
-          const policeLine = L.polyline(alert.policeRoute.map(pt => [pt.lat, pt.lng]), {
-            color: '#3b82f6',
-            weight: 2,
-            dashArray: '6, 6',
-            opacity: 0.7
-          }).addTo(map);
-          markersRef.current.sosElements.push(policeLine);
+          const pIdx = alert.policeRouteIndex || 0;
+          const traveledCoords = alert.policeRoute.slice(0, pIdx + 1).map(pt => [pt.lat, pt.lng]);
+          const remainingCoords = alert.policeRoute.slice(pIdx).map(pt => [pt.lat, pt.lng]);
+
+          if (traveledCoords.length > 1) {
+            const policeTraveledLine = L.polyline(traveledCoords, {
+              color: '#1e40af',
+              weight: 4,
+              opacity: 0.8
+            }).addTo(map);
+            markersRef.current.sosElements.push(policeTraveledLine);
+          }
+
+          if (remainingCoords.length > 0) {
+            const policeRemainingLine = L.polyline(remainingCoords, {
+              color: '#3b82f6',
+              weight: 4,
+              opacity: 0.9,
+              className: 'animated-police-path'
+            }).addTo(map);
+            markersRef.current.sosElements.push(policeRemainingLine);
+          }
         }
 
         if (alert.policeLocation) {
