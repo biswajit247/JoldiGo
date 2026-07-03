@@ -386,7 +386,7 @@ export const SimulatorProvider = ({ children }) => {
       const res = await fetch(`${api}/api/passenger/profile/${phone}`);
       const data = await res.json();
       if (data.success) {
-        setPassengerWalletBalance(data.passenger.wallet_balance);
+        setPassengerWalletBalance(parseFloat(data.passenger.wallet_balance || 0));
         setPassenger(prev => ({ ...prev, rideHistory: data.rideHistory }));
       }
     } catch (err) {
@@ -540,7 +540,7 @@ export const SimulatorProvider = ({ children }) => {
           });
           const verifyData = await verifyRes.json();
           if (verifyData.success) {
-            setPassengerWalletBalance(verifyData.wallet_balance);
+            setPassengerWalletBalance(parseFloat(verifyData.wallet_balance || 0));
             addLog(`Wallet topped up by ₹${amount} via Razorpay Checkout.`, 'success');
           } else {
             alert("Payment signature verification failed!");
@@ -567,7 +567,7 @@ export const SimulatorProvider = ({ children }) => {
         });
         const verifyData = await verifyRes.json();
         if (verifyData.success) {
-          setPassengerWalletBalance(verifyData.wallet_balance);
+          setPassengerWalletBalance(parseFloat(verifyData.wallet_balance || 0));
           addLog(`Wallet topped up by ₹${amount} (Mock top-up fallback)`, 'success');
         }
       }

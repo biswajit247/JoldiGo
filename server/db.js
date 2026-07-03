@@ -1,6 +1,9 @@
 import pg from 'pg';
 import dotenv from 'dotenv';
 
+// Automatically parse DECIMAL/NUMERIC (type OID 1700) as JavaScript numbers
+pg.types.setTypeParser(1700, (val) => parseFloat(val));
+
 dotenv.config();
 
 const { Pool } = pg;
