@@ -69,6 +69,8 @@ export default function AdminPanel() {
 
   // Chart interactivity states
   const [hoveredBarIndex, setHoveredBarIndex] = useState(null);
+  const [hoveredHourIndex, setHoveredHourIndex] = useState(null);
+  const [hoveredCategory, setHoveredCategory] = useState(null);
 
   // Mock playing evidence states
   const [playingMediaId, setPlayingMediaId] = useState(null);
@@ -366,6 +368,17 @@ export default function AdminPanel() {
   ];
 
   const maxWeeklyBookingValue = Math.max(...WEEKLY_REVENUE_DATA.map(d => d.bookings));
+
+  const HOURLY_LOAD_DATA = [
+    { time: '08:00', load: 35, revenue: 2450 },
+    { time: '10:00', load: 85, revenue: 5950 },
+    { time: '12:00', load: 60, revenue: 4200 },
+    { time: '14:00', load: 45, revenue: 3150 },
+    { time: '16:00', load: 70, revenue: 4900 },
+    { time: '18:00', load: 95, revenue: 8650 },
+    { time: '20:00', load: 80, revenue: 5600 },
+    { time: '22:00', load: 40, revenue: 2800 }
+  ];
 
   const getVehicleLabel = (type) => {
     if (type === 'car_ac') return '4-Wheeler AC';
@@ -1203,35 +1216,246 @@ export default function AdminPanel() {
                   <span className={`kpi-value ${financials.netPlatformProfits >= 0 ? 'text-indigo-300' : 'text-red-400'}`}>
                     ₹{financials.netPlatformProfits.toFixed(0)}
                   </span>
-                  <span className="kpi-sub text-gray-400">After gateway & overheads</span>
                 </div>
               </div>
+              {/* HOURLY DISPATCH LOAD AREA CHART */}
+              {(() => {
+                const hourlyPoints = HOURLY_LOAD_DATA.map((d, idx) => {
+                  const x = (idx * (500 / (HOURLY_LOAD_DATA.length - 1)));
+                  const y = 95 - (d.revenue / 9000) * 75;
+                  return { x, y, data: d };
+                });
+
+                const hourlyPathD = hourlyPoints.reduce((acc, p, idx) => {
+                  return acc + (idx === 0 ? `M ${p.x} ${p.y}` : ` L ${p.x} ${p.y}`);
+                }, '');
+
+                const hourlyFillD = hourlyPathD + ` L 500 105 L 0 105 Z`;
+
+                return (
+                  <div className="ops-map-card card-glow p-4 mt-4 relative" style={{ height: '220px' }}>
+                    <div className="flex justify-between items-center mb-2">
+                      <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                        Real-time Dispatch Hourly Load Curve (Kolkata Transit Channels)
+                      </h4>
+                      <span className="text-[9px] text-gray-500 font-mono">Hover curve to scan points</span>
+                    </div>
+
+                    <div className="relative" style={{ height: '150px' }}>
+                      <svg width="100%" height="100%" viewBox="0 0 500 120" preserveAspectRatio="none">
+                        <defs>
+                          <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#10b981" stopOpacity="0.35" />
+                            <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
+                          </linearGradient>
+                        </defs>
+
+                        {/* Grid lines */}
+                        <line x1="0" y1="20" x2="500" y2="20" stroke="rgba(255,255,255,0.03)" strokeWidth="1" />
+                        <line x1="0" y1="60" x2="500" y2="60" stroke="rgba(255,255,255,0.03)" strokeWidth="1" />
+                        <line x1="0" y1="105" x2="500" y2="105" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
+
+                        {/* Fill & Stroke */}
+                        <path d={hourlyFillD} fill="url(#areaGrad)" />
+                        <path d={hourlyPathD} fill="none" stroke="#10b981" strokeWidth="2.5" />
+
+                        {/* Grid labels */}
+                        <text x="5" y="16" fill="rgba(255,255,255,0.2)" fontSize="6" fontFamily="monospace">₹9,000</text>
+                        <text x="5" y="56" fill="rgba(255,255,255,0.2)" fontSize="6" fontFamily="monospace">₹4,500</text>
+
+                        {/* Interactive scanning cursor */}
+                        {hoveredHourIndex !== null && (
+                          <g>
+                            <line 
+                              x1={hourlyPoints[hoveredHourIndex].x} 
+                              y1="10" 
+                              x2={hourlyPoints[hoveredHourIndex].x} 
+                              y2="105" 
+                              stroke="rgba(16, 185, 129, 0.4)" 
+                              strokeWidth="1" 
+                              strokeDasharray="3, 3" 
+                            />
+                            <circle 
+                              cx={hourlyPoints[hoveredHourIndex].x} 
+                              cy={hourlyPoints[hoveredHourIndex].y} 
+                              r="4.5" 
+                              fill="#10b981" 
+                              stroke="#fff" 
+                              strokeWidth="1.5" 
+                            />
+                          </g>
+                        )}
+
+                        {/* Invisible overlay columns for hover detection */}
+                        {hourlyPoints.map((p, idx) => (
+                          <rect
+                            key={idx}
+                            x={Math.max(0, p.x - 25)}
+                            y="0"
+                            width="50"
+                            height="120"
+                            fill="transparent"
+                            style={{ cursor: 'pointer' }}
+                            onMouseEnter={() => setHoveredHourIndex(idx)}
+                            onMouseLeave={() => setHoveredHourIndex(null)}
+                          />
+                        ))}
+                      </svg>
+
+                      {/* Tooltip */}
+                      {hoveredHourIndex !== null && (
+                        <div 
+                          className="absolute bg-[#181d26] border border-emerald-500/30 p-2.5 rounded-lg text-[10px] font-mono text-gray-300 shadow-xl"
+                          style={{ 
+                            top: '10px', 
+                            left: `${Math.min(320, hourlyPoints[hoveredHourIndex].x + 15)}px`,
+                            zIndex: 10
+                          }}
+                        >
+                          <div className="font-bold text-emerald-400 border-b border-white/5 pb-1 mb-1">
+                            🕒 {HOURLY_LOAD_DATA[hoveredHourIndex].time} Load Details
+                          </div>
+                          <div className="flex justify-between gap-6">
+                            <span>Simulated Load:</span>
+                            <span className="text-white font-semibold">{HOURLY_LOAD_DATA[hoveredHourIndex].load}%</span>
+                          </div>
+                          <div className="flex justify-between gap-6 mt-0.5">
+                            <span>Est. Gross Revenue:</span>
+                            <span className="text-emerald-300 font-bold">₹{HOURLY_LOAD_DATA[hoveredHourIndex].revenue}</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* PREMIUM INTERACTIVE SVG ANALYTICS CHARTS SECTION */}
-              <div className="finance-charts-grid mt-2" style={{ display: 'grid', gridTemplateColumns: '320px 1fr 280px', gap: '16px' }}>
+              <div className="finance-charts-grid mt-4" style={{ display: 'grid', gridTemplateColumns: '320px 1fr 280px', gap: '16px' }}>
                 
                 {/* 1. Fare Splits Donut Chart */}
-                <div className="ops-map-card card-glow p-4 flex flex-col justify-between" style={{ height: '240px' }}>
-                  <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Fare Splits Ratio (Passenger total)</h4>
-                  
-                  <div className="flex justify-center items-center relative my-2">
-                    <svg width="140" height="140" viewBox="0 0 100 100">
-                      <circle cx="50" cy="50" r="40" fill="transparent" stroke="#ffdd00" strokeWidth="12" strokeDasharray="227.4 251.2" strokeDashoffset="0" />
-                      <circle cx="50" cy="50" r="40" fill="transparent" stroke="#ffaa00" strokeWidth="12" strokeDasharray="12 251.2" strokeDashoffset="-227.4" />
-                      <circle cx="50" cy="50" r="40" fill="transparent" stroke="#818cf8" strokeWidth="12" strokeDasharray="12 251.2" strokeDashoffset="-239.4" />
-                      
-                      <circle cx="50" cy="50" r="28" fill="#11141a" />
-                      <text x="50" y="47" textAnchor="middle" fill="#fff" fontSize="7" fontWeight="bold" fontFamily="monospace">100%</text>
-                      <text x="50" y="56" textAnchor="middle" fill="#a0aec0" fontSize="5" fontWeight="bold" fontFamily="sans-serif">COMPLIANT</text>
-                    </svg>
-                  </div>
+                {(() => {
+                  const totalFinancials = (financials.driverPayouts || 18000) + (financials.platformCommissionTotal || 1058) + (financials.accumulatedGstTotal || 1058);
+                  const driverPct = totalFinancials > 0 ? ((financials.driverPayouts / totalFinancials) * 100) : 90.5;
+                  const platformPct = totalFinancials > 0 ? ((financials.platformCommissionTotal / totalFinancials) * 100) : 4.8;
+                  const gstPct = totalFinancials > 0 ? ((financials.accumulatedGstTotal / totalFinancials) * 100) : 4.7;
 
-                  <div className="chart-legend flex justify-between text-[9px] text-gray-400 font-mono">
-                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full" style={{ backgroundColor: '#ffdd00' }}></span> Driver (90.5%)</span>
-                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full" style={{ backgroundColor: '#ffaa00' }}></span> Plat (4.8%)</span>
-                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full" style={{ backgroundColor: '#818cf8' }}></span> GST (4.8%)</span>
-                  </div>
-                </div>
+                  const strokeBasis = 251.2;
+                  const driverStroke = (driverPct / 100) * strokeBasis;
+                  const platformStroke = (platformPct / 100) * strokeBasis;
+                  const gstStroke = (gstPct / 100) * strokeBasis;
+
+                  const driverOffset = 0;
+                  const platformOffset = -driverStroke;
+                  const gstOffset = -(driverStroke + platformStroke);
+
+                  const getCentralText = () => {
+                    if (hoveredCategory === 'driver') return `${driverPct.toFixed(1)}%`;
+                    if (hoveredCategory === 'platform') return `${platformPct.toFixed(1)}%`;
+                    if (hoveredCategory === 'gst') return `${gstPct.toFixed(1)}%`;
+                    return '100%';
+                  };
+
+                  const getCentralSub = () => {
+                    if (hoveredCategory === 'driver') return 'DRIVER SHARE';
+                    if (hoveredCategory === 'platform') return 'PLATFORM FEES';
+                    if (hoveredCategory === 'gst') return 'GST AMOUNT';
+                    return 'COMPLIANT';
+                  };
+
+                  return (
+                    <div className="ops-map-card card-glow p-4 flex flex-col justify-between" style={{ height: '240px' }}>
+                      <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Fare Splits Ratio (Passenger total)</h4>
+                      
+                      <div className="flex justify-center items-center relative my-2">
+                        <svg width="140" height="140" viewBox="0 0 100 100" style={{ transform: 'rotate(-90deg)' }}>
+                          {/* Driver segment */}
+                          <circle 
+                            cx="50" 
+                            cy="50" 
+                            r="40" 
+                            fill="transparent" 
+                            stroke="#ffdd00" 
+                            strokeWidth={hoveredCategory === 'driver' ? '15' : '12'} 
+                            strokeDasharray={`${driverStroke} ${strokeBasis}`} 
+                            strokeDashoffset={driverOffset}
+                            className="transition-all duration-300 cursor-pointer"
+                            onMouseEnter={() => setHoveredCategory('driver')}
+                            onMouseLeave={() => setHoveredCategory(null)}
+                            style={{ filter: hoveredCategory === 'driver' ? 'drop-shadow(0 0 4px rgba(255, 221, 0, 0.5))' : 'none' }}
+                          />
+                          {/* Platform segment */}
+                          <circle 
+                            cx="50" 
+                            cy="50" 
+                            r="40" 
+                            fill="transparent" 
+                            stroke="#ffaa00" 
+                            strokeWidth={hoveredCategory === 'platform' ? '15' : '12'} 
+                            strokeDasharray={`${platformStroke} ${strokeBasis}`} 
+                            strokeDashoffset={platformOffset}
+                            className="transition-all duration-300 cursor-pointer"
+                            onMouseEnter={() => setHoveredCategory('platform')}
+                            onMouseLeave={() => setHoveredCategory(null)}
+                            style={{ filter: hoveredCategory === 'platform' ? 'drop-shadow(0 0 4px rgba(255, 170, 0, 0.5))' : 'none' }}
+                          />
+                          {/* GST segment */}
+                          <circle 
+                            cx="50" 
+                            cy="50" 
+                            r="40" 
+                            fill="transparent" 
+                            stroke="#818cf8" 
+                            strokeWidth={hoveredCategory === 'gst' ? '15' : '12'} 
+                            strokeDasharray={`${gstStroke} ${strokeBasis}`} 
+                            strokeDashoffset={gstOffset}
+                            className="transition-all duration-300 cursor-pointer"
+                            onMouseEnter={() => setHoveredCategory('gst')}
+                            onMouseLeave={() => setHoveredCategory(null)}
+                            style={{ filter: hoveredCategory === 'gst' ? 'drop-shadow(0 0 4px rgba(129, 140, 248, 0.5))' : 'none' }}
+                          />
+                          
+                          {/* Central circle to create donut effect */}
+                          <circle cx="50" cy="50" r="28" fill="#11141a" />
+                        </svg>
+                        
+                        {/* Overlay text in center (unrotated) */}
+                        <div className="absolute flex flex-col items-center justify-center" style={{ pointerEvents: 'none' }}>
+                          <span className="text-[12px] font-bold text-white font-mono">{getCentralText()}</span>
+                          <span className="text-[6px] font-bold text-gray-400 tracking-wider mt-0.5">{getCentralSub()}</span>
+                        </div>
+                      </div>
+
+                      <div className="chart-legend flex justify-between text-[9px] text-gray-400 font-mono">
+                        <span 
+                          className="flex items-center gap-1 cursor-pointer transition-all"
+                          onMouseEnter={() => setHoveredCategory('driver')}
+                          onMouseLeave={() => setHoveredCategory(null)}
+                          style={{ color: hoveredCategory === 'driver' ? '#fff' : 'inherit', fontWeight: hoveredCategory === 'driver' ? 'bold' : 'normal' }}
+                        >
+                          <span className="w-2 h-2 rounded-full bg-[#ffdd00]"></span> Driver ({driverPct.toFixed(1)}%)
+                        </span>
+                        <span 
+                          className="flex items-center gap-1 cursor-pointer transition-all"
+                          onMouseEnter={() => setHoveredCategory('platform')}
+                          onMouseLeave={() => setHoveredCategory(null)}
+                          style={{ color: hoveredCategory === 'platform' ? '#fff' : 'inherit', fontWeight: hoveredCategory === 'platform' ? 'bold' : 'normal' }}
+                        >
+                          <span className="w-2 h-2 rounded-full bg-[#ffaa00]"></span> Plat ({platformPct.toFixed(1)}%)
+                        </span>
+                        <span 
+                          className="flex items-center gap-1 cursor-pointer transition-all"
+                          onMouseEnter={() => setHoveredCategory('gst')}
+                          onMouseLeave={() => setHoveredCategory(null)}
+                          style={{ color: hoveredCategory === 'gst' ? '#fff' : 'inherit', fontWeight: hoveredCategory === 'gst' ? 'bold' : 'normal' }}
+                        >
+                          <span className="w-2 h-2 rounded-full bg-[#818cf8]"></span> GST ({gstPct.toFixed(1)}%)
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* 2. Weekly Booking Revenue Bar Chart */}
                 <div className="ops-map-card card-glow p-4 flex flex-col justify-between relative" style={{ height: '240px' }}>
