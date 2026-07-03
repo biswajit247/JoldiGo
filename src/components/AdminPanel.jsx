@@ -38,6 +38,7 @@ export default function AdminPanel() {
     setIsNightMode,
     verifyDriverStatus,
     payoutDriver,
+    broadcastNotification,
     updateSettings,
     updateGeofence,
     resolveSOS,
@@ -81,6 +82,11 @@ export default function AdminPanel() {
 
   // Mock playing evidence states
   const [playingMediaId, setPlayingMediaId] = useState(null);
+
+  // Broadcast simulator form states
+  const [broadcastTarget, setBroadcastTarget] = useState('all');
+  const [broadcastMsgInput, setBroadcastMsgInput] = useState('');
+  const [broadcastStatus, setBroadcastStatus] = useState('');
 
   // Map elements
   const mapContainerRef = useRef(null);
@@ -715,6 +721,84 @@ export default function AdminPanel() {
                   </div>
                 </div>
               )}
+
+              {/* Emergency Broadcast Control Widget */}
+              <div className="card-glow mt-4 p-5 flex flex-col gap-4">
+                <div className="flex items-center gap-2 text-red-400 font-bold uppercase tracking-wider text-sm">
+                  <span>📢</span> Emergency Broadcast & Notification Center
+                </div>
+                
+                <p className="text-xs text-gray-400">
+                  Broadcast system-wide notification alerts, road hazard closures, or weather advisories to all active Passenger and Driver simulator interfaces.
+                </p>
+
+                <div className="flex flex-col md:flex-row gap-3 items-end">
+                  <div className="flex flex-col gap-1 w-full md:w-[180px]">
+                    <label className="text-[10px] text-gray-500 font-bold uppercase">Target Recipients</label>
+                    <select 
+                      value={broadcastTarget} 
+                      onChange={(e) => setBroadcastTarget(e.target.value)}
+                      className="bg-black/40 border border-white/10 rounded px-3 py-1.5 text-xs text-white outline-none w-full"
+                    >
+                      <option value="all">All Devices (all)</option>
+                      <option value="passenger">Passengers Only</option>
+                      <option value="driver">Drivers Only</option>
+                    </select>
+                  </div>
+
+                  <div className="flex flex-col gap-1 flex-1 w-full">
+                    <label className="text-[10px] text-gray-500 font-bold uppercase">Alert Message Text</label>
+                    <input 
+                      type="text" 
+                      placeholder="e.g. 🌧️ Monsoon alert: Heavy waterlogging expected in Kolkata. Travel safely."
+                      value={broadcastMsgInput}
+                      onChange={(e) => setBroadcastMsgInput(e.target.value)}
+                      className="bg-black/40 border border-white/10 rounded px-3 py-1.5 text-xs text-white outline-none w-full animate-none"
+                    />
+                  </div>
+
+                  <button 
+                    onClick={async () => {
+                      if (!broadcastMsgInput.trim()) {
+                        alert("Please specify notification message text!");
+                        return;
+                      }
+                      setBroadcastStatus('Sending...');
+                      await broadcastNotification(broadcastTarget, broadcastMsgInput.trim());
+                      setBroadcastMsgInput('');
+                      setBroadcastStatus('Broadcast successfully deployed!');
+                      setTimeout(() => setBroadcastStatus(''), 4000);
+                    }}
+                    className="bg-red-600 hover:bg-red-500 text-white font-bold px-4 py-1.5 rounded text-xs uppercase tracking-wide transition-all h-[32px] w-full md:w-auto"
+                  >
+                    Send Alert
+                  </button>
+                </div>
+
+                <div className="flex gap-2 flex-wrap">
+                  <span className="text-[10px] text-gray-500 flex items-center">Preset Quick Alerts:</span>
+                  {[
+                    '🌧️ Heavy rains & flooding reported in Salt Lake. Travel carefully.',
+                    '🚧 Howrah Bridge closed temporarily due to congestion checks.',
+                    '⚡ Night Surcharge active: Fares scale to 1.2x base rate.'
+                  ].map((preset, i) => (
+                    <button 
+                      key={i}
+                      type="button"
+                      onClick={() => setBroadcastMsgInput(preset)}
+                      className="text-[9px] bg-white/5 border border-white/10 hover:bg-white/10 text-gray-300 px-2 py-0.5 rounded transition-all"
+                    >
+                      Preset {i+1}
+                    </button>
+                  ))}
+                </div>
+
+                {broadcastStatus && (
+                  <span className="text-[10px] text-green-400 animate-pulse font-semibold mt-1">
+                    {broadcastStatus}
+                  </span>
+                )}
+              </div>
 
             </div>
           )}

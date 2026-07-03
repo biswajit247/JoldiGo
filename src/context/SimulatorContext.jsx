@@ -272,9 +272,9 @@ export const SimulatorProvider = ({ children }) => {
     ]);
   };
 
-  const triggerSmsToast = (message) => {
+  const triggerSmsToast = (message, sender = 'JoldiGo OTP Gateway') => {
     playSound('sms');
-    setActiveSmsToast({ id: Date.now(), sender: 'JoldiGo OTP Gateway', message });
+    setActiveSmsToast({ id: Date.now(), sender, message });
     setTimeout(() => setActiveSmsToast(null), 6000);
   };
 
@@ -315,6 +315,9 @@ export const SimulatorProvider = ({ children }) => {
           setActiveRide(null);
           alert('Ride request expired or rejected by the driver.');
           break;
+        case 'system_broadcast':
+          triggerSmsToast(data.message, '⚠️ JoldiGo Control Room');
+          break;
       }
     };
     passengerSocketRef.current = ws;
@@ -348,6 +351,9 @@ export const SimulatorProvider = ({ children }) => {
           setChatMessages(prev => prev.some(m => m.id === data.message.id) ? prev : [...prev, data.message]);
           playSound('chat');
           break;
+        case 'system_broadcast':
+          triggerSmsToast(data.message, '⚠️ JoldiGo Control Room');
+          break;
       }
     };
     driverSocketsRef.current[driverId] = ws;
@@ -375,6 +381,9 @@ export const SimulatorProvider = ({ children }) => {
           playSound('sos');
           // Handle police sirens locally
           triggerPatrolDispatch(data.driverId, data.location);
+          break;
+        case 'system_broadcast':
+          triggerSmsToast(data.message, '⚠️ Control Room Loopback');
           break;
       }
     };
@@ -1051,6 +1060,19 @@ export const SimulatorProvider = ({ children }) => {
     }
   };
 
+  const broadcastNotification = async (target, message) => {
+    try {
+      const { api } = getServerEndpoints();
+      await fetch(`${api}/api/admin/broadcast-notification`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ target, message })
+      });
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const updateSettings = async (newSettings) => {
     try {
       const { api } = getServerEndpoints();
@@ -1161,6 +1183,7 @@ export const SimulatorProvider = ({ children }) => {
         uploadDriverDocs,
         verifyDriverStatus,
         payoutDriver,
+        broadcastNotification,
         updateSettings,
         updateGeofence: setGeofence,
         bookRide,
