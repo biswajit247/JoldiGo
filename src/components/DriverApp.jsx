@@ -82,6 +82,23 @@ export default function DriverApp({ isStandalone }) {
 
   const currentDriver = drivers.find((d) => d.id === selectedDriverId) || drivers[0];
 
+  if (!currentDriver) {
+    return (
+      <div className="driver-dashboard" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: '400px', backgroundColor: '#0d0d0d', color: '#888', padding: '24px', textAlign: 'center' }}>
+        <div style={{ width: '40px', height: '40px', border: '3px solid #ffdd00', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite', marginBottom: '16px' }}></div>
+        <h4 style={{ color: '#fff', margin: '0 0 8px 0', fontSize: '14px', fontWeight: 'bold' }}>📡 Connecting to JoldiGo Backend Services</h4>
+        <p style={{ margin: '0 0 16px 0', fontSize: '11px', lineHeight: '1.5' }}>
+          Waiting for active driver profile. Make sure your local Express server is running on port 5001 or set the correct address in the Cockpit header.
+        </p>
+        <style>{`
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+        `}</style>
+      </div>
+    );
+  }
+
   // Scroll chat drawer to bottom on new messages
   useEffect(() => {
     if (showChat && chatEndRef.current) {
