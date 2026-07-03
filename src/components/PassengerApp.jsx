@@ -112,6 +112,38 @@ export default function PassengerApp({ isStandalone }) {
   const [starRating, setStarRating] = useState(5);
   const [paymentStep, setPaymentStep] = useState('select'); 
 
+  // Promo code states
+  const [promoInput, setPromoInput] = useState('');
+  const [appliedPromo, setAppliedPromo] = useState('');
+  const [discount, setDiscount] = useState(0);
+  const [promoError, setPromoError] = useState('');
+  const [promoSuccess, setPromoSuccess] = useState('');
+
+  const handleApplyPromo = (e) => {
+    e.preventDefault();
+    setPromoError('');
+    setPromoSuccess('');
+    
+    const code = promoInput.trim().toUpperCase();
+    if (!code) return;
+
+    if (code === 'JOLDIGO50') {
+      setAppliedPromo('JOLDIGO50');
+      setDiscount(50);
+      setPromoSuccess('🎉 Promo applied: ₹50 discount matched!');
+    } else if (code === 'MONSOONFREE') {
+      if (settings.weather === 'rain' || settings.weather === 'waterlogged') {
+        setAppliedPromo('MONSOONFREE');
+        setDiscount(100);
+        setPromoSuccess('🌧️ Monsoon Promo applied: ₹100 safety discount matched!');
+      } else {
+        setPromoError('❌ Valid only during active monsoon/flooding alerts.');
+      }
+    } else {
+      setPromoError('❌ Invalid promo code.');
+    }
+  };
+
   // Map elements
   const mapContainerRef = useRef(null);
   const mapRef = useRef(null);
@@ -363,7 +395,14 @@ export default function PassengerApp({ isStandalone }) {
       alert("Pickup and Drop-off locations cannot be the same!");
       return;
     }
-    bookRide(pickupLoc, dropoffLoc, vehicleType, paymentMethod);
+    bookRide(pickupLoc, dropoffLoc, vehicleType, paymentMethod, appliedPromo, discount);
+    
+    // Clear promo codes on booking
+    setPromoInput('');
+    setAppliedPromo('');
+    setDiscount(0);
+    setPromoSuccess('');
+    setPromoError('');
   };
 
   const handleCancelWithFeeWarning = () => {
@@ -544,6 +583,43 @@ export default function PassengerApp({ isStandalone }) {
             </div>
           </div>
 
+          {/* Promo Code Selector */}
+          <div className="promo-code-selector mt-3">
+            <span className="text-[10px] text-gray-500 font-bold uppercase block mb-1">Apply Coupon Code</span>
+            <form onSubmit={handleApplyPromo} className="flex gap-2">
+              <input 
+                type="text" 
+                placeholder="e.g. JOLDIGO50" 
+                value={promoInput}
+                onChange={(e) => setPromoInput(e.target.value)}
+                disabled={appliedPromo !== ''}
+                className="bg-black/40 border border-white/10 rounded px-2 py-1 text-xs text-white flex-1 outline-none uppercase"
+              />
+              {appliedPromo ? (
+                <button 
+                  type="button"
+                  onClick={() => {
+                    setAppliedPromo('');
+                    setDiscount(0);
+                    setPromoSuccess('');
+                  }}
+                  className="px-2 py-1 bg-red-950/40 border border-red-500/20 text-red-400 rounded text-xs"
+                >
+                  Remove
+                </button>
+              ) : (
+                <button 
+                  type="submit"
+                  className="px-3 py-1 bg-amber-500 hover:bg-amber-400 text-black font-semibold rounded text-xs transition-all"
+                >
+                  Apply
+                </button>
+              )}
+            </form>
+            {promoError && <span className="text-[9px] text-red-400 block mt-1">{promoError}</span>}
+            {promoSuccess && <span className="text-[9px] text-green-400 block mt-1">{promoSuccess}</span>}
+          </div>
+
           {/* Pricing splits Invoice */}
           <div className="trust-fare-breakdown-box mt-3 p-3 bg-black/40 border border-white/5 rounded-lg text-xs">
             <div className="flex justify-between text-gray-400">
@@ -569,17 +645,29 @@ export default function PassengerApp({ isStandalone }) {
             </div>
             <div className="flex justify-between text-gray-400 mt-1">
               <span>Estimated Tolls:</span>
-              <span className="text-gray-300">₹{metrics.tollEstimate}</span>
+              <span className="text-gray-300 font-semibold">+₹{metrics.tollEstimate}</span>
             </div>
+
+            {discount > 0 && (
+              <div className="flex justify-between text-green-400 mt-1">
+                <span>Promo Discount ({appliedPromo}):</span>
+                <span className="font-semibold">-₹{discount.toFixed(2)}</span>
+              </div>
+            )}
+
             <div className="border-t border-white/5 my-2 pt-2 flex justify-between text-[11px] text-gray-400">
-              <span>Aggregator Cut (5% commission):</span>
-              <span>-₹{metrics.commission.toFixed(2)}</span>
+              <span>Aggregator Net Cut (Commission - Discount):</span>
+              <span>-₹{(metrics.commission - discount).toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-[11px] text-emerald-400 font-semibold">
-              <span>Driver Payout Split (95%):</span>
+              <span>Driver Payout Split (95% - Kept Whole):</span>
               <span>₹{metrics.takeHome.toFixed(2)}</span>
             </div>
-            <div className="border-t border-white/5 mt-2 pt-2 flex justify-between items-center text-[9px] text-gray-500 font-mono">
+            <div className="border-t border-white/10 mt-2 pt-2 flex justify-between items-center text-xs font-bold text-white">
+              <span>Estimated Commuter Pay:</span>
+              <span className="text-amber-500 text-sm">₹{Math.max(20, metrics.totalFare - discount).toFixed(2)}</span>
+            </div>
+            <div className="border-t border-white/5 mt-2 pt-1.5 flex justify-between items-center text-[9px] text-gray-500 font-mono">
               <span>Compliant Contract Hash:</span>
               <span className="text-amber-500 font-bold">{metrics.contractHash.substr(0, 16)}</span>
             </div>
@@ -607,13 +695,13 @@ export default function PassengerApp({ isStandalone }) {
             </div>
           )}
 
-          {paymentMethod === 'wallet' && passengerWalletBalance < metrics.totalFare && (
+          {paymentMethod === 'wallet' && passengerWalletBalance < Math.max(20, metrics.totalFare - discount) && (
             <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-2.5 rounded-lg text-xs mt-3 flex justify-between items-center">
               <span>⚠️ Insufficient Balance for booking!</span>
               <button 
                 className="bg-red-900/60 border border-red-500/30 text-red-200 px-2 py-0.5 rounded text-[10px] font-bold"
                 onClick={() => {
-                  setTopUpAmount(Math.ceil((metrics.totalFare - passengerWalletBalance) / 100) * 100);
+                  setTopUpAmount(Math.ceil((Math.max(20, metrics.totalFare - discount) - passengerWalletBalance) / 100) * 100);
                   setShowTopUpModal(true);
                 }}
               >
@@ -625,8 +713,8 @@ export default function PassengerApp({ isStandalone }) {
           <button 
             className="btn-primary full-width mt-4 animate-pulse-btn" 
             onClick={handleBook}
-            disabled={paymentMethod === 'wallet' && passengerWalletBalance < metrics.totalFare}
-            style={{ opacity: (paymentMethod === 'wallet' && passengerWalletBalance < metrics.totalFare) ? 0.5 : 1 }}
+            disabled={paymentMethod === 'wallet' && passengerWalletBalance < Math.max(20, metrics.totalFare - discount)}
+            style={{ opacity: (paymentMethod === 'wallet' && passengerWalletBalance < Math.max(20, metrics.totalFare - discount)) ? 0.5 : 1 }}
           >
             Book JoldiGo {vehicleType === 'car_ac' ? 'AC Car' : (vehicleType === 'car_non_ac' ? 'Non-AC Car' : 'Bike')}
           </button>

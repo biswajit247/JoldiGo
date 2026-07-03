@@ -708,7 +708,7 @@ export const SimulatorProvider = ({ children }) => {
     };
   };
 
-  const bookRide = (pickup, dropoff, vehicleType, paymentMethod = 'wallet') => {
+  const bookRide = (pickup, dropoff, vehicleType, paymentMethod = 'wallet', promoCode = '', discountApplied = 0) => {
     if (activeRide) return;
     if (!isPointInPolygon(pickup, geofence) || !isPointInPolygon(dropoff, geofence)) {
       alert("Service Unavailable: Locations lie outside Operational Geofences.");
@@ -718,8 +718,10 @@ export const SimulatorProvider = ({ children }) => {
     const dist = calculateDistance(pickup.lat, pickup.lng, dropoff.lat, dropoff.lng);
     const fareDetails = calculateDetailedFare(dist, vehicleType, pickup, dropoff);
 
-    if (paymentMethod === 'wallet' && passengerWalletBalance < fareDetails.totalFare) {
-      alert(`Insufficient Balance: You need ₹${fareDetails.totalFare} to book this ride.`);
+    const netPassengerFare = Math.max(20, parseFloat((fareDetails.totalFare - discountApplied).toFixed(2)));
+
+    if (paymentMethod === 'wallet' && passengerWalletBalance < netPassengerFare) {
+      alert(`Insufficient Balance: You need ₹${netPassengerFare} to book this ride.`);
       return;
     }
 
@@ -746,7 +748,11 @@ export const SimulatorProvider = ({ children }) => {
       pickupName: pickup.name,
       dropoffName: dropoff.name,
       paymentMethod, vehicleType, distance: dist,
-      totalFare: fareDetails.totalFare, takeHome: fareDetails.takeHome, commission: fareDetails.commission,
+      totalFare: netPassengerFare, 
+      takeHome: fareDetails.takeHome, 
+      commission: parseFloat((fareDetails.commission - discountApplied).toFixed(2)),
+      discountApplied,
+      promoCode,
       gstAmount: fareDetails.gstAmount, insurancePremium: fareDetails.insurancePremium,
       grossBaseRideFare: fareDetails.grossBaseRideFare,
       destinationZone: dropoff.zone,
