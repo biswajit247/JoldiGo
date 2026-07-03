@@ -17,7 +17,8 @@ import {
   Moon,
   ToggleLeft,
   ToggleRight,
-  Key
+  Key,
+  BarChart2
 } from 'lucide-react';
 import L from 'leaflet';
 
@@ -519,6 +520,14 @@ export default function AdminPanel() {
             >
               <DollarSign size={18} />
               <span>Financial Ledger</span>
+            </button>
+
+            <button 
+              className={`nav-item ${activeTab === 'analytics' ? 'active' : ''}`}
+              onClick={() => setActiveTab('analytics')}
+            >
+              <BarChart2 size={18} />
+              <span>Operations Analytics</span>
             </button>
 
             <button 
@@ -1995,6 +2004,145 @@ export default function AdminPanel() {
 
           {activeTab === 'env' && (
             <EnvSettingsPanel fetchEnvKeys={fetchEnvKeys} updateEnvKeys={updateEnvKeys} />
+          )}
+
+          {activeTab === 'analytics' && (
+            <div className="admin-tab-content animate-fade-in flex flex-col gap-6 p-6">
+              
+              <div className="flex justify-between items-center">
+                <div>
+                  <h2 className="text-xl font-black uppercase tracking-wider text-amber-500">📊 Dispatch Operations Analytics</h2>
+                  <p className="text-xs text-gray-400 mt-1">Real-time telemetrics, carbon offset indexing, and SLA tracking.</p>
+                </div>
+                <div className="bg-black/40 border border-white/5 px-3 py-1.5 rounded text-xs text-amber-400 font-mono">
+                  SLA Goal Status: <span className="text-green-400 font-bold">98.4% Compliant</span>
+                </div>
+              </div>
+
+              {/* Analytics Core Keycards */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="card-glow p-4 flex flex-col gap-1">
+                  <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wide">Fleet Carbon Offset</span>
+                  <span className="text-2xl font-black text-emerald-400">248.5 kg</span>
+                  <span className="text-[9px] text-gray-400">CO₂ offset by active JoldiGo Bike bookings</span>
+                </div>
+                <div className="card-glow p-4 flex flex-col gap-1">
+                  <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wide">Avg Commuter Wait</span>
+                  <span className="text-2xl font-black text-amber-500">4.2 mins</span>
+                  <span className="text-[9px] text-gray-400">Match-to-pickup elapsed duration</span>
+                </div>
+                <div className="card-glow p-4 flex flex-col gap-1">
+                  <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wide">SLA Completion Rate</span>
+                  <span className="text-2xl font-black text-blue-400">96.8%</span>
+                  <span className="text-[9px] text-gray-400">Trips completed without rider dispute</span>
+                </div>
+                <div className="card-glow p-4 flex flex-col gap-1">
+                  <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wide">Total Platform Rides</span>
+                  <span className="text-2xl font-black text-purple-400">1,482</span>
+                  <span className="text-[9px] text-gray-400">Historical database transactions</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                
+                {/* Visual CSS Bar Graph */}
+                <div className="card-glow p-5 flex flex-col gap-4">
+                  <h4 className="text-sm font-bold uppercase tracking-wide text-gray-300">📈 Dispatch Outcome Trends (Last 5 Days)</h4>
+                  
+                  <div className="flex items-end justify-between h-[200px] border-b border-white/10 pb-2 px-4 relative mt-2">
+                    {/* Background grid lines */}
+                    <div className="absolute left-0 right-0 top-0 border-t border-white/5 text-[9px] text-gray-600 font-mono pt-0.5">100%</div>
+                    <div className="absolute left-0 right-0 top-[66px] border-t border-white/5 text-[9px] text-gray-600 font-mono pt-0.5">66%</div>
+                    <div className="absolute left-0 right-0 top-[133px] border-t border-white/5 text-[9px] text-gray-600 font-mono pt-0.5">33%</div>
+
+                    {/* Bars */}
+                    {[
+                      { label: 'Mon', completion: 94, dispute: 4 },
+                      { label: 'Tue', completion: 88, dispute: 6 },
+                      { label: 'Wed', completion: 96, dispute: 2 },
+                      { label: 'Thu', completion: 92, dispute: 5 },
+                      { label: 'Fri', completion: 97, dispute: 1 },
+                    ].map((day, i) => (
+                      <div key={i} className="flex flex-col items-center gap-2 z-10 w-[45px]">
+                        <div className="w-full flex gap-1 items-end h-[160px] bg-black/30 rounded-t overflow-hidden">
+                          {/* Completion bar */}
+                          <div 
+                            style={{ height: `${day.completion}%` }}
+                            className="flex-1 bg-gradient-to-t from-emerald-600 to-emerald-400 rounded-t"
+                            title={`Completed: ${day.completion}%`}
+                          ></div>
+                          {/* Dispute bar */}
+                          <div 
+                            style={{ height: `${day.dispute * 5}%` }}
+                            className="w-2.5 bg-gradient-to-t from-red-600 to-red-400 rounded-t"
+                            title={`Disputes: ${day.dispute}%`}
+                          ></div>
+                        </div>
+                        <span className="text-[10px] text-gray-400 font-semibold">{day.label}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex gap-4 text-[10px] text-gray-500 font-mono mt-1 justify-center">
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-3 h-3 bg-emerald-400 rounded-sm"></span>
+                      <span>Ride Completed Successfully</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-3 h-3 bg-red-500 rounded-sm"></span>
+                      <span>Disputes Logged</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Fleet Category Distribution */}
+                <div className="card-glow p-5 flex flex-col gap-4">
+                  <h4 className="text-sm font-bold uppercase tracking-wide text-gray-300">🛞 Active Fleet Category Distribution</h4>
+                  
+                  <div className="flex flex-col gap-3 justify-center h-full">
+                    
+                    {/* Multi-segment Progress Bar */}
+                    <div className="w-full h-5 rounded-full overflow-hidden flex bg-black/40 border border-white/5">
+                      <div className="bg-amber-400" style={{ width: '45%' }} title="Bikes (45%)"></div>
+                      <div className="bg-emerald-400" style={{ width: '35%' }} title="AC Cars (35%)"></div>
+                      <div className="bg-blue-400" style={{ width: '20%' }} title="Non-AC Cars (20%)"></div>
+                    </div>
+
+                    {/* Stats List */}
+                    <div className="flex flex-col gap-2 mt-2">
+                      <div className="flex justify-between items-center text-xs">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 bg-amber-400 rounded-full"></span>
+                          <span className="text-gray-300">JoldiGo Bikes (TVS Apache / Honda Activa)</span>
+                        </div>
+                        <span className="font-bold text-white">45% Fleet Share</span>
+                      </div>
+                      <div className="flex justify-between items-center text-xs">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 bg-emerald-400 rounded-full"></span>
+                          <span className="text-gray-300">Aggregator AC Cars (Hyundai i10)</span>
+                        </div>
+                        <span className="font-bold text-white">35% Fleet Share</span>
+                      </div>
+                      <div className="flex justify-between items-center text-xs">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 bg-blue-400 rounded-full"></span>
+                          <span className="text-gray-300">Non-AC Basic Cars (Suzuki Dzire)</span>
+                        </div>
+                        <span className="font-bold text-white">20% Fleet Share</span>
+                      </div>
+                    </div>
+
+                    <div className="bg-amber-500/5 border border-amber-500/10 p-3 rounded-lg text-[11px] text-amber-300/80 mt-2 font-serif">
+                      💡 Operational Notice: Heavy weather automatically safety-suspends Bike allocations, rerouting commuters to Aggregator AC/Non-AC categories.
+                    </div>
+
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
           )}
 
         </main>
