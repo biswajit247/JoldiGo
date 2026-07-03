@@ -8,7 +8,7 @@
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "postinstall": "npm install --prefix server"
+    "postinstall": "[ -d server ] && npm install --prefix server || echo 'Skipping server install'"
   },
   "dependencies": {
     "@capacitor/android": "^8.4.1",
