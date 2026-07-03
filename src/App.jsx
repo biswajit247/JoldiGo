@@ -82,6 +82,9 @@ function App() {
   const [showNativeSelector, setShowNativeSelector] = useState(false);
   const [serverUrlInput, setServerUrlInput] = useState(() => {
     if (typeof window !== 'undefined') {
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        return 'http://localhost:5001';
+      }
       let saved = localStorage.getItem('joldigo_server_url');
       if (saved) {
         const normalized = saved.trim().replace(/\/$/, '');
