@@ -1533,7 +1533,7 @@ body {
 
 .btn-sos-floating {
   position: absolute;
-  bottom: 170px;
+  bottom: 280px;
   right: 16px;
   width: 48px;
   height: 48px;
@@ -1548,7 +1548,7 @@ body {
   align-items: center;
   justify-content: center;
   box-shadow: 0 4px 15px rgba(255, 51, 51, 0.4);
-  z-index: 900;
+  z-index: 1010;
 }
 
 .pulse-sos {
