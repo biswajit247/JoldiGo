@@ -296,8 +296,13 @@ function App() {
                     setServerUrlInput(e.target.value);
                     localStorage.setItem('joldigo_server_url', e.target.value);
                   }} 
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      window.location.reload();
+                    }
+                  }}
                   placeholder="http://localhost:5001"
-                  title="Backend Server Endpoint URL (e.g. https://joldigo.onrender.com)"
+                  title="Backend Server Endpoint URL (e.g. https://joldigo.onrender.com). Press Enter to apply."
                 />
               </div>
             </header>
