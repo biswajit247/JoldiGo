@@ -1135,6 +1135,24 @@ app.post('/api/admin/settings', (req, res) => {
   res.json({ success: true });
 });
 
+// Update global weather status
+app.post('/api/admin/weather', (req, res) => {
+  const { weather } = req.body;
+  if (!['clear', 'rain', 'flooding'].includes(weather)) {
+    return res.status(400).json({ error: 'Invalid weather condition.' });
+  }
+  globalSettings.weather = weather;
+
+  broadcastToAll({ 
+    type: 'settings_updated', 
+    settings: globalSettings, 
+    fuelPrices: globalFuelPrices, 
+    congestionZones: globalCongestionZones 
+  });
+
+  res.json({ success: true, weather: globalSettings.weather });
+});
+
 // --- HTTP SERVER SETUP ---
 const server = createServer(app);
 

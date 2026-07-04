@@ -1672,6 +1672,57 @@ export default function AdminPanel() {
                   </div>
                 </div>
 
+                {/* 3. SIMULATE WEATHER CONDITIONS CONTROLLERS */}
+                <div className="fuel-pricing-simulator-box card-glow p-4 bg-indigo-950/20 border border-indigo-500/20 rounded-xl w-[280px] flex flex-col justify-between">
+                  <div>
+                    <div className="flex justify-between items-center">
+                      <h4 className="text-sm font-bold text-indigo-400 flex items-center gap-1.5">🌦️ Weather Operations Center</h4>
+                      <span className="text-[9px] font-mono bg-indigo-950 text-indigo-300 font-bold px-1.5 py-0.5 rounded">dispatch rules</span>
+                    </div>
+                    <p className="text-[10px] text-gray-400 mt-2">
+                      Adjust simulator weather. Heavy Rain surges pricing by 1.15x. Flooding triggers 1.25x surge and safety-suspends bike dispatch.
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col gap-1.5 mt-3">
+                    <button
+                      type="button"
+                      onClick={() => updateSettings({ weather: 'clear' })}
+                      className={`btn-primary py-1.5 px-3 text-[10px] font-bold rounded flex items-center justify-between transition-all ${
+                        settings.weather === 'clear' ? 'bg-amber-500 text-black' : 'bg-black/40 text-gray-400 border border-white/5'
+                      }`}
+                      style={{ padding: '6px 12px' }}
+                    >
+                      <span>☀️ Clear Sky</span>
+                      {settings.weather === 'clear' && <span className="text-[9px] uppercase tracking-wider font-extrabold text-black">Active</span>}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => updateSettings({ weather: 'rain' })}
+                      className={`btn-primary py-1.5 px-3 text-[10px] font-bold rounded flex items-center justify-between transition-all ${
+                        settings.weather === 'rain' ? 'bg-blue-500 text-white' : 'bg-black/40 text-gray-400 border border-white/5'
+                      }`}
+                      style={{ padding: '6px 12px' }}
+                    >
+                      <span>🌧️ Heavy Rain</span>
+                      {settings.weather === 'rain' && <span className="text-[9px] uppercase tracking-wider font-extrabold text-white">Active</span>}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => updateSettings({ weather: 'flooding' })}
+                      className={`btn-primary py-1.5 px-3 text-[10px] font-bold rounded flex items-center justify-between transition-all ${
+                        settings.weather === 'flooding' || settings.weather === 'waterlogged' ? 'bg-red-500 text-white' : 'bg-black/40 text-gray-400 border border-white/5'
+                      }`}
+                      style={{ padding: '6px 12px' }}
+                    >
+                      <span>🌊 Flooding / Waterlog</span>
+                      {(settings.weather === 'flooding' || settings.weather === 'waterlogged') && <span className="text-[9px] uppercase tracking-wider font-extrabold text-white">Active</span>}
+                    </button>
+                  </div>
+                </div>
+
               </div>
 
               {/* THREE CATEGORY PRICING CONFIGURATION SETTINGS */}

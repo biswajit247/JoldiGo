@@ -785,7 +785,7 @@ export const SimulatorProvider = ({ children }) => {
     // Weather surge multiplier & safety controls
     let weatherMultiplier = 1.0;
     if (settings.weather === 'rain') weatherMultiplier = 1.15;
-    else if (settings.weather === 'waterlogged') weatherMultiplier = 1.25;
+    else if (settings.weather === 'waterlogged' || settings.weather === 'flooding') weatherMultiplier = 1.25;
 
     const baseSurge = isNightMode ? 1.20 : 1.00;
     
@@ -812,7 +812,7 @@ export const SimulatorProvider = ({ children }) => {
     const tollEstimate = distance > 8 ? 35 : 0;
     const insurancePremium = 2.00; 
     
-    const totalFare = (settings.weather === 'waterlogged' && vehicleType === 'bike')
+    const totalFare = ((settings.weather === 'waterlogged' || settings.weather === 'flooding') && vehicleType === 'bike')
       ? 0
       : parseFloat((grossBaseRideFare + gstAmount + tollEstimate + insurancePremium).toFixed(2));
 

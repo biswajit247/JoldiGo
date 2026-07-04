@@ -23,7 +23,8 @@ import L from 'leaflet';
 
 const RainOverlay = ({ weather }) => {
   if (!weather || weather === 'clear') return null;
-  const dropCount = weather === 'waterlogged' ? 40 : 20;
+  const isSevere = weather === 'waterlogged' || weather === 'flooding';
+  const dropCount = isSevere ? 45 : 20;
   const drops = Array.from({ length: dropCount }).map((_, i) => ({
     id: i,
     left: Math.random() * 100,
@@ -32,7 +33,7 @@ const RainOverlay = ({ weather }) => {
   }));
 
   return (
-    <div className={`rain-overlay ${weather === 'waterlogged' ? 'waterlogged' : ''}`}>
+    <div className={`rain-overlay ${isSevere ? 'waterlogged' : ''}`}>
       {drops.map(d => (
         <div 
           key={d.id} 
@@ -44,7 +45,7 @@ const RainOverlay = ({ weather }) => {
           }} 
         />
       ))}
-      {weather === 'waterlogged' && <div className="waterlogging-flood-bar"></div>}
+      {isSevere && <div className="waterlogging-flood-bar"></div>}
     </div>
   );
 };
@@ -546,6 +547,13 @@ export default function PassengerApp({ isStandalone }) {
       alert("Pickup and Drop-off locations cannot be the same!");
       return;
     }
+
+    // Safety check: block bike request booking under flooding conditions
+    if (vehicleType === 'bike' && (settings.weather === 'waterlogged' || settings.weather === 'flooding')) {
+      alert("❌ SAFETY RESTRICTION: Bike dispatch is suspended due to severe flooding/waterlogging! Please request an AC or Non-AC Car instead.");
+      return;
+    }
+    
     bookRide(pickupLoc, dropoffLoc, vehicleType, paymentMethod, appliedPromo, discount);
     
     // Clear promo codes on booking
