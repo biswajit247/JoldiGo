@@ -154,6 +154,14 @@ export const SimulatorProvider = ({ children }) => {
   // Server state parameters
   const [fuelPrices, setFuelPrices] = useState({ cng: 95.50, petrol: 104.50, diesel: 92.75 });
   const [insuranceReservePool, setInsuranceReservePool] = useState(348.00); 
+  const [adminStats, setAdminStats] = useState({
+    totalCommission: 0,
+    safetyPoolBalance: 348.00,
+    activeTrips: 0,
+    grossBookings: 0,
+    driverPayouts: 0,
+    accumulatedGstTotal: 0
+  });
   const [isNightMode, setIsNightMode] = useState(false); 
   const [passengerWalletBalance, setPassengerWalletBalance] = useState(500.00); 
   const [congestionZones, setCongestionZones] = useState({ HOWRAH_BRIDGE: 'heavy', PARK_STREET: 'medium', SALT_LAKE_SEC5: 'medium' });
@@ -199,6 +207,7 @@ export const SimulatorProvider = ({ children }) => {
       const ledgerData = await ledgerRes.json();
       if (ledgerData.success) {
         setInsuranceReservePool(ledgerData.stats.safetyPoolBalance);
+        setAdminStats(ledgerData.stats);
       }
 
       // Fetch dynamic geofencing zones
@@ -1400,6 +1409,8 @@ export const SimulatorProvider = ({ children }) => {
         setFuelPrices,
         insuranceReservePool,
         setInsuranceReservePool,
+        adminStats,
+        setAdminStats,
         isNightMode,
         setIsNightMode,
         passengerWalletBalance,

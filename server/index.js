@@ -917,13 +917,28 @@ app.get('/api/admin/stats', async (req, res) => {
     const activeTripsRes = await query("SELECT COUNT(*) FROM rides WHERE status IN ('searching', 'accepted', 'arrived', 'in_progress')");
     const activeTrips = parseInt(activeTripsRes.rows[0].count || 0);
 
+    // Gross fare from completed rides
+    const fareRes = await query("SELECT SUM(total_fare) as total_fare_sum FROM rides WHERE status = 'completed'");
+    const grossBookings = parseFloat(fareRes.rows[0].total_fare_sum || 0);
+
+    // Driver payouts from completed rides
+    const takeHomeRes = await query("SELECT SUM(driver_take_home) as total_take_home FROM rides WHERE status = 'completed'");
+    const driverPayouts = parseFloat(takeHomeRes.rows[0].total_take_home || 0);
+
+    // GST Tax liabilities from completed rides
+    const gstRes = await query("SELECT SUM(gst_amount) as total_gst FROM rides WHERE status = 'completed'");
+    const accumulatedGstTotal = parseFloat(gstRes.rows[0].total_gst || 0);
+
     res.json({
       success: true,
       stats: {
         totalCommission,
         safetyPoolBalance,
         activeTrips,
-        commissionBalance: totalCommission // Comm earned
+        commissionBalance: totalCommission,
+        grossBookings,
+        driverPayouts,
+        accumulatedGstTotal
       }
     });
   } catch (err) {

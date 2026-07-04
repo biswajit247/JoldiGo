@@ -34,6 +34,7 @@ export default function AdminPanel() {
     fuelPrices,
     setFuelPrices,
     insuranceReservePool,
+    adminStats,
     isNightMode,
     setIsNightMode,
     verifyDriverStatus,
@@ -422,9 +423,9 @@ export default function AdminPanel() {
       perKmCarNonAC: parseFloat(perKmCarNonAC),
       baseFareBike: parseFloat(baseFareBike),
       perKmBike: parseFloat(perKmBike),
-      surgeMultiplier: parseFloat(surgeMultiplier),
-      weather: weather
+      surgeMultiplier: parseFloat(surgeMultiplier)
     });
+    alert("Pricing configuration updated successfully!");
   };
 
   const handleUpdateFuelIndex = (e) => {
@@ -465,36 +466,23 @@ export default function AdminPanel() {
 
   // Compute Platform Totals for Finance Tab
   const computeFinancials = () => {
-    let platformCommissionTotal = 0;
-    let accumulatedGstTotal = 0;
-    
-    drivers.forEach(d => {
-      platformCommissionTotal += d.earnings.commission;
-    });
+    const grossBookings = adminStats.grossBookings || 0;
+    const platformCommissionTotal = adminStats.totalCommission || 0;
+    const accumulatedGstTotal = adminStats.accumulatedGstTotal || 0;
+    const driverPayouts = adminStats.driverPayouts || 0;
 
-    disputes.forEach(disp => {
-      if (disp.status === 'awaiting_evidence' || disp.status === 'under_review') {
-        platformCommissionTotal += disp.commission;
-      }
-    });
-
-    accumulatedGstTotal = platformCommissionTotal;
-
-    const grossBookings = platformCommissionTotal / 0.05; 
-    const driverPayouts = grossBookings * 0.95; 
     const gatewayFees = grossBookings * 1.05 * 0.02; 
-
     const odttaLicenseMonthlyAmortized = 8333; 
     const controlRoomStaffCostMonthly = 60000; 
 
     const netPlatformProfits = platformCommissionTotal - gatewayFees - (odttaLicenseMonthlyAmortized + controlRoomStaffCostMonthly);
 
     return {
-      grossBookings: parseFloat(grossBookings.toFixed(2)),
-      platformCommissionTotal: parseFloat(platformCommissionTotal.toFixed(2)),
-      accumulatedGstTotal: parseFloat(accumulatedGstTotal.toFixed(2)),
+      grossBookings,
+      platformCommissionTotal,
+      accumulatedGstTotal,
       gatewayFees: parseFloat(gatewayFees.toFixed(2)),
-      driverPayouts: parseFloat(driverPayouts.toFixed(2)),
+      driverPayouts,
       netPlatformProfits: parseFloat(netPlatformProfits.toFixed(2)),
       licenseFeeFixed: 500000,
       controlRoomStaff: 60000,
@@ -1838,60 +1826,7 @@ export default function AdminPanel() {
                   </div>
                 </div>
 
-                {/* MONSOON WEATHER SURCHARGE CONTROLLER */}
-                <div className="settings-card-group surge-settings-card mt-3">
-                  <div className="flex justify-between items-center">
-                    <h4>🌧️ Monsoon Weather Controller</h4>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
-                      weather === 'clear' 
-                        ? 'bg-emerald-950/40 text-emerald-400 border-emerald-500/20' 
-                        : (weather === 'rain' 
-                            ? 'bg-blue-950/40 text-blue-400 border-blue-500/20' 
-                            : 'bg-red-950/40 text-red-400 border-red-500/20')
-                    }`}>
-                      {weather.toUpperCase()}
-                    </span>
-                  </div>
-                  <p className="text-xs text-gray-400 mt-1">
-                    Adjust pricing multipliers based on real-time monsoon conditions. Flooding bans app bikes dynamically for safety.
-                  </p>
 
-                  <div className="flex gap-2 mt-4">
-                    <button
-                      type="button"
-                      onClick={() => setWeather('clear')}
-                      className={`flex-1 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 border transition-all ${
-                        weather === 'clear'
-                          ? 'bg-emerald-500/10 border-emerald-400 text-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.15)]'
-                          : 'bg-black/30 border-white/5 text-gray-400 hover:bg-white/5'
-                      }`}
-                    >
-                      ☀️ Clear Sky (1.0x)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setWeather('rain')}
-                      className={`flex-1 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 border transition-all ${
-                        weather === 'rain'
-                          ? 'bg-blue-500/10 border-blue-400 text-blue-300 shadow-[0_0_10px_rgba(59,130,246,0.15)]'
-                          : 'bg-black/30 border-white/5 text-gray-400 hover:bg-white/5'
-                      }`}
-                    >
-                      🌧️ Heavy Rain (1.15x)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setWeather('waterlogged')}
-                      className={`flex-1 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 border transition-all ${
-                        weather === 'waterlogged'
-                          ? 'bg-red-500/10 border-red-400 text-red-300 shadow-[0_0_10px_rgba(239,68,68,0.15)]'
-                          : 'bg-black/30 border-white/5 text-gray-400 hover:bg-white/5'
-                      }`}
-                    >
-                      🌊 Flooding (1.25x • 🚫 Bike)
-                    </button>
-                  </div>
-                </div>
 
                 <div className="divider-h mt-4"></div>
 
@@ -2899,14 +2834,14 @@ function EnvSettingsPanel({ fetchEnvKeys, updateEnvKeys }) {
 
   if (loading) {
     return (
-      <div className="history-screen text-center" style={{ padding: '120px 20px 20px 20px', color: '#888' }}>
+      <div className="admin-tab-content text-center font-bold text-xs" style={{ padding: '40px 20px', color: '#888' }}>
         Loading credentials from server environment...
       </div>
     );
   }
 
   return (
-    <div className="history-screen" style={{ padding: '90px 20px 20px 20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+    <div className="admin-tab-content" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
       <div className="payouts-section card-glow text-left">
         <h3 className="text-sm font-bold uppercase tracking-wider text-yellow-400 mb-1 flex items-center gap-1.5">
           <span>⚙️</span> API Keys & Environmental Credentials Manager
