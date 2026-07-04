@@ -378,7 +378,9 @@ app.get('/api/drivers', async (req, res) => {
       location: { lat: parseFloat(drv.location_lat), lng: parseFloat(drv.location_lng) },
       documents: { license: drv.license_number, aadhar: drv.aadhar_number, rc: drv.rc_number },
       earnings: { daily: parseFloat(drv.earnings_daily), weekly: parseFloat(drv.earnings_weekly), commission: parseFloat(drv.commission_owed) },
-      vehicles: JSON.parse(drv.vehicles || '[]')
+      vehicles: JSON.parse(drv.vehicles || '[]'),
+      subscriptionTier: drv.subscription_tier || 'free',
+      subscriptionExpiresAt: drv.subscription_expires_at
     }));
     res.json({ success: true, drivers: formattedDrivers });
   } catch (err) {

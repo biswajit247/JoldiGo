@@ -63,7 +63,8 @@ export default function AdminPanel() {
     updateEnvKeys,
     smsLogs,
     simulationSpeed,
-    setSimulationSpeed
+    setSimulationSpeed,
+    updateFuelPrices
   } = useSimulator();
 
   useEffect(() => {
@@ -417,6 +418,37 @@ export default function AdminPanel() {
 
   }, [drivers, activeRide, sosAlerts, activeTab, congestionZones, showDemandHeatmap, demandHotspots]);
 
+  const exportSmsJson = () => {
+    if (smsLogs.length === 0) return alert("No logs to export.");
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(smsLogs, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", `sms_telemetry_logs_${Date.now()}.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+  };
+
+  const exportSmsCsv = () => {
+    if (smsLogs.length === 0) return alert("No logs to export.");
+    const csvRows = [
+      ["ID", "Sender", "Message", "Timestamp"],
+      ...smsLogs.map(log => [
+        log.id,
+        `"${log.sender.replace(/"/g, '""')}"`,
+        `"${log.message.replace(/"/g, '""')}"`,
+        log.timestamp
+      ])
+    ];
+    const csvContent = "data:text/csv;charset=utf-8," + csvRows.map(e => e.join(",")).join("\n");
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute("href", encodeURI(csvContent));
+    downloadAnchor.setAttribute("download", `sms_telemetry_logs_${Date.now()}.csv`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+  };
+
   // Form handlers
   const handleSaveSettings = (e) => {
     e.preventDefault();
@@ -432,13 +464,14 @@ export default function AdminPanel() {
     alert("Pricing configuration updated successfully!");
   };
 
-  const handleUpdateFuelIndex = (e) => {
+  const handleUpdateFuelIndex = async (e) => {
     e.preventDefault();
-    setFuelPrices({
+    await updateFuelPrices({
       cng: parseFloat(localFuelPrices.cng),
       petrol: parseFloat(localFuelPrices.petrol),
       diesel: parseFloat(localFuelPrices.diesel)
     });
+    alert("Kolkata Fuel Market indices updated & surcharges synced in real-time!");
   };
 
   const handleGeofencePreset = (presetName) => {
@@ -2561,9 +2594,27 @@ export default function AdminPanel() {
                   <h4 className="text-sm font-bold text-amber-500 uppercase tracking-wider flex items-center gap-2">
                     💬 Live SMS Gateway Logs ({smsLogs.length} Active Records)
                   </h4>
-                  <span className="text-[10px] text-emerald-400 font-bold bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-500/20">
-                    🟢 SIMULATED TWILIO GATEWAY: ONLINE
-                  </span>
+                  <div className="flex items-center gap-2">
+                    {smsLogs.length > 0 && (
+                      <>
+                        <button 
+                          onClick={exportSmsJson}
+                          className="bg-[#1e1b4b] text-[#c7d2fe] hover:bg-[#312e81] border border-[#4338ca]/30 px-2.5 py-1 rounded text-[10px] font-bold cursor-pointer transition-all"
+                        >
+                          📄 Export JSON
+                        </button>
+                        <button 
+                          onClick={exportSmsCsv}
+                          className="bg-[#451a03] text-[#fef3c7] hover:bg-[#78350f] border border-[#b45309]/30 px-2.5 py-1 rounded text-[10px] font-bold cursor-pointer transition-all"
+                        >
+                          📊 Export CSV
+                        </button>
+                      </>
+                    )}
+                    <span className="text-[10px] text-emerald-400 font-bold bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-500/20">
+                      🟢 SIMULATED TWILIO GATEWAY: ONLINE
+                    </span>
+                  </div>
                 </div>
 
                 {smsLogs.length === 0 ? (
@@ -2905,7 +2956,75 @@ export default function AdminPanel() {
                     })()}
                   </div>
                 </div>
+              </div>
 
+              {/* TOP PARTNERS LEADERBOARD */}
+              <div className="card-glow p-5 mt-4">
+                <div className="flex justify-between items-center mb-3">
+                  <div>
+                    <h4 className="text-sm font-bold uppercase tracking-wide text-amber-500">🏆 JoldiGo Top Partners Leaderboard</h4>
+                    <p className="text-[10px] text-gray-500 font-mono mt-0.5">Real-time driver ratings, compliance metrics, and subscription contributions.</p>
+                  </div>
+                  <span className="text-[10px] text-amber-400 font-mono bg-amber-950/40 px-2 py-0.5 rounded border border-amber-500/20 font-bold">
+                    Updated live
+                  </span>
+                </div>
+
+                {(() => {
+                  const sortedDrivers = [...drivers].sort((a, b) => {
+                    if (b.rating !== a.rating) return b.rating - a.rating;
+                    const aRides = Math.round((a.id * 7 + 12) % 35) + 15;
+                    const bRides = Math.round((b.id * 7 + 12) % 35) + 15;
+                    return bRides - aRides;
+                  });
+
+                  return (
+                    <div style={{ overflowX: 'auto' }}>
+                      <table className="w-full text-left text-xs border-collapse">
+                        <thead>
+                          <tr className="border-b border-white/5 text-gray-500 text-[10px] uppercase tracking-wider">
+                            <th className="py-2 px-3">Rank</th>
+                            <th className="py-2 px-3">Partner</th>
+                            <th className="py-2 px-3">Category</th>
+                            <th className="py-2 px-3">Customer Rating</th>
+                            <th className="py-2 px-3">Est. Weekly Trips</th>
+                            <th className="py-2 px-3">Est. Weekly Revenue</th>
+                            <th className="py-2 px-3 text-right">Subscription Tier</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {sortedDrivers.slice(0, 5).map((drv, idx) => {
+                            const rides = Math.round((drv.id * 7 + 12) % 35) + 15;
+                            const rankLabel = idx === 0 ? '🥇 1st' : (idx === 1 ? '🥈 2nd' : (idx === 2 ? '🥉 3rd' : `${idx + 1}th`));
+                            return (
+                              <tr key={drv.id} className="border-b border-white/5 hover:bg-white/5 transition-all">
+                                <td className="py-2.5 px-3 font-bold text-amber-400">{rankLabel}</td>
+                                <td className="py-2.5 px-3 font-semibold text-white">{drv.name}</td>
+                                <td className="py-2.5 px-3 font-mono text-[10px] text-gray-400">
+                                  {drv.vehicleType === 'car_ac' ? 'AC Car' : (drv.vehicleType === 'car_non_ac' ? 'Non-AC Car' : 'Bike')}
+                                </td>
+                                <td className="py-2.5 px-3 text-emerald-400 font-bold">⭐️ {drv.rating.toFixed(1)} / 5.0</td>
+                                <td className="py-2.5 px-3 text-gray-300 font-mono">{rides} rides</td>
+                                <td className="py-2.5 px-3 text-emerald-400 font-mono">₹{(rides * 135).toFixed(0)}</td>
+                                <td className="py-2.5 px-3 text-right">
+                                  <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${
+                                    drv.subscriptionTier === 'gold' 
+                                      ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30' 
+                                      : (drv.subscriptionTier === 'silver' 
+                                        ? 'bg-slate-300/20 text-slate-200 border border-slate-300/30' 
+                                        : 'bg-black/40 text-gray-500 border border-white/5')
+                                  }`}>
+                                    {drv.subscriptionTier.toUpperCase()}
+                                  </span>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  );
+                })()}
               </div>
 
             </div>

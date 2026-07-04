@@ -1292,6 +1292,20 @@ export const SimulatorProvider = ({ children }) => {
     }
   };
 
+  const updateFuelPrices = async (newFuelPrices) => {
+    try {
+      const { api } = getServerEndpoints();
+      await fetch(`${api}/api/admin/settings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fuelPrices: newFuelPrices })
+      });
+      fetchInitialData();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const fileSafetyClaim = async (driverId, claimType, amount, description) => {
     try {
       const { api } = getServerEndpoints();
@@ -1469,6 +1483,7 @@ export const SimulatorProvider = ({ children }) => {
         payoutDriver,
         broadcastNotification,
         updateSettings,
+        updateFuelPrices,
         updateGeofence: setGeofence,
         bookRide,
         rejectRide,
