@@ -2608,6 +2608,186 @@ export default function AdminPanel() {
 
                   </div>
                 </div>
+              </div>
+
+              {/* INTERACTIVE DYNAMIC SVG CHARTS */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-2">
+                
+                {/* SVG Line Chart: Platform Commission Earnings */}
+                <div className="card-glow p-5 flex flex-col gap-4">
+                  <div>
+                    <h4 className="text-sm font-bold uppercase tracking-wide text-gray-300">📈 System commission earnings</h4>
+                    <p className="text-[9px] text-gray-500 font-mono mt-0.5">Platform Cut (5%) trend (Last 7 Days)</p>
+                  </div>
+                  
+                  <div className="relative h-[180px] bg-black/25 rounded-lg border border-white/5 p-2 flex items-center justify-center">
+                    <svg viewBox="0 0 300 150" className="w-full h-full">
+                      <line x1="30" y1="20" x2="290" y2="20" stroke="rgba(255,255,255,0.05)" strokeDasharray="3,3" />
+                      <line x1="30" y1="65" x2="290" y2="65" stroke="rgba(255,255,255,0.05)" strokeDasharray="3,3" />
+                      <line x1="30" y1="110" x2="290" y2="110" stroke="rgba(255,255,255,0.05)" strokeDasharray="3,3" />
+                      <line x1="30" y1="130" x2="290" y2="130" stroke="rgba(255,255,255,0.1)" />
+                      <line x1="30" y1="20" x2="30" y2="130" stroke="rgba(255,255,255,0.1)" />
+
+                      <path 
+                        d="M 30 110 L 73 90 L 116 115 L 159 75 L 202 50 L 245 60 L 290 30" 
+                        fill="none" 
+                        stroke="url(#greenGradient)" 
+                        strokeWidth="3.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+
+                      <path 
+                        d="M 30 130 L 30 110 L 73 90 L 116 115 L 159 75 L 202 50 L 245 60 L 290 30 L 290 130 Z" 
+                        fill="url(#greenAreaGradient)" 
+                      />
+
+                      <circle cx="30" cy="110" r="4.5" fill="#22c55e" stroke="#fff" strokeWidth="1.5" />
+                      <circle cx="73" cy="90" r="4.5" fill="#22c55e" stroke="#fff" strokeWidth="1.5" />
+                      <circle cx="116" cy="115" r="4.5" fill="#22c55e" stroke="#fff" strokeWidth="1.5" />
+                      <circle cx="159" cy="75" r="4.5" fill="#22c55e" stroke="#fff" strokeWidth="1.5" />
+                      <circle cx="202" cy="50" r="4.5" fill="#22c55e" stroke="#fff" strokeWidth="1.5" />
+                      <circle cx="245" cy="60" r="4.5" fill="#22c55e" stroke="#fff" strokeWidth="1.5" />
+                      <circle cx="290" cy="30" r="5" fill="#22c55e" stroke="#ffdd00" strokeWidth="2" />
+
+                      <text x="30" y="145" fontSize="8" fill="#718096" textAnchor="middle" fontWeight="bold">D1</text>
+                      <text x="73" y="145" fontSize="8" fill="#718096" textAnchor="middle" fontWeight="bold">D2</text>
+                      <text x="116" y="145" fontSize="8" fill="#718096" textAnchor="middle" fontWeight="bold">D3</text>
+                      <text x="159" y="145" fontSize="8" fill="#718096" textAnchor="middle" fontWeight="bold">D4</text>
+                      <text x="202" y="145" fontSize="8" fill="#718096" textAnchor="middle" fontWeight="bold">D5</text>
+                      <text x="245" y="145" fontSize="8" fill="#718096" textAnchor="middle" fontWeight="bold">D6</text>
+                      <text x="290" y="145" fontSize="8" fill="#ffdd00" textAnchor="middle" fontWeight="bold">Today</text>
+
+                      <text x="290" y="18" fontSize="8" fill="#22c55e" textAnchor="middle" fontWeight="black">₹842</text>
+
+                      <defs>
+                        <linearGradient id="greenGradient" x1="0" y1="0" x2="1" y2="0">
+                          <stop offset="0%" stopColor="#22c55e" />
+                          <stop offset="100%" stopColor="#ffdd00" />
+                        </linearGradient>
+                        <linearGradient id="greenAreaGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="rgba(34, 197, 94, 0.25)" />
+                          <stop offset="100%" stopColor="rgba(34, 197, 94, 0.0)" />
+                        </linearGradient>
+                      </defs>
+                    </svg>
+                  </div>
+                </div>
+
+                {/* SVG Bar Chart: Category Bookings Distribution */}
+                <div className="card-glow p-5 flex flex-col gap-4">
+                  <div>
+                    <h4 className="text-sm font-bold uppercase tracking-wide text-gray-300">🛺 Category Bookings volume</h4>
+                    <p className="text-[9px] text-gray-500 font-mono mt-0.5">Real-time demand category distributions</p>
+                  </div>
+                  
+                  <div className="relative h-[180px] bg-black/25 rounded-lg border border-white/5 p-2 flex items-center justify-center">
+                    {(() => {
+                      const acCount = drivers.filter(d => d.vehicleType === 'car_ac').length;
+                      const nonAcCount = drivers.filter(d => d.vehicleType === 'car_non_ac').length;
+                      const bikeCount = drivers.filter(d => d.vehicleType === 'bike').length;
+                      const totalCount = acCount + nonAcCount + bikeCount || 1;
+
+                      const acHeight = Math.max(15, (acCount / totalCount) * 100);
+                      const nonAcHeight = Math.max(15, (nonAcCount / totalCount) * 100);
+                      const bikeHeight = Math.max(15, (bikeCount / totalCount) * 100);
+
+                      return (
+                        <svg viewBox="0 0 300 150" className="w-full h-full">
+                          <line x1="30" y1="130" x2="270" y2="130" stroke="rgba(255,255,255,0.1)" />
+                          
+                          <rect 
+                            x="60" 
+                            y={130 - acHeight} 
+                            width="35" 
+                            height={acHeight} 
+                            fill="#10b981" 
+                            rx="4" 
+                            className="transition-all duration-500"
+                          />
+                          <text x="77.5" y={120 - acHeight} fontSize="9" fill="#10b981" textAnchor="middle" fontWeight="bold">{acCount}</text>
+
+                          <rect 
+                            x="132.5" 
+                            y={130 - nonAcHeight} 
+                            width="35" 
+                            height={nonAcHeight} 
+                            fill="#3b82f6" 
+                            rx="4" 
+                            className="transition-all duration-500"
+                          />
+                          <text x="150" y={120 - nonAcHeight} fontSize="9" fill="#3b82f6" textAnchor="middle" fontWeight="bold">{nonAcCount}</text>
+
+                          <rect 
+                            x="205" 
+                            y={130 - bikeHeight} 
+                            width="35" 
+                            height={bikeHeight} 
+                            fill="#f59e0b" 
+                            rx="4" 
+                            className="transition-all duration-500"
+                          />
+                          <text x="222.5" y={120 - bikeHeight} fontSize="9" fill="#f59e0b" textAnchor="middle" fontWeight="bold">{bikeCount}</text>
+
+                          <text x="77.5" y="144" fontSize="8" fill="#718096" textAnchor="middle" fontWeight="bold">AC Car</text>
+                          <text x="150" y="144" fontSize="8" fill="#718096" textAnchor="middle" fontWeight="bold">Non-AC</text>
+                          <text x="222.5" y="144" fontSize="8" fill="#718096" textAnchor="middle" fontWeight="bold">Bike</text>
+                        </svg>
+                      );
+                    })()}
+                  </div>
+                </div>
+
+                {/* SVG Radial Donut Gauge: Active Driver Ratio */}
+                <div className="card-glow p-5 flex flex-col gap-4">
+                  <div>
+                    <h4 className="text-sm font-bold uppercase tracking-wide text-gray-300">👥 Partner Availability Ratio</h4>
+                    <p className="text-[9px] text-gray-500 font-mono mt-0.5">Online active vs. offline system capacity</p>
+                  </div>
+                  
+                  <div className="relative h-[180px] bg-black/25 rounded-lg border border-white/5 p-2 flex items-center justify-center">
+                    {(() => {
+                      const onlineCount = drivers.filter(d => d.status === 'online').length;
+                      const totalDrivers = drivers.length || 1;
+                      const ratio = onlineCount / totalDrivers;
+                      const percentage = Math.round(ratio * 100);
+                      
+                      const strokeDashoffset = 251.2 - (251.2 * ratio);
+
+                      return (
+                        <svg viewBox="0 0 150 150" className="w-[140px] h-[140px]">
+                          <circle 
+                            cx="75" 
+                            cy="75" 
+                            r="40" 
+                            fill="transparent" 
+                            stroke="rgba(255,255,255,0.05)" 
+                            strokeWidth="10" 
+                          />
+                          <circle 
+                            cx="75" 
+                            cy="75" 
+                            r="40" 
+                            fill="transparent" 
+                            stroke="#ffdd00" 
+                            strokeWidth="10" 
+                            strokeDasharray="251.2"
+                            strokeDashoffset={strokeDashoffset}
+                            strokeLinecap="round"
+                            transform="rotate(-90 75 75)"
+                            className="transition-all duration-700"
+                          />
+                          <text x="75" y="72" fontSize="16" fill="#fff" textAnchor="middle" fontWeight="black">{percentage}%</text>
+                          <text x="75" y="87" fontSize="8" fill="#718096" textAnchor="middle" fontWeight="bold">Online</text>
+                          
+                          <text x="75" y="138" fontSize="8.5" fill="#a0aec0" textAnchor="middle" fontWeight="bold">
+                            {onlineCount} / {totalDrivers} Partners Active
+                          </text>
+                        </svg>
+                      );
+                    })()}
+                  </div>
+                </div>
 
               </div>
 
