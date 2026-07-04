@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useSimulator } from '../context/SimulatorContext';
+import { useSimulator, calculateDistance } from '../context/SimulatorContext';
 import { 
   ShieldAlert, 
   MapPin, 
@@ -945,73 +945,97 @@ export default function DriverApp({ isStandalone }) {
             </div>
 
             {/* TIMER DIALOG OFFER INCOMING */}
-            {activeRide && activeRide.driverId === currentDriver.id && activeRide.status === 'searching' && (
-              <div className="incoming-request-modal card-glow animate-bounce-in" style={{ top: '65px' }}>
-                <div className="incoming-header">
-                  <span className="pulse-dot red"></span>
-                  <h4>UPFRONT DISPATCH OFFER</h4>
-                </div>
+            {activeRide && activeRide.driverId === currentDriver.id && activeRide.status === 'searching' && (() => {
+              const driverToPickupDist = (currentDriver && activeRide.pickup)
+                ? calculateDistance(currentDriver.location.lat, currentDriver.location.lng, activeRide.pickup.lat, activeRide.pickup.lng)
+                : 0;
+              return (
+                <div className="incoming-request-modal card-glow animate-bounce-in" style={{ top: '65px' }}>
+                  <div className="incoming-header">
+                    <span className="pulse-dot red"></span>
+                    <h4>UPFRONT DISPATCH OFFER</h4>
+                  </div>
 
-                <div className="incoming-timer-arc">
-                  <div className="timer-number">{activeRide.timer}s</div>
-                </div>
+                  <div className="incoming-timer-arc">
+                    <div className="timer-number">{activeRide.timer}s</div>
+                  </div>
 
-                <div className="incoming-details-table">
-                  <div className="row">
-                    <span className="lbl">Vehicle Type:</span>
-                    <span className="val bold text-yellow-400">{getVehicleLabel(activeRide.vehicleType)}</span>
-                  </div>
-                  <div className="row">
-                    <span className="lbl">Dest Zone:</span>
-                    <span className="val bold text-yellow-400">{activeRide.destinationZone}</span>
-                  </div>
-                  <div className="row">
-                    <span className="lbl">Payment Method:</span>
-                    <span className="val bold text-indigo-300 uppercase">{activeRide.paymentMethod}</span>
-                  </div>
-                  <div className="row font-semibold">
-                    <span className="lbl">Traffic Friction:</span>
-                    <span className="val text-orange-400">{activeRide.estimatedRouteFriction}</span>
-                  </div>
-                  
-                  <div className="border-t border-white/5 my-1 pt-1"></div>
-                  
-                  {/* NO-HIDDEN-MATH INVOICE SPLIT */}
-                  <div className="row text-[10px]">
-                    <span className="lbl">Base Ride Fare:</span>
-                    <span className="val">₹{activeRide.grossBaseRideFare.toFixed(2)}</span>
-                  </div>
-                  <div className="row text-[10px]">
-                    <span className="lbl">Passenger GST (5%):</span>
-                    <span className="val text-indigo-300">+₹{activeRide.gstAmount.toFixed(2)}</span>
-                  </div>
-                  <div className="row text-[10px]">
-                    <span className="lbl">Toll Charges:</span>
-                    <span className="val">₹{activeRide.tollEstimate}</span>
-                  </div>
-                  <div className="row text-[10px]">
-                    <span className="lbl">Platform Cut (5%):</span>
-                    <span className="val text-red-400">-₹{activeRide.commission.toFixed(2)}</span>
-                  </div>
-                  <div className="row border-t border-gray-700 pt-1 mt-1 font-bold text-[13px]">
-                    <span className="lbl">Driver Net Share (95%):</span>
-                    <span className="val text-green-400">₹{activeRide.takeHome.toFixed(2)}</span>
-                  </div>
-                  <div className="text-[8px] font-mono text-gray-500 mt-1 truncate">
-                    Contract: {activeRide.contractHash}
-                  </div>
-                </div>
+                  <div className="incoming-details-table">
+                    <div className="row font-bold text-[14px]">
+                      <span className="lbl text-green-400">Net Take-Home:</span>
+                      <span className="val text-green-400">₹{activeRide.takeHome.toFixed(2)}</span>
+                    </div>
+                    <div className="row mt-1 text-[11px]">
+                      <span className="lbl text-yellow-400">Pickup Zone:</span>
+                      <span className="val text-white font-semibold">{activeRide.pickupName || 'Current Zone'}</span>
+                    </div>
+                    <div className="row text-[11px]">
+                      <span className="lbl text-yellow-400">Dropoff Zone:</span>
+                      <span className="val text-white font-semibold">{activeRide.dropoffName || activeRide.destinationZone}</span>
+                    </div>
+                    <div className="row text-[10px] text-indigo-200">
+                      <span className="lbl">Pickup Distance:</span>
+                      <span className="val font-semibold">{driverToPickupDist.toFixed(2)} km</span>
+                    </div>
+                    <div className="row text-[10px] text-indigo-200">
+                      <span className="lbl">Ride Distance:</span>
+                      <span className="val font-semibold">{activeRide.distance.toFixed(2)} km</span>
+                    </div>
 
-                <div className="incoming-actions mt-3">
-                  <button className="btn-secondary flex-1 mr-2 py-1.5" onClick={rejectRide}>
-                    Decline
-                  </button>
-                  <button className="btn-primary flex-1 ml-2 py-1.5 text-xs" onClick={() => acceptRide(currentDriver.id)}>
-                    Accept Offer
-                  </button>
+                    {/* COLLAPSIBLE DETAILS DROPDOWN */}
+                    <details className="mt-2 text-left bg-black/45 border border-white/10 rounded-lg p-2 transition-all">
+                      <summary className="text-[10px] text-indigo-300 font-bold cursor-pointer select-none outline-none flex justify-between items-center">
+                        <span>📋 Fare Breakdown Details</span>
+                        <span className="text-[8px]">▼ Click to toggle</span>
+                      </summary>
+                      <div className="mt-2 flex flex-col gap-1 text-[9px] text-gray-400">
+                        <div className="flex justify-between">
+                          <span>Vehicle Type:</span>
+                          <span className="text-white">{getVehicleLabel(activeRide.vehicleType)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Payment Method:</span>
+                          <span className="text-white uppercase">{activeRide.paymentMethod}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Traffic Friction:</span>
+                          <span className="text-white">{activeRide.estimatedRouteFriction}</span>
+                        </div>
+                        <div className="h-[1px] bg-white/5 my-1"></div>
+                        <div className="flex justify-between">
+                          <span>Base Ride Fare:</span>
+                          <span>₹{activeRide.grossBaseRideFare.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Passenger GST (5%):</span>
+                          <span className="text-indigo-400">+₹{activeRide.gstAmount.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Toll Estimate:</span>
+                          <span>₹{activeRide.tollEstimate}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Platform Commission (5%):</span>
+                          <span className="text-red-400">-₹{activeRide.commission.toFixed(2)}</span>
+                        </div>
+                        <div className="text-[8px] font-mono text-gray-600 mt-1 truncate">
+                          Contract: {activeRide.contractHash}
+                        </div>
+                      </div>
+                    </details>
+                  </div>
+
+                  <div className="incoming-actions mt-3">
+                    <button className="btn-secondary flex-1 mr-2 py-1.5" onClick={rejectRide}>
+                      Decline
+                    </button>
+                    <button className="btn-primary flex-1 ml-2 py-1.5 text-xs" onClick={() => acceptRide(currentDriver.id)}>
+                      Accept Offer
+                    </button>
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
           </div>
         )}
