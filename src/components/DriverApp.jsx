@@ -120,6 +120,57 @@ export default function DriverApp({ isStandalone }) {
   // Heatmap Toggle State
   const [showHeatmap, setShowHeatmap] = useState(false);
 
+  // Driver Subscription states
+  const [subTier, setSubTier] = useState('free');
+  const [subExpires, setSubExpires] = useState(null);
+  const [loadingSub, setLoadingSub] = useState(false);
+
+  const fetchSubscription = async () => {
+    if (!selectedDriverId) return;
+    setLoadingSub(true);
+    try {
+      const { api } = getServerEndpoints();
+      const res = await fetch(`${api}/api/driver/subscription?driverId=${selectedDriverId}`);
+      const data = await res.json();
+      if (data.success) {
+        setSubTier(data.tier);
+        setSubExpires(data.expiresAt);
+      }
+    } catch (err) {
+      console.error("Failed to load driver subscription details:", err);
+    } finally {
+      setLoadingSub(false);
+    }
+  };
+
+  useEffect(() => {
+    if (selectedDriverId) {
+      fetchSubscription();
+    }
+  }, [tab, selectedDriverId]);
+
+  const handleUpgradeSubscription = async (tierVal) => {
+    setLoadingSub(true);
+    try {
+      const { api } = getServerEndpoints();
+      const res = await fetch(`${api}/api/driver/subscription/upgrade`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ driverId: selectedDriverId, tier: tierVal })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSubTier(data.tier);
+        setSubExpires(data.expiresAt);
+        alert(`🎉 Successfully upgraded driver subscription to ${tierVal.toUpperCase()} tier!`);
+      }
+    } catch (err) {
+      console.error("Failed to upgrade driver subscription:", err);
+    } finally {
+      setLoadingSub(false);
+    }
+  };
+
   useEffect(() => {
     if (tab !== 'history' || !selectedDriverId) return;
     
@@ -787,6 +838,12 @@ export default function DriverApp({ isStandalone }) {
                     >
                       History
                     </button>
+                    <button 
+                      className={`tab-btn-compact ${tab === 'subscription' ? 'active' : ''}`}
+                      onClick={() => setTab('subscription')}
+                    >
+                      Premium
+                    </button>
                   </div>
 
                   {tab === 'dashboard' && (
@@ -1067,6 +1124,74 @@ export default function DriverApp({ isStandalone }) {
                           ))}
                         </div>
                       )}
+                    </div>
+                  )}
+
+                  {tab === 'subscription' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }} className="text-left mt-2">
+                      <span className="text-[10px] text-gray-500 font-extrabold uppercase block tracking-wider">🌟 Premium Subscriptions</span>
+
+                      <div className="p-3 bg-black/40 border border-white/5 rounded-lg flex flex-col gap-1 text-xs">
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-400">Current active tier:</span>
+                          <span className="font-black text-amber-500 uppercase tracking-widest text-[11px] bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                            🛡️ {subTier}
+                          </span>
+                        </div>
+                        {subExpires && (
+                          <span className="text-[8px] text-gray-500 block mt-1">
+                            Expires on: {new Date(subExpires).toLocaleDateString()} (Auto-Renews)
+                          </span>
+                        )}
+                      </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
+                        {[
+                          { key: 'free', name: 'Free Partner Standard', fee: '₹0 / mo', commission: '5.0% commission cut', desc: 'Standard JoldiGo platform fee indexing.' },
+                          { key: 'silver', name: 'Premium Silver Tier', fee: '₹299 / mo', commission: '2.5% commission cut', desc: 'Halves standard per-ride platform fees + standard dispatch priority.' },
+                          { key: 'gold', name: 'Premium Gold Tier', fee: '₹599 / mo', commission: '1.0% commission cut', desc: 'Waives base fees to just 1% commission + maximum booking matching dispatch priority.' }
+                        ].map(tier => {
+                          const isCurrent = subTier === tier.key;
+
+                          return (
+                            <div 
+                              key={tier.key}
+                              className={`p-3 rounded-lg border text-left flex justify-between items-center transition-all ${
+                                isCurrent 
+                                  ? 'border-amber-400 bg-amber-500/5' 
+                                  : 'border-white/5 bg-black/30 hover:border-white/10'
+                              }`}
+                            >
+                              <div className="flex flex-col gap-0.5">
+                                <span className="text-[11px] font-black text-white">{tier.name}</span>
+                                <span className="text-[10px] font-extrabold text-green-400 mt-0.5">{tier.commission} ({tier.fee})</span>
+                                <p className="text-[9.5px] text-gray-400 mt-1 leading-snug">{tier.desc}</p>
+                              </div>
+
+                              <button
+                                type="button"
+                                disabled={isCurrent || loadingSub}
+                                onClick={() => handleUpgradeSubscription(tier.key)}
+                                style={{
+                                  padding: '6px 12px',
+                                  fontSize: '9px',
+                                  fontWeight: 'bold',
+                                  borderRadius: '4px',
+                                  backgroundColor: isCurrent ? 'rgba(255,255,255,0.05)' : 'var(--color-primary)',
+                                  border: isCurrent ? '1px solid transparent' : '1px solid transparent',
+                                  color: isCurrent ? '#666' : '#000',
+                                  cursor: isCurrent ? 'default' : 'pointer',
+                                  marginLeft: '8px',
+                                  flexShrink: 0
+                                }}
+                                className={isCurrent ? '' : 'hover:bg-amber-400'}
+                              >
+                                {isCurrent ? 'Active' : 'Upgrade'}
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   )}
                 </div>

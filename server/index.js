@@ -52,6 +52,8 @@ const loadPersistedSettings = async () => {
     `);
 
     await query("ALTER TABLE drivers ADD COLUMN IF NOT EXISTS vehicles TEXT DEFAULT '[]'");
+    await query("ALTER TABLE drivers ADD COLUMN IF NOT EXISTS subscription_tier VARCHAR(50) DEFAULT 'free'");
+    await query("ALTER TABLE drivers ADD COLUMN IF NOT EXISTS subscription_expires_at TIMESTAMP DEFAULT NULL");
 
     const res = await query("SELECT * FROM system_settings");
     res.rows.forEach(row => {
@@ -508,6 +510,51 @@ app.get('/api/driver/history', async (req, res) => {
     })) });
   } catch (err) {
     res.status(500).json({ error: 'Failed to retrieve completed rides history.', details: err.message });
+  }
+});
+
+// Get driver subscription details
+app.get('/api/driver/subscription', async (req, res) => {
+  const { driverId } = req.query;
+  if (!driverId) return res.status(400).json({ error: 'Driver ID is required.' });
+  try {
+    const dbRes = await query(
+      "SELECT subscription_tier, subscription_expires_at FROM drivers WHERE id = $1",
+      [driverId]
+    );
+    if (dbRes.rows.length === 0) return res.status(404).json({ error: 'Driver not found.' });
+    
+    res.json({
+      success: true,
+      tier: dbRes.rows[0].subscription_tier || 'free',
+      expiresAt: dbRes.rows[0].subscription_expires_at
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to load driver subscription details.', details: err.message });
+  }
+});
+
+// Upgrade driver subscription tier
+app.post('/api/driver/subscription/upgrade', async (req, res) => {
+  const { driverId, tier } = req.body;
+  if (!driverId || !tier) {
+    return res.status(400).json({ error: 'Driver ID and target tier are required.' });
+  }
+  if (!['free', 'silver', 'gold'].includes(tier)) {
+    return res.status(400).json({ error: 'Invalid subscription tier.' });
+  }
+  try {
+    const expiry = tier === 'free' ? null : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    await query(
+      "UPDATE drivers SET subscription_tier = $1, subscription_expires_at = $2 WHERE id = $3",
+      [tier, expiry, driverId]
+    );
+    
+    broadcastToRole('admin', { type: 'drivers_updated' });
+
+    res.json({ success: true, tier, expiresAt: expiry });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to upgrade subscription.', details: err.message });
   }
 });
 
@@ -1249,6 +1296,27 @@ wss.on('connection', (ws) => {
             }
           } catch (fraudErr) {
             console.error("[Fraud Monitor Error]", fraudErr);
+          }
+
+          // Retrieve driver subscription tier to apply matching platform commission
+          let finalCommission = parseFloat(data.ride.commission || 0);
+          let finalTakeHome = parseFloat(data.ride.takeHome || 0);
+          try {
+            const drvSubRes = await query("SELECT subscription_tier FROM drivers WHERE id = $1", [data.ride.driverId]);
+            if (drvSubRes.rows.length > 0) {
+              const tier = drvSubRes.rows[0].subscription_tier || 'free';
+              const baseFareAmt = parseFloat(data.ride.grossBaseRideFare || (data.ride.totalFare * 0.90));
+              let rate = 0.05; // 5%
+              if (tier === 'silver') rate = 0.025; // 2.5%
+              else if (tier === 'gold') rate = 0.01; // 1%
+              
+              finalCommission = parseFloat((baseFareAmt * rate).toFixed(2));
+              finalTakeHome = parseFloat((baseFareAmt - finalCommission).toFixed(2));
+              data.ride.commission = finalCommission;
+              data.ride.takeHome = finalTakeHome;
+            }
+          } catch (subErr) {
+            console.error("[Subscription Override Error]", subErr);
           }
 
           // Create database ride record
