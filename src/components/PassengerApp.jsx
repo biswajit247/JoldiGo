@@ -69,6 +69,7 @@ export default function PassengerApp({ isStandalone }) {
     cancelRide,
     fileDispute,
     calculateDetailedFare,
+    getFuelSurchargePercentage,
     congestionZones,
     activeSmsToast,
     triggerSmsToast,
@@ -573,6 +574,11 @@ export default function PassengerApp({ isStandalone }) {
               <div className="vehicle-info">
                 <span className="vh-name">JoldiGo AC Car</span>
                 <span className="vh-eta">Premium Air-Conditioned sedan</span>
+                {getFuelSurchargePercentage('car_ac') > 0 && (
+                  <span className="text-[9px] text-amber-500 font-bold block mt-0.5" style={{ color: '#f59e0b' }}>
+                    ⛽ Includes +{getFuelSurchargePercentage('car_ac')}% Petrol Surcharge
+                  </span>
+                )}
               </div>
               <span className="vh-price">₹{acMetrics.totalFare}</span>
             </button>
@@ -587,6 +593,11 @@ export default function PassengerApp({ isStandalone }) {
               <div className="vehicle-info">
                 <span className="vh-name">JoldiGo Non-AC Car</span>
                 <span className="vh-eta">Standard budget transport</span>
+                {getFuelSurchargePercentage('car_non_ac') > 0 && (
+                  <span className="text-[9px] text-orange-500 font-bold block mt-0.5" style={{ color: '#f97316' }}>
+                    ⛽ Includes +{getFuelSurchargePercentage('car_non_ac')}% Diesel Surcharge
+                  </span>
+                )}
               </div>
               <span className="vh-price">₹{nonAcMetrics.totalFare}</span>
             </button>
@@ -603,6 +614,11 @@ export default function PassengerApp({ isStandalone }) {
               <div className="vehicle-info">
                 <span className="vh-name">JoldiGo Bike</span>
                 <span className="vh-eta">{bikeMetrics.totalFare === 0 ? 'Safety Suspended (Flooding)' : 'Fast & nimble bike commute'}</span>
+                {getFuelSurchargePercentage('bike') > 0 && (
+                  <span className="text-[9px] text-green-500 font-bold block mt-0.5" style={{ color: '#22c55e' }}>
+                    ⛽ Includes +{getFuelSurchargePercentage('bike')}% CNG Surcharge
+                  </span>
+                )}
               </div>
               <span className="vh-price">{bikeMetrics.totalFare === 0 ? 'Suspended' : `₹${bikeMetrics.totalFare}`}</span>
             </button>

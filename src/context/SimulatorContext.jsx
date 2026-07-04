@@ -745,6 +745,19 @@ export const SimulatorProvider = ({ children }) => {
     const indexedBase = standardBase + fuelDeltaPrice;
     const distanceChargeable = Math.max(0, distance - 2);
     const baseRideFareBeforeSurge = indexedBase + distanceChargeable * perKm;
+
+    let fuelSurchargePct = 0;
+    if (isCarAC) {
+      const diff = Math.max(0, fuelPrices.petrol - 100.00);
+      fuelSurchargePct = Math.round((diff / 5.0) * 3.0 * 10) / 10;
+    } else if (isCarNonAC) {
+      const diff = Math.max(0, fuelPrices.diesel - 90.00);
+      fuelSurchargePct = Math.round((diff / 5.0) * 2.5 * 10) / 10;
+    } else {
+      const diff = Math.max(0, fuelPrices.cng - 90.00);
+      fuelSurchargePct = Math.round((diff / 5.0) * 2.0 * 10) / 10;
+    }
+    const finalFareBeforeSurge = baseRideFareBeforeSurge * (1 + fuelSurchargePct / 100);
     
     // Proximity Congestion
     let trafficMultiplier = 1.0;
@@ -791,7 +804,7 @@ export const SimulatorProvider = ({ children }) => {
     }
 
     const finalSurgeMultiplier = parseFloat(Math.min(2.50, Math.max(baseSurge, settings.surgeMultiplier) * trafficMultiplier * weatherMultiplier * geofenceSurgeMultiplier).toFixed(2));
-    const grossBaseRideFare = parseFloat((baseRideFareBeforeSurge * finalSurgeMultiplier).toFixed(2));
+    const grossBaseRideFare = parseFloat((finalFareBeforeSurge * finalSurgeMultiplier).toFixed(2));
     
     const gstAmount = parseFloat((grossBaseRideFare * 0.05).toFixed(2));
     const commission = parseFloat((grossBaseRideFare * 0.05).toFixed(2));
@@ -1349,6 +1362,19 @@ export const SimulatorProvider = ({ children }) => {
     }
   };
 
+  const getFuelSurchargePercentage = (vehicleType) => {
+    if (vehicleType === 'car_ac') {
+      const diff = Math.max(0, fuelPrices.petrol - 100.00);
+      return Math.round((diff / 5.0) * 3.0 * 10) / 10;
+    } else if (vehicleType === 'car_non_ac') {
+      const diff = Math.max(0, fuelPrices.diesel - 90.00);
+      return Math.round((diff / 5.0) * 2.5 * 10) / 10;
+    } else {
+      const diff = Math.max(0, fuelPrices.cng - 90.00);
+      return Math.round((diff / 5.0) * 2.0 * 10) / 10;
+    }
+  };
+
   return (
     <SimulatorContext.Provider
       value={{
@@ -1362,6 +1388,7 @@ export const SimulatorProvider = ({ children }) => {
         activeScheduledSurge,
         updateSurgeSchedules,
         demandHotspots,
+        getFuelSurchargePercentage,
         activeRide,
         sosAlerts,
         settings,
