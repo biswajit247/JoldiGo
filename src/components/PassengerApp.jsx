@@ -90,6 +90,112 @@ export default function PassengerApp({ isStandalone }) {
     }
   };
 
+  const handleDownloadReceipt = (ride) => {
+    const printWindow = window.open('', '_blank', 'width=600,height=800');
+    if (!printWindow) return alert("Please allow popups to download your receipt.");
+    
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>JoldiGo Ride Receipt - ${ride.id}</title>
+          <style>
+            body { font-family: sans-serif; padding: 30px; color: #111; line-height: 1.4; }
+            .header { text-align: center; border-bottom: 2px dashed #ccc; padding-bottom: 15px; margin-bottom: 20px; }
+            .title { font-size: 24px; font-weight: bold; color: #ffaa00; margin: 0; }
+            .subtitle { font-size: 12px; color: #666; margin-top: 5px; }
+            .details-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+            .details-table td { padding: 8px 0; font-size: 14px; }
+            .details-table .lbl { color: #555; }
+            .details-table .val { text-align: right; font-weight: bold; }
+            .divider { border-top: 1px solid #eee; margin: 10px 0; }
+            .total-row { font-size: 18px; font-weight: bold; border-top: 2px dashed #ccc; padding-top: 10px; margin-top: 15px; display: flex; justify-content: space-between; }
+            .footer { text-align: center; font-size: 11px; color: #888; margin-top: 40px; border-top: 1px solid #eee; padding-top: 15px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="title">JoldiGo Receipt</div>
+            <div class="subtitle">Kolkata Ride-Hailing Simulation Network</div>
+            <div class="subtitle">Receipt ID: ${ride.id} | Date: ${new Date().toLocaleDateString()}</div>
+          </div>
+          
+          <table class="details-table">
+            <tr>
+              <td class="lbl">Passenger Phone</td>
+              <td class="val">${ride.passengerPhone}</td>
+            </tr>
+            <tr>
+              <td class="lbl">Pickup Location</td>
+              <td class="val">${ride.pickupName}</td>
+            </tr>
+            <tr>
+              <td class="lbl">Dropoff Location</td>
+              <td class="val">${ride.dropoffName}</td>
+            </tr>
+            <tr>
+              <td class="lbl">Ride Distance</td>
+              <td class="val">${ride.distance.toFixed(2)} km</td>
+            </tr>
+            <tr>
+              <td class="lbl">Payment Method</td>
+              <td class="val" style="text-transform: uppercase;">${ride.paymentMethod}</td>
+            </tr>
+          </table>
+          
+          <div class="divider"></div>
+          
+          <table class="details-table">
+            <tr>
+              <td class="lbl">Base Ride Fare</td>
+              <td class="val">₹${ride.grossBaseRideFare.toFixed(2)}</td>
+            </tr>
+            <tr>
+              <td class="lbl">Passenger GST (5%)</td>
+              <td class="val">+₹${ride.gstAmount.toFixed(2)}</td>
+            </tr>
+            <tr>
+              <td class="lbl">Toll / Bridge Fees</td>
+              <td class="val">₹${ride.tollEstimate || 0}</td>
+            </tr>
+            <tr>
+              <td class="lbl">Safety Insurance Premium</td>
+              <td class="val">+₹2.00</td>
+            </tr>
+            ${ride.discountApplied > 0 ? `
+            <tr style="color: #22c55e;">
+              <td class="lbl">Promo Code Discount (${ride.promoCode || 'Applied'})</td>
+              <td class="val">-₹${ride.discountApplied.toFixed(2)}</td>
+            </tr>
+            ` : ''}
+          </table>
+          
+          <div class="total-row">
+            <span>Net Amount Paid</span>
+            <span style="color: #ffaa00;">₹${ride.totalFare.toFixed(2)}</span>
+          </div>
+          
+          <div style="font-size: 9px; font-family: monospace; color: #888; margin-top: 20px; text-align: center; word-break: break-all;">
+            Contract Cryptographic Proof:<br/>
+            ${ride.contractHash}
+          </div>
+          
+          <div class="footer">
+            Thank you for riding with JoldiGo!<br/>
+            Kolkata Operations Control Board.
+          </div>
+          
+          <script>
+            window.onload = function() {
+              window.print();
+              setTimeout(function() { window.close(); }, 500);
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
   useEffect(() => {
     if (passenger.isLoggedIn && passenger.phone) {
       connectPassengerSocket(passenger.phone);
@@ -1062,7 +1168,83 @@ export default function PassengerApp({ isStandalone }) {
 
               <h4 className="payment-success-title mt-3">Payment Successful!</h4>
               <p className="payment-success-desc font-semibold">₹{activeRide.totalFare} paid (Includes ₹{activeRide.gstAmount} GST & ₹2 Insur)</p>
-
+ 
+              {/* RIDE INVOICE RECEIPT CARD */}
+              <div className="bg-black/40 border border-white/5 rounded-xl p-3 my-3 text-left flex flex-col gap-1.5 text-xs">
+                <span className="text-[10px] text-amber-500 font-extrabold uppercase tracking-wider block">🧾 Official Ride Receipt</span>
+                
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Pickup Location:</span>
+                  <span className="font-semibold text-white truncate max-w-[170px]">{activeRide.pickupName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Dropoff Location:</span>
+                  <span className="font-semibold text-white truncate max-w-[170px]">{activeRide.dropoffName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Total Distance:</span>
+                  <span className="font-semibold text-white">{activeRide.distance.toFixed(2)} km</span>
+                </div>
+                
+                <div className="h-[1px] bg-white/5 my-1"></div>
+ 
+                <div className="flex justify-between text-[11px]">
+                  <span className="text-gray-400">Base Ride Fare:</span>
+                  <span className="text-gray-200">₹{activeRide.grossBaseRideFare.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-[11px]">
+                  <span className="text-gray-400">Passenger GST (5%):</span>
+                  <span className="text-gray-200">+₹{activeRide.gstAmount.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-[11px]">
+                  <span className="text-gray-400">Toll / Bridge Fees:</span>
+                  <span className="text-gray-200">₹{activeRide.tollEstimate || 0}</span>
+                </div>
+                <div className="flex justify-between text-[11px]">
+                  <span className="text-gray-400">Safety Insurance Cover:</span>
+                  <span className="text-gray-200">+₹2.00</span>
+                </div>
+                
+                {activeRide.discountApplied > 0 && (
+                  <div className="flex justify-between text-[11px] text-green-400 font-semibold">
+                    <span>Promo Discount:</span>
+                    <span>-₹{activeRide.discountApplied.toFixed(2)}</span>
+                  </div>
+                )}
+ 
+                <div className="h-[1px] bg-white/10 my-1"></div>
+ 
+                <div className="flex justify-between text-sm font-bold text-white">
+                  <span>Net Charged:</span>
+                  <span className="text-amber-400">₹{activeRide.totalFare.toFixed(2)}</span>
+                </div>
+                
+                <div className="text-[8px] font-mono text-gray-500 mt-1 truncate font-mono">
+                  Contract Receipt: {activeRide.contractHash}
+                </div>
+ 
+                <button 
+                  type="button"
+                  onClick={() => handleDownloadReceipt(activeRide)}
+                  style={{
+                    backgroundColor: 'rgba(255,221,0,0.1)',
+                    border: '1px solid rgba(255,221,0,0.3)',
+                    color: 'var(--color-primary)',
+                    borderRadius: '6px',
+                    padding: '6px 12px',
+                    fontSize: '10px',
+                    fontWeight: 'bold',
+                    cursor: 'pointer',
+                    marginTop: '8px',
+                    textAlign: 'center',
+                    transition: 'all 0.2s'
+                  }}
+                  className="hover:bg-amber-400 hover:text-black flex items-center justify-center gap-1.5"
+                >
+                  📥 Download PDF Receipt
+                </button>
+              </div>
+ 
               <div className="divider-h my-3"></div>
 
               <p className="rating-instructions">Rate your trip with {matchedDriver?.name}:</p>
