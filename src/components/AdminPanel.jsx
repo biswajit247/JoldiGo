@@ -147,7 +147,7 @@ export default function AdminPanel() {
       attributionControl: false,
     }).setView([22.5726, 88.3639], 12);
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(map);
 
     mapRef.current = map;
 
@@ -178,7 +178,7 @@ export default function AdminPanel() {
       attributionControl: false,
     }).setView([22.5726, 88.3639], 12);
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(map);
     geofenceMapRef.current = map;
 
     // 2. Draw standard geofence boundary (green dash polygon)

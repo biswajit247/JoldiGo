@@ -209,7 +209,7 @@ export default function PassengerApp({ isStandalone }) {
       zoomControl: false,
     }).setView([22.5726, 88.3639], 12);
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
       maxZoom: 19,
     }).addTo(map);
 

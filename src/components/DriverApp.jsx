@@ -147,7 +147,7 @@ export default function DriverApp({ isStandalone }) {
       attributionControl: false,
     }).setView([currentDriver.location.lat, currentDriver.location.lng], 13);
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(map);
 
     mapRef.current = map;
 
