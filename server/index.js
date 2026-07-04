@@ -929,6 +929,18 @@ app.get('/api/admin/stats', async (req, res) => {
     const gstRes = await query("SELECT SUM(gst_amount) as total_gst FROM rides WHERE status = 'completed'");
     const accumulatedGstTotal = parseFloat(gstRes.rows[0].total_gst || 0);
 
+    // Sum of driver tier subscriptions
+    const tiersRes = await query("SELECT subscription_tier, COUNT(*) as count FROM drivers GROUP BY subscription_tier");
+    let silverCount = 0;
+    let goldCount = 0;
+    let freeCount = 0;
+    tiersRes.rows.forEach(r => {
+      if (r.subscription_tier === 'silver') silverCount = parseInt(r.count || 0);
+      else if (r.subscription_tier === 'gold') goldCount = parseInt(r.count || 0);
+      else freeCount = parseInt(r.count || 0);
+    });
+    const subscriptionEarnings = (silverCount * 299) + (goldCount * 599);
+
     res.json({
       success: true,
       stats: {
@@ -938,7 +950,11 @@ app.get('/api/admin/stats', async (req, res) => {
         commissionBalance: totalCommission,
         grossBookings,
         driverPayouts,
-        accumulatedGstTotal
+        accumulatedGstTotal,
+        silverCount,
+        goldCount,
+        freeCount,
+        subscriptionEarnings
       }
     });
   } catch (err) {

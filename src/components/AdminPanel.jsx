@@ -470,12 +470,13 @@ export default function AdminPanel() {
     const platformCommissionTotal = adminStats.totalCommission || 0;
     const accumulatedGstTotal = adminStats.accumulatedGstTotal || 0;
     const driverPayouts = adminStats.driverPayouts || 0;
+    const subscriptionEarnings = adminStats.subscriptionEarnings || 0;
 
     const gatewayFees = grossBookings * 1.05 * 0.02; 
     const odttaLicenseMonthlyAmortized = 8333; 
     const controlRoomStaffCostMonthly = 60000; 
 
-    const netPlatformProfits = platformCommissionTotal - gatewayFees - (odttaLicenseMonthlyAmortized + controlRoomStaffCostMonthly);
+    const netPlatformProfits = platformCommissionTotal + subscriptionEarnings - gatewayFees - (odttaLicenseMonthlyAmortized + controlRoomStaffCostMonthly);
 
     return {
       grossBookings,
@@ -483,6 +484,7 @@ export default function AdminPanel() {
       accumulatedGstTotal,
       gatewayFees: parseFloat(gatewayFees.toFixed(2)),
       driverPayouts,
+      subscriptionEarnings,
       netPlatformProfits: parseFloat(netPlatformProfits.toFixed(2)),
       licenseFeeFixed: 500000,
       controlRoomStaff: 60000,
@@ -1948,7 +1950,7 @@ export default function AdminPanel() {
               </div>
 
               {/* Financial KPI Cards */}
-              <div className="finance-kpis grid-dashboard">
+              <div className="finance-kpis" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '16px' }}>
                 <div className="kpi-card card-glow">
                   <span className="kpi-label">Gross Ride Bookings</span>
                   <span className="kpi-value text-green-400">₹{financials.grossBookings.toFixed(0)}</span>
@@ -1956,9 +1958,15 @@ export default function AdminPanel() {
                 </div>
 
                 <div className="kpi-card card-glow">
-                  <span className="kpi-label">Platform commission (5%)</span>
+                  <span className="kpi-label">Platform commission</span>
                   <span className="kpi-value text-amber-500">₹{financials.platformCommissionTotal.toFixed(0)}</span>
                   <span className="kpi-sub text-gray-400">Accrued platform share</span>
+                </div>
+
+                <div className="kpi-card card-glow">
+                  <span className="kpi-label">Premium Subscriptions</span>
+                  <span className="kpi-value text-emerald-400">₹{financials.subscriptionEarnings.toFixed(0)}</span>
+                  <span className="kpi-sub text-gray-400">Silver & Gold tiers</span>
                 </div>
 
                 <div className="kpi-card card-glow">
@@ -1972,6 +1980,7 @@ export default function AdminPanel() {
                   <span className={`kpi-value ${financials.netPlatformProfits >= 0 ? 'text-indigo-300' : 'text-red-400'}`}>
                     ₹{financials.netPlatformProfits.toFixed(0)}
                   </span>
+                  <span className="kpi-sub text-gray-400">Net platform revenue</span>
                 </div>
               </div>
               {/* HOURLY DISPATCH LOAD AREA CHART */}
@@ -2416,8 +2425,57 @@ export default function AdminPanel() {
                 </div>
               </div>
 
+              {/* Driver Subscription Tier Registry */}
+              <div className="payouts-section card-glow mt-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-bold uppercase tracking-wider text-amber-400 flex items-center gap-2">
+                    👑 Premium Subscriptions Registry & MRR Ledger
+                  </h4>
+                  <div className="text-xs text-gray-400 font-mono">
+                    MRR (Silver & Gold): <span className="text-emerald-400 font-bold">₹{((adminStats.silverCount || 0) * 299 + (adminStats.goldCount || 0) * 599).toLocaleString('en-IN')} / mo</span>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Overview of partner drivers registered on Gold (1.0% Commission, ₹599/mo) and Silver (2.5% Commission, ₹299/mo) subscription tiers.
+                </p>
+
+                <div className="payout-table-grid mt-3">
+                  <div className="payout-header" style={{ gridTemplateColumns: '150px 140px 100px 140px 1fr' }}>
+                    <span>Partner Name</span>
+                    <span>Active Subscription Tier</span>
+                    <span>Commission Cut</span>
+                    <span>Billing Status</span>
+                    <span>Estimated Renewal Date</span>
+                  </div>
+
+                  {drivers.map(d => {
+                    const tier = d.subscription_tier || 'standard';
+                    const commissionCut = tier === 'gold' ? '1.0%' : (tier === 'silver' ? '2.5%' : '5.0%');
+                    const billingStatus = tier === 'standard' ? 'N/A (Free)' : 'Active (Prepaid)';
+                    const renewal = tier === 'standard' ? 'N/A' : 'Auto-renewing (30d)';
+                    return (
+                      <div key={d.id} className="payout-row" style={{ gridTemplateColumns: '150px 140px 100px 140px 1fr' }}>
+                        <span className="font-semibold text-white">{d.name}</span>
+                        <span>
+                          <span className={`text-[9px] uppercase tracking-wider font-extrabold px-2 py-0.5 rounded ${
+                            tier === 'gold' 
+                              ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' 
+                              : (tier === 'silver' ? 'bg-slate-400/10 text-slate-300 border border-slate-400/20' : 'bg-gray-800 text-gray-400')
+                          }`}>
+                            {tier.toUpperCase()}
+                          </span>
+                        </span>
+                        <span className="font-mono text-xs text-emerald-400 font-bold">{commissionCut}</span>
+                        <span className="text-xs text-gray-300">{billingStatus}</span>
+                        <span className="text-xs text-gray-500">{renewal}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
               {/* Driver Payout Breakdown Ledger */}
-              <div className="payouts-section card-glow">
+              <div className="payouts-section card-glow mt-4">
                 <h4>Driver Payout Breakdown Ledger (95% Base splits)</h4>
                 
                 <div className="payout-table-grid mt-3">

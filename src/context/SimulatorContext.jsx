@@ -160,7 +160,11 @@ export const SimulatorProvider = ({ children }) => {
     activeTrips: 0,
     grossBookings: 0,
     driverPayouts: 0,
-    accumulatedGstTotal: 0
+    accumulatedGstTotal: 0,
+    silverCount: 0,
+    goldCount: 0,
+    freeCount: 0,
+    subscriptionEarnings: 0
   });
   const [isNightMode, setIsNightMode] = useState(false); 
   const [passengerWalletBalance, setPassengerWalletBalance] = useState(500.00); 
