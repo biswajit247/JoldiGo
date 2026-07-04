@@ -545,7 +545,7 @@ export default function DriverApp({ isStandalone }) {
             </div>
 
             {tab === 'dashboard' && (
-              <div style={{ position: 'relative' }}>
+              <div style={{ position: 'relative', flex: 1, minHeight: '0', display: 'flex', flexDirection: 'column' }}>
                 <div ref={mapContainerRef} className="map-view-container driver-map"></div>
                 <button
                   type="button"
