@@ -2475,30 +2475,30 @@ export default function AdminPanel() {
               </div>
 
               {/* Analytics Core Keycards */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="card-glow p-4 flex flex-col gap-1">
-                  <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wide">Fleet Carbon Offset</span>
-                  <span className="text-2xl font-black text-emerald-400">248.5 kg</span>
-                  <span className="text-[9px] text-gray-400">CO₂ offset by active JoldiGo Bike bookings</span>
+              <div className="kpi-row">
+                <div className="kpi-card card-glow" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <span className="kpi-label">Fleet Carbon Offset</span>
+                  <span className="kpi-value text-emerald-400" style={{ fontSize: '20px' }}>248.5 kg</span>
+                  <span className="text-[9px] text-gray-400 mt-1">CO₂ offset by active JoldiGo Bike bookings</span>
                 </div>
-                <div className="card-glow p-4 flex flex-col gap-1">
-                  <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wide">Avg Commuter Wait</span>
-                  <span className="text-2xl font-black text-amber-500">4.2 mins</span>
-                  <span className="text-[9px] text-gray-400">Match-to-pickup elapsed duration</span>
+                <div className="kpi-card card-glow" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <span className="kpi-label">Avg Commuter Wait</span>
+                  <span className="kpi-value text-amber-500" style={{ fontSize: '20px' }}>4.2 mins</span>
+                  <span className="text-[9px] text-gray-400 mt-1">Match-to-pickup elapsed duration</span>
                 </div>
-                <div className="card-glow p-4 flex flex-col gap-1">
-                  <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wide">SLA Completion Rate</span>
-                  <span className="text-2xl font-black text-blue-400">96.8%</span>
-                  <span className="text-[9px] text-gray-400">Trips completed without rider dispute</span>
+                <div className="kpi-card card-glow" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <span className="kpi-label">SLA Completion Rate</span>
+                  <span className="kpi-value text-blue-400" style={{ fontSize: '20px' }}>96.8%</span>
+                  <span className="text-[9px] text-gray-400 mt-1">Trips completed without rider dispute</span>
                 </div>
-                <div className="card-glow p-4 flex flex-col gap-1">
-                  <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wide">Total Platform Rides</span>
-                  <span className="text-2xl font-black text-purple-400">1,482</span>
-                  <span className="text-[9px] text-gray-400">Historical database transactions</span>
+                <div className="kpi-card card-glow" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <span className="kpi-label">Total Platform Rides</span>
+                  <span className="kpi-value text-purple-400" style={{ fontSize: '20px' }}>1,482</span>
+                  <span className="text-[9px] text-gray-400 mt-1">Historical database transactions</span>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
                 
                 {/* Visual CSS Bar Graph */}
                 <div className="card-glow p-5 flex flex-col gap-4">
@@ -2518,18 +2518,16 @@ export default function AdminPanel() {
                       { label: 'Thu', completion: 92, dispute: 5 },
                       { label: 'Fri', completion: 97, dispute: 1 },
                     ].map((day, i) => (
-                      <div key={i} className="flex flex-col items-center gap-2 z-10 w-[45px]">
-                        <div className="w-full flex gap-1 items-end h-[160px] bg-black/30 rounded-t overflow-hidden">
+                      <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', zIndex: 10, width: '45px' }}>
+                        <div style={{ width: '100%', display: 'flex', gap: '4px', alignItems: 'end', height: '160px', backgroundColor: 'rgba(0,0,0,0.3)', borderTopLeftRadius: '4px', borderTopRightRadius: '4px', overflow: 'hidden', padding: '0 2px' }}>
                           {/* Completion bar */}
                           <div 
-                            style={{ height: `${day.completion}%` }}
-                            className="flex-1 bg-gradient-to-t from-emerald-600 to-emerald-400 rounded-t"
+                            style={{ height: `${day.completion}%`, flex: 1, background: 'linear-gradient(to top, #059669, #34d399)', borderTopLeftRadius: '2px', borderTopRightRadius: '2px' }}
                             title={`Completed: ${day.completion}%`}
                           ></div>
                           {/* Dispute bar */}
                           <div 
-                            style={{ height: `${day.dispute * 5}%` }}
-                            className="w-2.5 bg-gradient-to-t from-red-600 to-red-400 rounded-t"
+                            style={{ height: `${day.dispute * 5}%`, width: '8px', background: 'linear-gradient(to top, #dc2626, #f87171)', borderTopLeftRadius: '2px', borderTopRightRadius: '2px' }}
                             title={`Disputes: ${day.dispute}%`}
                           ></div>
                         </div>
@@ -2597,10 +2595,10 @@ export default function AdminPanel() {
               </div>
 
               {/* INTERACTIVE DYNAMIC SVG CHARTS */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-2">
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginTop: '8px' }}>
                 
                 {/* SVG Line Chart: Platform Commission Earnings */}
-                <div className="card-glow p-5 flex flex-col gap-4">
+                <div className="card-glow p-5" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <div>
                     <h4 className="text-sm font-bold uppercase tracking-wide text-gray-300">📈 System commission earnings</h4>
                     <p className="text-[9px] text-gray-500 font-mono mt-0.5">Platform Cut (5%) trend (Last 7 Days)</p>
@@ -2661,7 +2659,7 @@ export default function AdminPanel() {
                 </div>
 
                 {/* SVG Bar Chart: Category Bookings Distribution */}
-                <div className="card-glow p-5 flex flex-col gap-4">
+                <div className="card-glow p-5" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <div>
                     <h4 className="text-sm font-bold uppercase tracking-wide text-gray-300">🛺 Category Bookings volume</h4>
                     <p className="text-[9px] text-gray-500 font-mono mt-0.5">Real-time demand category distributions</p>
@@ -2725,7 +2723,7 @@ export default function AdminPanel() {
                 </div>
 
                 {/* SVG Radial Donut Gauge: Active Driver Ratio */}
-                <div className="card-glow p-5 flex flex-col gap-4">
+                <div className="card-glow p-5" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <div>
                     <h4 className="text-sm font-bold uppercase tracking-wide text-gray-300">👥 Partner Availability Ratio</h4>
                     <p className="text-[9px] text-gray-500 font-mono mt-0.5">Online active vs. offline system capacity</p>
