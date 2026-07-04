@@ -70,7 +70,8 @@ export default function DriverApp({ isStandalone }) {
     connectDriverSocket,
     startGpsTracking,
     stopGpsTracking,
-    isGpsActive
+    isGpsActive,
+    demandHotspots
   } = useSimulator();
 
   const speakText = (text, langCode) => {
@@ -116,6 +117,9 @@ export default function DriverApp({ isStandalone }) {
   const [history, setHistory] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
 
+  // Heatmap Toggle State
+  const [showHeatmap, setShowHeatmap] = useState(false);
+
   useEffect(() => {
     if (tab !== 'history' || !selectedDriverId) return;
     
@@ -148,6 +152,7 @@ export default function DriverApp({ isStandalone }) {
     pickup: null,
     dropoff: null,
     routeLine: null,
+    heatmapCircles: []
   });
 
   const currentDriver = drivers.find((d) => d.id === selectedDriverId) || drivers[0];
@@ -202,6 +207,24 @@ export default function DriverApp({ isStandalone }) {
     if (markersRef.current.remainingPolyline) {
       map.removeLayer(markersRef.current.remainingPolyline);
       markersRef.current.remainingPolyline = null;
+    }
+
+    if (markersRef.current.heatmapCircles) {
+      markersRef.current.heatmapCircles.forEach(c => map.removeLayer(c));
+      markersRef.current.heatmapCircles = [];
+    }
+
+    if (showHeatmap && demandHotspots) {
+      markersRef.current.heatmapCircles = demandHotspots.map(spot => {
+        return L.circle([spot.lat, spot.lng], {
+          color: '#ff3333',
+          fillColor: '#ff3333',
+          fillOpacity: 0.15,
+          radius: spot.weight * 300,
+          weight: 1.5,
+          dashArray: '3, 6'
+        }).addTo(map);
+      });
     }
 
     const driverIcon = L.divIcon({
@@ -260,7 +283,7 @@ export default function DriverApp({ isStandalone }) {
         }
       }
     }
-  }, [activeRide, currentDriver, selectedDriverId]);
+  }, [activeRide, currentDriver, selectedDriverId, showHeatmap, demandHotspots]);
 
   // Handle doc upload form
   const handleOnboardingSubmit = (e) => {
@@ -471,7 +494,35 @@ export default function DriverApp({ isStandalone }) {
             </div>
 
             {tab === 'dashboard' && (
-              <div ref={mapContainerRef} className="map-view-container driver-map"></div>
+              <div style={{ position: 'relative' }}>
+                <div ref={mapContainerRef} className="map-view-container driver-map"></div>
+                <button
+                  type="button"
+                  onClick={() => setShowHeatmap(!showHeatmap)}
+                  style={{
+                    position: 'absolute',
+                    bottom: '12px',
+                    left: '12px',
+                    zIndex: 1000,
+                    backgroundColor: showHeatmap ? 'rgba(239, 68, 68, 0.9)' : 'rgba(17, 24, 39, 0.9)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    color: '#fff',
+                    borderRadius: '6px',
+                    padding: '5px 8px',
+                    fontSize: '9px',
+                    fontWeight: 'bold',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  <span>🔥</span>
+                  {showHeatmap ? 'Heatmap: ON' : 'Heatmap: OFF'}
+                </button>
+              </div>
             )}
 
             {tab === 'dashboard' && currentDriver.status === 'online' && (
