@@ -266,38 +266,53 @@ export const SimulatorProvider = ({ children }) => {
       const ctx = new AudioContext();
 
       if (type === 'sos') {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        
+        const now = ctx.currentTime;
+        // Alternating high and low emergency siren warble
+        osc.frequency.setValueAtTime(960, now);
+        osc.frequency.setValueAtTime(1200, now + 0.15);
+        osc.frequency.setValueAtTime(960, now + 0.3);
+        osc.frequency.setValueAtTime(1200, now + 0.45);
+        osc.frequency.setValueAtTime(960, now + 0.6);
+        osc.frequency.setValueAtTime(1200, now + 0.75);
+        
+        gain.gain.setValueAtTime(0.12, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.95);
+        
+        osc.start();
+        osc.stop(now + 1.0);
+      } else if (type === 'match') {
         const osc1 = ctx.createOscillator();
         const osc2 = ctx.createOscillator();
         const gain = ctx.createGain();
-        osc1.type = 'sawtooth';
-        osc2.type = 'square';
+        
+        osc1.type = 'sine';
+        osc2.type = 'sine';
+        
         osc1.connect(gain);
         osc2.connect(gain);
         gain.connect(ctx.destination);
-        osc1.frequency.setValueAtTime(440, ctx.currentTime);
-        osc1.frequency.linearRampToValueAtTime(880, ctx.currentTime + 0.3);
-        osc1.frequency.linearRampToValueAtTime(440, ctx.currentTime + 0.6);
-        osc2.frequency.setValueAtTime(450, ctx.currentTime);
-        osc2.frequency.linearRampToValueAtTime(890, ctx.currentTime + 0.3);
-        osc2.frequency.linearRampToValueAtTime(450, ctx.currentTime + 0.6);
-        gain.gain.setValueAtTime(0.08, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.0);
+        
+        const now = ctx.currentTime;
+        // Harmonized pleasant chord double bell chimes (E5/G#5 -> A5/C#6)
+        osc1.frequency.setValueAtTime(659.25, now);
+        osc2.frequency.setValueAtTime(830.61, now);
+        
+        osc1.frequency.setValueAtTime(880.00, now + 0.15);
+        osc2.frequency.setValueAtTime(1109.73, now + 0.15);
+        
+        gain.gain.setValueAtTime(0.08, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+        
         osc1.start();
         osc2.start();
-        osc1.stop(ctx.currentTime + 1.0);
-        osc2.stop(ctx.currentTime + 1.0);
-      } else if (type === 'match') {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = 'sine';
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.frequency.setValueAtTime(600, ctx.currentTime);
-        osc.frequency.setValueAtTime(900, ctx.currentTime + 0.12);
-        gain.gain.setValueAtTime(0.06, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.4);
+        osc1.stop(now + 0.6);
+        osc2.stop(now + 0.6);
       } else if (type === 'chat') {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
@@ -1099,6 +1114,23 @@ export const SimulatorProvider = ({ children }) => {
     }
   };
 
+  const triggerPassengerSOS = (passengerPhone) => {
+    if (!activeRide) return;
+
+    playSound('sos');
+
+    // Notify control room via active passenger socket
+    const ws = passengerSocketRef.current;
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({
+        type: 'sos_alert',
+        rideId: activeRide.id,
+        driverId: activeRide.driverId,
+        location: activeRide.driverId ? (drivers.find(d => d.id === activeRide.driverId)?.location || { lat: 22.5726, lng: 88.3639 }) : { lat: 22.5726, lng: 88.3639 }
+      }));
+    }
+  };
+
   // SOS police interceptor local visual rendering for admin panel
   const triggerPatrolDispatch = async (driverId, location) => {
     const policeStationLoc = { lat: location.lat + 0.015, lng: location.lng - 0.018 };
@@ -1436,6 +1468,7 @@ export const SimulatorProvider = ({ children }) => {
         completePaymentAndRate,
         cancelRide,
         triggerSOS,
+        triggerPassengerSOS,
         resolveSOS,
         fileDispute,
         uploadDisputeEvidence,

@@ -76,6 +76,7 @@ export default function PassengerApp({ isStandalone }) {
     triggerSmsToast,
     connectPassengerSocket,
     sendOtpRequest,
+    triggerPassengerSOS,
   } = useSimulator();
 
   const speakText = (text, langCode) => {
@@ -1547,6 +1548,15 @@ export default function PassengerApp({ isStandalone }) {
 
             <div ref={mapContainerRef} className="map-view-container"></div>
             {renderPanelOverlay()}
+
+            {activeRide && (activeRide.status === 'accepted' || activeRide.status === 'arrived' || activeRide.status === 'in_progress') && (
+              <button 
+                className="btn-sos-floating pulse-sos"
+                onClick={() => triggerPassengerSOS(passenger.phone)}
+              >
+                SOS
+              </button>
+            )}
 
             {/* RAZORPAY SECURE TOP UP DIALOG */}
             {showTopUpModal && (

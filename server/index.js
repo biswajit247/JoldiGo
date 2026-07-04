@@ -1440,13 +1440,15 @@ wss.on('connection', (ws) => {
 
         case 'sos_alert':
           // Log SOS alert locally and notify admins
+          const isPassenger = clientMeta.role === 'passenger';
+          const triggerLabel = isPassenger ? 'Passenger' : 'Driver';
           broadcastToRole('admin', { 
             type: 'sos_broadcast', 
-            driverId: clientMeta.id, 
+            driverId: isPassenger ? (data.driverId || '') : clientMeta.id, 
             rideId: data.rideId, 
-            location: data.location 
+            location: data.location || { lat: 22.5726, lng: 88.3639 } 
           });
-          console.log(`🚨 SOS Panic Alarm triggered by Driver ${clientMeta.id} during Ride ${data.rideId}`);
+          console.log(`🚨 SOS Panic Alarm triggered by ${triggerLabel} ${clientMeta.id} during Ride ${data.rideId}`);
           break;
 
         case 'file_dispute':
