@@ -476,7 +476,7 @@ export default function AdminPanel() {
     const odttaLicenseMonthlyAmortized = 8333; 
     const controlRoomStaffCostMonthly = 60000; 
 
-    const netPlatformProfits = platformCommissionTotal + subscriptionEarnings - gatewayFees - (odttaLicenseMonthlyAmortized + controlRoomStaffCostMonthly);
+    const netPlatformProfits = platformCommissionTotal + subscriptionEarnings - gatewayFees;
 
     return {
       grossBookings,
