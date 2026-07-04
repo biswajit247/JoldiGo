@@ -112,6 +112,34 @@ export default function DriverApp({ isStandalone }) {
   const [claimAmount, setClaimAmount] = useState(150);
   const [claimDesc, setClaimDesc] = useState('');
 
+  // Completed Ride History State
+  const [history, setHistory] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+
+  useEffect(() => {
+    if (tab !== 'history' || !selectedDriverId) return;
+    
+    let active = true;
+    const fetchHistory = async () => {
+      setLoadingHistory(true);
+      try {
+        const { api } = getServerEndpoints();
+        const res = await fetch(`${api}/api/driver/history?driverId=${selectedDriverId}`);
+        const data = await res.json();
+        if (data.success && active) {
+          setHistory(data.history);
+        }
+      } catch (err) {
+        console.error("Failed to load driver history:", err);
+      } finally {
+        if (active) setLoadingHistory(false);
+      }
+    };
+    
+    fetchHistory();
+    return () => { active = false; };
+  }, [tab, selectedDriverId, activeRide?.status]);
+
   // Map elements
   const mapContainerRef = useRef(null);
   const mapRef = useRef(null);
@@ -702,6 +730,12 @@ export default function DriverApp({ isStandalone }) {
                     >
                       Garage
                     </button>
+                    <button 
+                      className={`tab-btn-compact ${tab === 'history' ? 'active' : ''}`}
+                      onClick={() => setTab('history')}
+                    >
+                      History
+                    </button>
                   </div>
 
                   {tab === 'dashboard' && (
@@ -938,6 +972,50 @@ export default function DriverApp({ isStandalone }) {
                           Add to Garage
                         </button>
                       </form>
+                    </div>
+                  )}
+
+                  {tab === 'history' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }} className="text-left mt-2">
+                      <span className="text-[10px] text-gray-500 font-extrabold uppercase block tracking-wider">📜 Completed Rides History</span>
+                      
+                      {loadingHistory ? (
+                        <div className="text-center py-4 text-xs text-gray-500">Loading history logs...</div>
+                      ) : history.length === 0 ? (
+                        <div className="text-center py-6 text-xs text-gray-500 italic">No completed rides logged for this partner.</div>
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '250px', overflowY: 'auto' }}>
+                          {history.map(item => (
+                            <div key={item.id} className="p-3 bg-black/40 border border-white/5 rounded-lg flex flex-col gap-1.5 text-xs">
+                              <div className="flex justify-between items-center font-bold">
+                                <span className="text-green-400">₹{item.takeHome.toFixed(2)} Take-Home</span>
+                                <span className="text-gray-500 font-mono text-[9px]">{new Date(item.createdAt).toLocaleDateString()}</span>
+                              </div>
+                              <div className="text-gray-400 leading-tight">
+                                <div><span className="text-amber-500 font-bold">A:</span> {item.pickupName}</div>
+                                <div className="mt-0.5"><span className="text-amber-500 font-bold">B:</span> {item.dropoffName}</div>
+                              </div>
+                              <div className="flex justify-between items-center text-[10px] text-gray-500 border-t border-white/5 pt-1.5 mt-0.5">
+                                <span>Distance: {item.distance.toFixed(2)} km</span>
+                                <span className="text-gray-400">Fare: ₹{item.totalFare.toFixed(2)}</span>
+                              </div>
+                              {item.rating && (
+                                <div className="bg-amber-950/20 border border-amber-500/10 p-2 rounded flex flex-col gap-1 mt-0.5">
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-[10px] text-amber-400 font-bold">Rating:</span>
+                                    <div className="flex text-amber-400 font-bold text-[10px]">
+                                      {Array.from({ length: item.rating }).map((_, i) => '★').join('')}
+                                    </div>
+                                  </div>
+                                  {item.comment && (
+                                    <p className="text-[10px] text-gray-400 italic">"{item.comment}"</p>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

@@ -483,6 +483,34 @@ app.post('/api/driver/vehicles/add', async (req, res) => {
   }
 });
 
+// Get driver completed ride history logs
+app.get('/api/driver/history', async (req, res) => {
+  const { driverId } = req.query;
+  if (!driverId) return res.status(400).json({ error: 'Driver ID is required.' });
+  try {
+    const ridesRes = await query(
+      `SELECT id, pickup_name, dropoff_name, distance, total_fare, driver_take_home, created_at, passenger_rating, passenger_comment
+       FROM rides 
+       WHERE driver_id = $1 AND status = 'completed'
+       ORDER BY created_at DESC`,
+      [driverId]
+    );
+    res.json({ success: true, history: ridesRes.rows.map(r => ({
+      id: r.id,
+      pickupName: r.pickup_name,
+      dropoffName: r.dropoff_name,
+      distance: parseFloat(r.distance || 0),
+      totalFare: parseFloat(r.total_fare || 0),
+      takeHome: parseFloat(r.driver_take_home || 0),
+      createdAt: r.created_at,
+      rating: r.passenger_rating ? parseInt(r.passenger_rating) : null,
+      comment: r.passenger_comment || ''
+    })) });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to retrieve completed rides history.', details: err.message });
+  }
+});
+
 // Toggle Driver Online Status
 app.post('/api/driver/toggle-status', async (req, res) => {
   const { id } = req.body;
