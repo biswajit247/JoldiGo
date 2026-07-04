@@ -241,30 +241,43 @@ export default function PassengerApp({ isStandalone }) {
   const [discount, setDiscount] = useState(0);
   const [promoError, setPromoError] = useState('');
   const [promoSuccess, setPromoSuccess] = useState('');
+  const [showPromoDrawer, setShowPromoDrawer] = useState(false);
 
-  const handleApplyPromo = (e) => {
-    e.preventDefault();
+  const applySpecificPromoCode = (code) => {
     setPromoError('');
     setPromoSuccess('');
+    const codeVal = code.toUpperCase();
     
-    const code = promoInput.trim().toUpperCase();
-    if (!code) return;
-
-    if (code === 'JOLDIGO50') {
+    if (codeVal === 'JOLDIGO50') {
       setAppliedPromo('JOLDIGO50');
       setDiscount(50);
       setPromoSuccess('🎉 Promo applied: ₹50 discount matched!');
-    } else if (code === 'MONSOONFREE') {
-      if (settings.weather === 'rain' || settings.weather === 'waterlogged') {
+    } else if (codeVal === 'MONSOONFREE') {
+      if (settings.weather === 'rain' || settings.weather === 'waterlogged' || settings.weather === 'flooding') {
         setAppliedPromo('MONSOONFREE');
         setDiscount(100);
         setPromoSuccess('🌧️ Monsoon Promo applied: ₹100 safety discount matched!');
       } else {
         setPromoError('❌ Valid only during active monsoon/flooding alerts.');
       }
+    } else if (codeVal === 'JOLDISAVE') {
+      setAppliedPromo('JOLDISAVE');
+      setDiscount(25);
+      setPromoSuccess('🎉 JoldiSave applied: ₹25 discount matched!');
+    } else if (codeVal === 'FIRSTGO') {
+      setAppliedPromo('FIRSTGO');
+      setDiscount(75);
+      setPromoSuccess('🚀 FIRSTGO applied: ₹75 discount matched!');
     } else {
       setPromoError('❌ Invalid promo code.');
     }
+  };
+
+  const handleApplyPromo = (e) => {
+    if (e) e.preventDefault();
+    const code = promoInput.trim().toUpperCase();
+    if (!code) return;
+    applySpecificPromoCode(code);
   };
 
   // Map elements
@@ -744,7 +757,16 @@ export default function PassengerApp({ isStandalone }) {
 
           {/* Promo Code Selector */}
           <div className="promo-code-selector mt-3">
-            <span className="text-[10px] text-gray-500 font-bold uppercase block mb-1">Apply Coupon Code</span>
+            <div className="flex justify-between items-center mb-1">
+              <span className="text-[10px] text-gray-500 font-bold uppercase">Apply Coupon Code</span>
+              <button
+                type="button"
+                onClick={() => setShowPromoDrawer(true)}
+                className="text-[9px] text-amber-400 hover:text-amber-300 font-bold underline bg-transparent border-none p-0 cursor-pointer"
+              >
+                🎟️ View Offers
+              </button>
+            </div>
             <form onSubmit={handleApplyPromo} className="flex gap-2">
               <input 
                 type="text" 
@@ -1307,6 +1329,99 @@ export default function PassengerApp({ isStandalone }) {
 
       <div className="phone-screen-content">
         <RainOverlay weather={settings.weather} />
+
+        {/* PROMO CODES SLIDING DRAWER */}
+        {showPromoDrawer && (
+          <div 
+            style={{
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              right: 0,
+              backgroundColor: 'rgba(10, 10, 10, 0.98)',
+              borderTop: '1px solid rgba(255, 255, 255, 0.15)',
+              borderTopLeftRadius: '16px',
+              borderTopRightRadius: '16px',
+              zIndex: 9999,
+              padding: '16px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px',
+              boxShadow: '0 -4px 20px rgba(0, 0, 0, 0.8)',
+              maxHeight: '380px',
+              overflowY: 'auto'
+            }}
+            className="animate-slide-up text-left"
+          >
+            <div className="flex justify-between items-center pb-2 border-b border-white/5">
+              <span className="text-xs font-black uppercase text-amber-500 tracking-wider">🎟️ Available Promo Codes</span>
+              <button
+                type="button"
+                onClick={() => setShowPromoDrawer(false)}
+                className="text-[10px] text-gray-400 hover:text-white font-bold bg-white/5 hover:bg-white/10 px-2 py-0.5 rounded cursor-pointer border-none"
+              >
+                Close
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {[
+                { code: 'JOLDIGO50', value: '₹50 Off', desc: 'Flat discount on any booking.', restriction: 'None' },
+                { code: 'FIRSTGO', value: '₹75 Off', desc: 'Commence your first JoldiGo ride.', restriction: 'First time user' },
+                { code: 'JOLDISAVE', value: '₹25 Off', desc: 'Save on standard commuter fares.', restriction: 'None' },
+                { code: 'MONSOONFREE', value: '₹100 Off', desc: 'Active safety surcharge relief cover.', restriction: 'Valid only during Rain/Floods' }
+              ].map((promo) => {
+                const isMonsoonAlert = settings.weather === 'rain' || settings.weather === 'waterlogged' || settings.weather === 'flooding';
+                const isPromoBlocked = promo.code === 'MONSOONFREE' && !isMonsoonAlert;
+
+                return (
+                  <div 
+                    key={promo.code}
+                    className={`p-3 rounded-lg border text-left flex justify-between items-center transition-all ${
+                      isPromoBlocked 
+                        ? 'border-white/5 bg-white/2 opacity-40 cursor-not-allowed' 
+                        : 'border-white/10 bg-black/40 hover:border-amber-400/50 cursor-pointer'
+                    }`}
+                    onClick={() => {
+                      if (!isPromoBlocked) {
+                        applySpecificPromoCode(promo.code);
+                        setPromoInput(promo.code);
+                        setShowPromoDrawer(false);
+                      }
+                    }}
+                  >
+                    <div className="flex-1 flex flex-col gap-0.5">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[11px] font-extrabold text-white font-mono bg-white/10 px-1.5 py-0.5 rounded">{promo.code}</span>
+                        <span className="text-[10px] font-black text-amber-400">{promo.value}</span>
+                      </div>
+                      <p className="text-[9px] text-gray-400 mt-1">{promo.desc}</p>
+                      <span className="text-[8px] text-gray-600 font-semibold uppercase">Condition: {promo.restriction}</span>
+                    </div>
+
+                    <button
+                      type="button"
+                      disabled={isPromoBlocked}
+                      style={{
+                        padding: '4px 8px',
+                        fontSize: '9px',
+                        fontWeight: 'bold',
+                        borderRadius: '4px',
+                        backgroundColor: isPromoBlocked ? 'rgba(255,255,255,0.05)' : 'rgba(255,221,0,0.1)',
+                        border: isPromoBlocked ? '1px solid transparent' : '1px solid rgba(255,221,0,0.3)',
+                        color: isPromoBlocked ? '#555' : 'var(--color-primary)',
+                        cursor: isPromoBlocked ? 'default' : 'pointer'
+                      }}
+                      className={isPromoBlocked ? '' : 'hover:bg-amber-400 hover:text-black'}
+                    >
+                      {isPromoBlocked ? 'Locked' : 'Apply'}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
         
         {/* Floating SMS Gateway Toast Alert */}
         {activeSmsToast && (
