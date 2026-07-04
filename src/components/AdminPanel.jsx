@@ -1565,10 +1565,10 @@ export default function AdminPanel() {
               </div>
 
               {/* Night Hour & Fuel API Index Simulator widgets */}
-              <div className="flex gap-4 mt-3 mb-4">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-3 mb-4">
                 
                 {/* 1. Fuel Indexer */}
-                <div className="fuel-pricing-simulator-box card-glow p-4 bg-indigo-950/20 border border-indigo-500/20 rounded-xl flex-1">
+                <div className="fuel-pricing-simulator-box card-glow p-4 bg-indigo-950/20 border border-indigo-500/20 rounded-xl flex flex-col justify-between">
                   <h4 className="text-sm font-bold text-indigo-400">⛽ Kolkata Fuel Market Price Feed Indexer</h4>
                   
                   <form className="flex flex-col gap-3 mt-3" onSubmit={handleUpdateFuelIndex}>
@@ -1636,7 +1636,7 @@ export default function AdminPanel() {
                 </div>
 
                 {/* 2. SIMULATE NIGHT HOURS TOGGLE */}
-                <div className="fuel-pricing-simulator-box card-glow p-4 bg-indigo-950/20 border border-indigo-500/20 rounded-xl w-[260px] flex flex-col justify-between">
+                <div className="fuel-pricing-simulator-box card-glow p-4 bg-indigo-950/20 border border-indigo-500/20 rounded-xl flex flex-col justify-between">
                   <div>
                     <div className="flex justify-between items-center">
                       <h4 className="text-sm font-bold text-indigo-400 flex items-center gap-1.5"><Moon size={16} /> Night Hour Shift</h4>
@@ -1661,7 +1661,7 @@ export default function AdminPanel() {
                 </div>
 
                 {/* 3. SIMULATE WEATHER CONDITIONS CONTROLLERS */}
-                <div className="fuel-pricing-simulator-box card-glow p-4 bg-indigo-950/20 border border-indigo-500/20 rounded-xl w-[280px] flex flex-col justify-between">
+                <div className="fuel-pricing-simulator-box card-glow p-4 bg-indigo-950/20 border border-indigo-500/20 rounded-xl flex flex-col justify-between">
                   <div>
                     <div className="flex justify-between items-center">
                       <h4 className="text-sm font-bold text-indigo-400 flex items-center gap-1.5">🌦️ Weather Operations Center</h4>
