@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useSimulator, calculateDistance } from '../context/SimulatorContext';
+import { useSimulator, calculateDistance, getServerEndpoints } from '../context/SimulatorContext';
 import { 
   ShieldAlert, 
   MapPin, 
