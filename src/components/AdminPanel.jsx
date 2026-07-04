@@ -18,7 +18,8 @@ import {
   ToggleLeft,
   ToggleRight,
   Key,
-  BarChart2
+  BarChart2,
+  MessageSquare
 } from 'lucide-react';
 import L from 'leaflet';
 
@@ -59,7 +60,10 @@ export default function AdminPanel() {
     resolveSafetyClaim,
     connectAdminSocket,
     fetchEnvKeys,
-    updateEnvKeys
+    updateEnvKeys,
+    smsLogs,
+    simulationSpeed,
+    setSimulationSpeed
   } = useSimulator();
 
   useEffect(() => {
@@ -636,6 +640,14 @@ export default function AdminPanel() {
             </button>
 
             <button 
+              className={`nav-item ${activeTab === 'sms_logs' ? 'active' : ''}`}
+              onClick={() => setActiveTab('sms_logs')}
+            >
+              <MessageSquare size={18} />
+              <span>SMS Broadcast Logs</span>
+            </button>
+
+            <button 
               className={`nav-item ${activeTab === 'env' ? 'active' : ''}`}
               onClick={() => setActiveTab('env')}
             >
@@ -742,6 +754,24 @@ export default function AdminPanel() {
                   <div className="card-header-flex">
                     <h4>Kolkata Real-time Operations Map</h4>
                     <div className="flex items-center gap-4">
+                      {/* SIMULATION SPEED SLIDER */}
+                      <div className="flex items-center gap-2 bg-black/40 border border-white/5 px-2.5 py-1 rounded-lg text-[10px]">
+                        <span className="text-gray-400 font-bold uppercase">⚡ GPS Speed:</span>
+                        <input 
+                          type="range"
+                          min="100"
+                          max="850"
+                          step="50"
+                          value={900 - simulationSpeed}
+                          onChange={(e) => setSimulationSpeed(900 - parseInt(e.target.value))}
+                          style={{ width: '70px', height: '4px', cursor: 'pointer', accentColor: '#fbbf24' }}
+                          title="Slide to adjust GPS simulation refresh rates"
+                        />
+                        <span className="text-amber-400 font-bold font-mono min-w-[30px] text-right">
+                          {simulationSpeed === 400 ? '1.0x' : `${(400 / simulationSpeed).toFixed(1)}x`}
+                        </span>
+                      </div>
+
                       <button 
                         onClick={() => setShowDemandHeatmap(!showDemandHeatmap)}
                         className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
@@ -2517,6 +2547,51 @@ export default function AdminPanel() {
 
           {activeTab === 'env' && (
             <EnvSettingsPanel fetchEnvKeys={fetchEnvKeys} updateEnvKeys={updateEnvKeys} />
+          )}
+
+          {activeTab === 'sms_logs' && (
+            <div className="admin-tab-content animate-fade-in" style={{ gap: '16px', maxHeight: '100%', overflowY: 'auto', padding: '24px' }}>
+              <div className="section-title-flex">
+                <h3>SMS Gateway & Telemetry Logs</h3>
+                <p className="text-gray-400 text-sm">Real-time tracking of OTP verifications, dispatch notifications, and panic alerts.</p>
+              </div>
+
+              <div className="card-glow p-5">
+                <div className="flex justify-between items-center mb-4">
+                  <h4 className="text-sm font-bold text-amber-500 uppercase tracking-wider flex items-center gap-2">
+                    💬 Live SMS Gateway Logs ({smsLogs.length} Active Records)
+                  </h4>
+                  <span className="text-[10px] text-emerald-400 font-bold bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-500/20">
+                    🟢 SIMULATED TWILIO GATEWAY: ONLINE
+                  </span>
+                </div>
+
+                {smsLogs.length === 0 ? (
+                  <div className="text-center py-10 text-gray-500 italic text-xs">
+                    No SMS dispatches registered in this session. Book a ride or request an OTP to trigger gateway payloads.
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {smsLogs.map(log => (
+                      <div 
+                        key={log.id} 
+                        className="p-3 bg-black/25 rounded-lg border border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs"
+                      >
+                        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                          <span className="font-mono text-[10px] text-indigo-400 font-bold bg-indigo-950 px-2 py-0.5 rounded">
+                            {log.sender}
+                          </span>
+                          <span className="text-gray-300">{log.message}</span>
+                        </div>
+                        <span className="font-mono text-[10px] text-gray-500 whitespace-nowrap">
+                          {log.timestamp}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           )}
 
           {activeTab === 'analytics' && (

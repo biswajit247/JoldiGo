@@ -170,6 +170,8 @@ export const SimulatorProvider = ({ children }) => {
   const [passengerWalletBalance, setPassengerWalletBalance] = useState(500.00); 
   const [congestionZones, setCongestionZones] = useState({ HOWRAH_BRIDGE: 'heavy', PARK_STREET: 'medium', SALT_LAKE_SEC5: 'medium' });
   const [activeSmsToast, setActiveSmsToast] = useState(null);
+  const [smsLogs, setSmsLogs] = useState([]);
+  const [simulationSpeed, setSimulationSpeed] = useState(400);
 
   const [settings, setSettings] = useState({
     baseFareCarAC: 50, perKmCarAC: 20,
@@ -351,7 +353,14 @@ export const SimulatorProvider = ({ children }) => {
 
   const triggerSmsToast = (message, sender = 'JoldiGo OTP Gateway') => {
     playSound('sms');
-    setActiveSmsToast({ id: Date.now(), sender, message });
+    const newLog = {
+      id: Date.now(),
+      sender,
+      message,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    };
+    setActiveSmsToast(newLog);
+    setSmsLogs(prev => [newLog, ...prev].slice(0, 50));
     setTimeout(() => setActiveSmsToast(null), 6000);
   };
 
@@ -1018,7 +1027,7 @@ export const SimulatorProvider = ({ children }) => {
 
         setActiveRide(prev => prev ? { ...prev, routeIndex: idx, location: nextLoc } : null);
       }
-    }, 400);
+    }, simulationSpeed);
   };
 
   const startRide = async () => {
@@ -1494,7 +1503,10 @@ export const SimulatorProvider = ({ children }) => {
         stopGpsTracking,
         isGpsActive,
         fetchEnvKeys,
-        updateEnvKeys
+        updateEnvKeys,
+        smsLogs,
+        simulationSpeed,
+        setSimulationSpeed
       }}
     >
       {children}
