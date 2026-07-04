@@ -431,24 +431,7 @@ app.post('/api/driver/vehicles/select', async (req, res) => {
       [selectedVeh.type, selectedVeh.name, selectedVeh.number, JSON.stringify(list), driverId]
     );
 
-    const driversRes = await query('SELECT * FROM drivers');
-    const formattedDrivers = driversRes.rows.map(drv => ({
-      id: drv.id,
-      name: drv.name,
-      phone: drv.phone,
-      vehicleType: drv.vehicle_type,
-      vehicleName: drv.vehicle_name,
-      vehicleNumber: drv.vehicle_number,
-      status: drv.status,
-      verificationStatus: drv.verification_status,
-      rating: parseFloat(drv.rating),
-      location: { lat: parseFloat(drv.location_lat), lng: parseFloat(drv.location_lng) },
-      documents: { license: drv.license_number, aadhar: drv.aadhar_number, rc: drv.rc_number },
-      earnings: { daily: parseFloat(drv.earnings_daily), weekly: parseFloat(drv.earnings_weekly), commission: parseFloat(drv.commission_owed) },
-      vehicles: JSON.parse(drv.vehicles || '[]')
-    }));
-
-    broadcastToAll({ type: 'drivers_updated', drivers: formattedDrivers });
+    await broadcastDriversUpdate();
 
     res.json({ success: true, vehicles: list });
   } catch (err) {
@@ -550,7 +533,7 @@ app.post('/api/driver/subscription/upgrade', async (req, res) => {
       [tier, expiry, driverId]
     );
     
-    broadcastToRole('admin', { type: 'drivers_updated' });
+    await broadcastDriversUpdate();
 
     res.json({ success: true, tier, expiresAt: expiry });
   } catch (err) {
@@ -1501,6 +1484,34 @@ const findWsClient = (role, id) => {
     }
   }
   return null;
+};
+
+// Helper: Broadcast all formatted drivers to all connected clients
+const broadcastDriversUpdate = async () => {
+  try {
+    const driversRes = await query('SELECT * FROM drivers');
+    const formattedDrivers = driversRes.rows.map(drv => ({
+      id: drv.id,
+      name: drv.name,
+      phone: drv.phone,
+      vehicleType: drv.vehicle_type,
+      vehicleName: drv.vehicle_name,
+      vehicleNumber: drv.vehicle_number,
+      status: drv.status,
+      verificationStatus: drv.verification_status,
+      rating: parseFloat(drv.rating || 5),
+      location: { lat: parseFloat(drv.location_lat || 22.5726), lng: parseFloat(drv.location_lng || 88.3639) },
+      documents: { license: drv.license_number, aadhar: drv.aadhar_number, rc: drv.rc_number },
+      earnings: { daily: parseFloat(drv.earnings_daily || 0), weekly: parseFloat(drv.earnings_weekly || 0), commission: parseFloat(drv.commission_owed || 0) },
+      vehicles: JSON.parse(drv.vehicles || '[]'),
+      subscriptionTier: drv.subscription_tier || 'free',
+      subscriptionExpiresAt: drv.subscription_expires_at
+    }));
+
+    broadcastToAll({ type: 'drivers_updated', drivers: formattedDrivers });
+  } catch (err) {
+    console.error("[Broadcast Drivers Update Error]", err);
+  }
 };
 
 // Start the integrated HTTP and WebSockets backend server
