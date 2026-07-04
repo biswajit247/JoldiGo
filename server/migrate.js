@@ -150,6 +150,21 @@ const migrate = async () => {
     await pool.query(setupTablesSql);
     console.log('✔ Schema tables constructed successfully.');
 
+    // Add vehicles column if not exists
+    await pool.query("ALTER TABLE drivers ADD COLUMN IF NOT EXISTS vehicles TEXT DEFAULT '[]'");
+    
+    // Seed default vehicle arrays for existing drivers that have '[]' as vehicles
+    const driversRes = await pool.query("SELECT id, vehicle_type, vehicle_name, vehicle_number, vehicles FROM drivers");
+    for (const d of driversRes.rows) {
+      if (!d.vehicles || d.vehicles === '[]') {
+        const defaultVehs = [
+          { id: 'v_init_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5), type: d.vehicle_type, name: d.vehicle_name, number: d.vehicle_number, active: true }
+        ];
+        await pool.query("UPDATE drivers SET vehicles = $1 WHERE id = $2", [JSON.stringify(defaultVehs), d.id]);
+      }
+    }
+    console.log('✔ Driver vehicles schema initialized and synchronized.');
+
     // 2. Run seed script
     await pool.query(seedDataSql);
     console.log('✔ Operational seed data populated successfully.');

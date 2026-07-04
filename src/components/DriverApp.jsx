@@ -696,6 +696,12 @@ export default function DriverApp({ isStandalone }) {
                         </span>
                       )}
                     </button>
+                    <button 
+                      className={`tab-btn-compact ${tab === 'garage' ? 'active' : ''}`}
+                      onClick={() => setTab('garage')}
+                    >
+                      Garage
+                    </button>
                   </div>
 
                   {tab === 'dashboard' && (
@@ -824,6 +830,114 @@ export default function DriverApp({ isStandalone }) {
                           )}
                         </div>
                       </div>
+                    </div>
+                  )}
+ 
+                  {tab === 'garage' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }} className="text-left mt-2">
+                      <span className="text-[10px] text-gray-500 font-extrabold uppercase block tracking-wider">🚗 Garage & Active Vehicle</span>
+                      
+                      <div className="flex flex-col gap-2">
+                        {currentDriver.vehicles && currentDriver.vehicles.map(veh => (
+                          <div 
+                            key={veh.id} 
+                            onClick={async () => {
+                              try {
+                                const { api } = getServerEndpoints();
+                                const res = await fetch(`${api}/api/driver/vehicles/select`, {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ driverId: currentDriver.id, vehicleId: veh.id })
+                                });
+                                const data = await res.json();
+                                if (data.success) {
+                                  // Server broadcast will trigger websocket update
+                                }
+                              } catch (err) {
+                                console.error(err);
+                              }
+                            }}
+                            className={`p-2.5 rounded-lg border transition-all flex justify-between items-center cursor-pointer ${
+                              veh.active 
+                                ? 'bg-indigo-600/10 border-indigo-400 text-white shadow-[0_0_10px_rgba(99,102,241,0.15)]' 
+                                : 'bg-black/30 border-white/5 text-gray-400 hover:bg-white/5'
+                            }`}
+                          >
+                            <div className="flex flex-col gap-0.5">
+                              <span className="font-bold text-[11px]">{veh.name}</span>
+                              <span className="text-[9px] font-mono text-gray-500">{veh.number}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[9px] uppercase font-bold px-1.5 py-0.5 rounded bg-black/40 text-gray-300">
+                                {getVehicleLabel(veh.type)}
+                              </span>
+                              {veh.active && <span className="text-[9px] text-green-400">● Active</span>}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+ 
+                      {/* Register New Vehicle Form */}
+                      <form 
+                        onSubmit={async (e) => {
+                          e.preventDefault();
+                          const name = e.target.vehName.value.trim();
+                          const number = e.target.vehNumber.value.trim();
+                          const type = e.target.vehType.value;
+                          if (!name || !number) return;
+ 
+                          try {
+                            const { api } = getServerEndpoints();
+                            const res = await fetch(`${api}/api/driver/vehicles/add`, {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ driverId: currentDriver.id, name, number, type })
+                            });
+                            const data = await res.json();
+                            if (data.success) {
+                              e.target.reset();
+                              // Reload initial data to fetch new vehicle lists
+                              const drvsRes = await fetch(`${api}/api/drivers`);
+                              const drvsData = await drvsRes.json();
+                              if (drvsData.success) {
+                                // WebSocket update will dispatch
+                              }
+                            }
+                          } catch (err) {
+                            console.error(err);
+                          }
+                        }}
+                        className="p-2.5 bg-black/40 rounded-lg border border-white/5 flex flex-col gap-2 mt-1"
+                      >
+                        <span className="text-[10px] font-bold text-gray-300">Register New Vehicle</span>
+                        
+                        <div className="flex gap-2">
+                          <div className="flex-1">
+                            <label className="text-[9px] text-gray-500 block mb-0.5">Model Name</label>
+                            <input name="vehName" type="text" placeholder="e.g. TVS Apache Bike" style={{ width: '100%', fontSize: '10px', padding: '4px 6px', background: '#111', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '4px', outline: 'none' }} required />
+                          </div>
+                          <div className="w-[100px]">
+                            <label className="text-[9px] text-gray-500 block mb-0.5">License Plate</label>
+                            <input name="vehNumber" type="text" placeholder="e.g. WB-02-1234" style={{ width: '100%', fontSize: '10px', padding: '4px 6px', background: '#111', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '4px', outline: 'none' }} required />
+                          </div>
+                        </div>
+ 
+                        <div>
+                          <label className="text-[9px] text-gray-500 block mb-0.5">Category Dispatch Pool</label>
+                          <select 
+                            name="vehType"
+                            style={{ width: '100%', fontSize: '10px', padding: '4px', background: '#111', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '4px', outline: 'none' }}
+                          >
+                            <option value="car_ac">4-Wheeler AC Car Fares</option>
+                            <option value="car_nonac">4-Wheeler Non-AC Car Fares</option>
+                            <option value="bike">App Bike Fares</option>
+                          </select>
+                        </div>
+ 
+                        <button type="submit" className="btn-primary py-1 text-[10px] font-bold mt-1" style={{ padding: '6px' }}>
+                          Add to Garage
+                        </button>
+                      </form>
                     </div>
                   )}
                 </div>

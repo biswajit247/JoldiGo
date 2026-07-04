@@ -378,6 +378,9 @@ export const SimulatorProvider = ({ children }) => {
             setActiveScheduledSurge(data.activeScheduledSurge);
           }
           break;
+        case 'drivers_updated':
+          setDrivers(data.drivers);
+          break;
       }
     };
     passengerSocketRef.current = ws;
@@ -424,6 +427,9 @@ export const SimulatorProvider = ({ children }) => {
           if (data.activeScheduledSurge !== undefined) {
             setActiveScheduledSurge(data.activeScheduledSurge);
           }
+          break;
+        case 'drivers_updated':
+          setDrivers(data.drivers);
           break;
       }
     };
@@ -473,6 +479,9 @@ export const SimulatorProvider = ({ children }) => {
           if (data.activeScheduledSurge !== undefined) {
             setActiveScheduledSurge(data.activeScheduledSurge);
           }
+          break;
+        case 'drivers_updated':
+          setDrivers(data.drivers);
           break;
       }
     };

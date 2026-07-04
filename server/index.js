@@ -51,6 +51,8 @@ const loadPersistedSettings = async () => {
       )
     `);
 
+    await query("ALTER TABLE drivers ADD COLUMN IF NOT EXISTS vehicles TEXT DEFAULT '[]'");
+
     const res = await query("SELECT * FROM system_settings");
     res.rows.forEach(row => {
       if (row.value) {
@@ -373,11 +375,111 @@ app.get('/api/drivers', async (req, res) => {
       rating: parseFloat(drv.rating),
       location: { lat: parseFloat(drv.location_lat), lng: parseFloat(drv.location_lng) },
       documents: { license: drv.license_number, aadhar: drv.aadhar_number, rc: drv.rc_number },
-      earnings: { daily: parseFloat(drv.earnings_daily), weekly: parseFloat(drv.earnings_weekly), commission: parseFloat(drv.commission_owed) }
+      earnings: { daily: parseFloat(drv.earnings_daily), weekly: parseFloat(drv.earnings_weekly), commission: parseFloat(drv.commission_owed) },
+      vehicles: JSON.parse(drv.vehicles || '[]')
     }));
     res.json({ success: true, drivers: formattedDrivers });
   } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch drivers list.', details: err.message });
+    res.status(500).json({ error: 'Failed to retrieve drivers list.' });
+  }
+});
+
+// Get active vehicles for driver
+app.get('/api/driver/vehicles', async (req, res) => {
+  const { driverId } = req.query;
+  if (!driverId) return res.status(400).json({ error: 'Driver ID is required.' });
+  try {
+    const dbRes = await query("SELECT vehicles FROM drivers WHERE id = $1", [driverId]);
+    if (dbRes.rows.length > 0) {
+      return res.json({ success: true, vehicles: JSON.parse(dbRes.rows[0].vehicles || '[]') });
+    }
+    res.json({ success: true, vehicles: [] });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to retrieve garage vehicles.', details: err.message });
+  }
+});
+
+// Switch active vehicle
+app.post('/api/driver/vehicles/select', async (req, res) => {
+  const { driverId, vehicleId } = req.body;
+  if (!driverId || !vehicleId) return res.status(400).json({ error: 'Driver ID and Vehicle ID required.' });
+  try {
+    const dbRes = await query("SELECT vehicles FROM drivers WHERE id = $1", [driverId]);
+    if (dbRes.rows.length === 0) return res.status(404).json({ error: 'Driver not found.' });
+
+    let list = JSON.parse(dbRes.rows[0].vehicles || '[]');
+    let selectedVeh = null;
+
+    list = list.map(v => {
+      if (v.id === vehicleId) {
+        v.active = true;
+        selectedVeh = v;
+      } else {
+        v.active = false;
+      }
+      return v;
+    });
+
+    if (!selectedVeh) return res.status(400).json({ error: 'Vehicle not registered.' });
+
+    await query(
+      `UPDATE drivers 
+       SET vehicle_type = $1, vehicle_name = $2, vehicle_number = $3, vehicles = $4 
+       WHERE id = $5`,
+      [selectedVeh.type, selectedVeh.name, selectedVeh.number, JSON.stringify(list), driverId]
+    );
+
+    const driversRes = await query('SELECT * FROM drivers');
+    const formattedDrivers = driversRes.rows.map(drv => ({
+      id: drv.id,
+      name: drv.name,
+      phone: drv.phone,
+      vehicleType: drv.vehicle_type,
+      vehicleName: drv.vehicle_name,
+      vehicleNumber: drv.vehicle_number,
+      status: drv.status,
+      verificationStatus: drv.verification_status,
+      rating: parseFloat(drv.rating),
+      location: { lat: parseFloat(drv.location_lat), lng: parseFloat(drv.location_lng) },
+      documents: { license: drv.license_number, aadhar: drv.aadhar_number, rc: drv.rc_number },
+      earnings: { daily: parseFloat(drv.earnings_daily), weekly: parseFloat(drv.earnings_weekly), commission: parseFloat(drv.commission_owed) },
+      vehicles: JSON.parse(drv.vehicles || '[]')
+    }));
+
+    broadcastToAll({ type: 'drivers_updated', drivers: formattedDrivers });
+
+    res.json({ success: true, vehicles: list });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update active vehicle.', details: err.message });
+  }
+});
+
+// Register new vehicle
+app.post('/api/driver/vehicles/add', async (req, res) => {
+  const { driverId, type, name, number } = req.body;
+  if (!driverId || !type || !name || !number) {
+    return res.status(400).json({ error: 'All vehicle specifications required.' });
+  }
+  try {
+    const dbRes = await query("SELECT vehicles FROM drivers WHERE id = $1", [driverId]);
+    if (dbRes.rows.length === 0) return res.status(404).json({ error: 'Driver not found.' });
+
+    const list = JSON.parse(dbRes.rows[0].vehicles || '[]');
+    const newVeh = {
+      id: 'v_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+      type,
+      name,
+      number,
+      active: false
+    };
+
+    list.push(newVeh);
+
+    await query("UPDATE drivers SET vehicles = $1 WHERE id = $2", [JSON.stringify(list), driverId]);
+
+    res.json({ success: true, vehicles: list });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to register new vehicle.', details: err.message });
   }
 });
 
