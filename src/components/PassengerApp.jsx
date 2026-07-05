@@ -235,6 +235,8 @@ export default function PassengerApp({ isStandalone }) {
   const [selectedPayment, setSelectedPayment] = useState('upi');
   const [starRating, setStarRating] = useState(5);
   const [paymentStep, setPaymentStep] = useState('select'); 
+  const [selectedTip, setSelectedTip] = useState(0); 
+  const [customTip, setCustomTip] = useState(''); 
 
   // Promo code states
   const [promoInput, setPromoInput] = useState('');
@@ -1297,11 +1299,99 @@ export default function PassengerApp({ isStandalone }) {
                 ))}
               </div>
 
+              {/* HAPPY RIDE TIPS WIDGET */}
+              <div className="happy-ride-tips-container mt-3 p-3 bg-black/40 border border-white/5 rounded-xl text-center">
+                <span className="text-[11px] font-extrabold text-amber-500 uppercase tracking-wider block mb-1">🎁 Happy Ride Tips</span>
+                <p className="text-[9px] text-gray-400 mb-3">100% of your tip goes directly to {matchedDriver?.name} to appreciate their service.</p>
+                
+                <div className="flex gap-2 justify-center mb-2">
+                  {[20, 50, 100].map(amt => (
+                    <button
+                      key={amt}
+                      type="button"
+                      onClick={() => {
+                        setSelectedTip(amt);
+                        setCustomTip('');
+                      }}
+                      style={{
+                        padding: '6px 12px',
+                        fontSize: '10px',
+                        fontWeight: 'bold',
+                        borderRadius: '8px',
+                        border: selectedTip === amt ? '1px solid #ffba08' : '1px solid rgba(255,255,255,0.1)',
+                        backgroundColor: selectedTip === amt ? 'rgba(255,186,8,0.15)' : 'rgba(0,0,0,0.3)',
+                        color: selectedTip === amt ? '#ffba08' : '#aaa',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      +₹{amt}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedTip('custom');
+                    }}
+                    style={{
+                      padding: '6px 12px',
+                      fontSize: '10px',
+                      fontWeight: 'bold',
+                      borderRadius: '8px',
+                      border: selectedTip === 'custom' ? '1px solid #ffba08' : '1px solid rgba(255,255,255,0.1)',
+                      backgroundColor: selectedTip === 'custom' ? 'rgba(255,186,8,0.15)' : 'rgba(0,0,0,0.3)',
+                      color: selectedTip === 'custom' ? '#ffba08' : '#aaa',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    Custom
+                  </button>
+                </div>
+
+                {selectedTip === 'custom' && (
+                  <input
+                    type="number"
+                    placeholder="Enter tip amount in ₹"
+                    value={customTip}
+                    onChange={(e) => setCustomTip(Math.max(1, parseInt(e.target.value) || ''))}
+                    style={{
+                      width: '80%',
+                      margin: '6px auto 0 auto',
+                      textAlign: 'center',
+                      fontSize: '11px',
+                      backgroundColor: 'rgba(0,0,0,0.4)',
+                      color: '#fff',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      borderRadius: '6px',
+                      padding: '4px'
+                    }}
+                    className="font-mono"
+                  />
+                )}
+
+                {selectedTip !== 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedTip(0);
+                      setCustomTip('');
+                    }}
+                    className="text-[9px] text-red-400 font-bold underline bg-transparent border-none mt-2 cursor-pointer"
+                  >
+                    Remove Tip
+                  </button>
+                )}
+              </div>
+
               <button 
                 className="btn-primary full-width mt-4" 
                 onClick={() => {
-                  completePaymentAndRate(starRating);
+                  const finalTip = selectedTip === 'custom' ? (parseInt(customTip) || 0) : selectedTip;
+                  completePaymentAndRate(starRating, finalTip);
                   setPaymentStep('select');
+                  setSelectedTip(0);
+                  setCustomTip('');
                 }}
               >
                 Submit & Book Again

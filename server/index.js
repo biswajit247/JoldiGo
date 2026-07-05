@@ -403,6 +403,49 @@ app.get('/api/driver/vehicles', async (req, res) => {
   }
 });
 
+// Rate ride and process tips
+app.post('/api/ride/rate', async (req, res) => {
+  const { rideId, rating, tipAmount } = req.body;
+  const parsedRating = parseFloat(rating || 5);
+  const parsedTip = parseFloat(tipAmount || 0);
+  
+  try {
+    const rideRes = await query('SELECT passenger_phone, driver_id FROM rides WHERE id = $1', [rideId]);
+    if (rideRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Ride not found.' });
+    }
+    const ride = rideRes.rows[0];
+
+    // Update ride rating
+    await query('UPDATE rides SET rating = $1 WHERE id = $2', [parsedRating, rideId]);
+
+    // Recalculate average rating for driver
+    const avgRes = await query('SELECT AVG(rating) as avg_rating FROM rides WHERE driver_id = $1 AND rating IS NOT NULL', [ride.driver_id]);
+    if (avgRes.rows.length > 0 && avgRes.rows[0].avg_rating) {
+      const newAvg = parseFloat(avgRes.rows[0].avg_rating);
+      await query('UPDATE drivers SET rating = $1 WHERE id = $2', [newAvg, ride.driver_id]);
+    }
+
+    // Process tipping transaction
+    if (parsedTip > 0) {
+      // Deduct from passenger wallet
+      await query('UPDATE passengers SET wallet_balance = wallet_balance - $1 WHERE phone = $2', [parsedTip, ride.passenger_phone]);
+      
+      // Credit 100% of the tip amount to driver's earnings
+      await query('UPDATE drivers SET earnings_daily = earnings_daily + $1, earnings_weekly = earnings_weekly + $1 WHERE id = $2', [parsedTip, ride.driver_id]);
+      
+      console.log(`🎁 Tip of ₹${parsedTip} processed for Driver ${ride.driver_id} from Passenger ${ride.passenger_phone}`);
+    }
+
+    broadcastToRole('admin', { type: 'ledger_update' });
+    broadcastDriversUpdate();
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to rate and tip driver.', details: err.message });
+  }
+});
+
 // Switch active vehicle
 app.post('/api/driver/vehicles/select', async (req, res) => {
   const { driverId, vehicleId } = req.body;

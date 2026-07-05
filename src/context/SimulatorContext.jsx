@@ -1047,13 +1047,33 @@ export const SimulatorProvider = ({ children }) => {
     });
   };
 
-  const completePaymentAndRate = async (rating) => {
+  const completePaymentAndRate = async (rating, tipAmount = 0) => {
     if (!activeRide || activeRide.status !== 'completed') return;
     
-    // Refresh local client view and close ride view
+    try {
+      const { api } = getServerEndpoints();
+      await fetch(`${api}/api/ride/rate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          rideId: activeRide.id,
+          rating: parseFloat(rating || 5),
+          tipAmount: parseFloat(tipAmount || 0)
+        })
+      });
+      
+      if (tipAmount > 0) {
+        addLog(`Payment of ₹${activeRide.totalFare} & ₹${tipAmount} tip completed.`, 'success');
+        triggerSmsToast(`JoldiGo Pay: ₹${tipAmount} tip successfully credited to your driver.`, 'JoldiGo Wallet');
+      } else {
+        addLog(`Payment of ₹${activeRide.totalFare} completed successfully.`, 'success');
+      }
+    } catch (e) {
+      console.error("Failed to rate and tip", e);
+    }
+
     await refreshPassengerProfile(passenger.phone);
     setActiveRide(null);
-    addLog(`Payment of ₹${activeRide.totalFare} completed successfully.`, 'success');
   };
 
   const cancelRide = () => {
