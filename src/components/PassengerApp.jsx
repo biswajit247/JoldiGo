@@ -338,12 +338,13 @@ export default function PassengerApp({ isStandalone }) {
     const MAP_TILE_URLS = {
       google_roadmap: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
       google_satellite: 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
-      voyager: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'
+      voyager: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+      dark_navigation: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
     };
 
-    const tileLayer = L.tileLayer(MAP_TILE_URLS[mapStyle] || MAP_TILE_URLS.google_roadmap, {
+    const tileLayer = L.tileLayer(MAP_TILE_URLS[mapStyle] || MAP_TILE_URLS.dark_navigation, {
       maxZoom: 19,
-      attribution: mapStyle.startsWith('google') ? '&copy; Google Maps' : '&copy; CartoDB'
+      attribution: mapStyle.startsWith('google') ? '&copy; Google Maps' : '&copy; CartoDB/Mapbox'
     }).addTo(map);
 
     tileLayerRef.current = tileLayer;
@@ -372,7 +373,8 @@ export default function PassengerApp({ isStandalone }) {
       const MAP_TILE_URLS = {
         google_roadmap: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
         google_satellite: 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
-        voyager: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'
+        voyager: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+        dark_navigation: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
       };
       tileLayerRef.current.setUrl(MAP_TILE_URLS[mapStyle]);
     }
@@ -1662,6 +1664,21 @@ export default function PassengerApp({ isStandalone }) {
               <div ref={mapContainerRef} className="map-view-container" style={{ height: '100%' }}></div>
               
               <div style={{ position: 'absolute', top: '8px', right: '8px', zIndex: 999, display: 'flex', gap: '4px' }}>
+                <button
+                  onClick={() => setMapStyle('dark_navigation')}
+                  style={{
+                    padding: '3px 6px',
+                    fontSize: '8px',
+                    fontWeight: 'extrabold',
+                    borderRadius: '4px',
+                    backgroundColor: mapStyle === 'dark_navigation' ? '#ffdd00' : 'rgba(0,0,0,0.6)',
+                    color: mapStyle === 'dark_navigation' ? '#000' : '#fff',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    cursor: 'pointer'
+                  }}
+                >
+                  ⚡ Ola/Uber Dark
+                </button>
                 <button
                   onClick={() => setMapStyle('google_roadmap')}
                   style={{

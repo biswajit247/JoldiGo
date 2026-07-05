@@ -252,12 +252,13 @@ export default function DriverApp({ isStandalone }) {
     const MAP_TILE_URLS = {
       google_roadmap: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
       google_satellite: 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
-      voyager: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'
+      voyager: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+      dark_navigation: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
     };
 
-    const tileLayer = L.tileLayer(MAP_TILE_URLS[mapStyle] || MAP_TILE_URLS.google_roadmap, {
+    const tileLayer = L.tileLayer(MAP_TILE_URLS[mapStyle] || MAP_TILE_URLS.dark_navigation, {
       maxZoom: 19,
-      attribution: mapStyle.startsWith('google') ? '&copy; Google Maps' : '&copy; CartoDB'
+      attribution: mapStyle.startsWith('google') ? '&copy; Google Maps' : '&copy; CartoDB/Mapbox'
     }).addTo(map);
 
     tileLayerRef.current = tileLayer;
@@ -276,7 +277,8 @@ export default function DriverApp({ isStandalone }) {
       const MAP_TILE_URLS = {
         google_roadmap: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
         google_satellite: 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
-        voyager: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'
+        voyager: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+        dark_navigation: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
       };
       tileLayerRef.current.setUrl(MAP_TILE_URLS[mapStyle]);
     }
@@ -318,26 +320,45 @@ export default function DriverApp({ isStandalone }) {
     }
 
     const driverIcon = L.divIcon({
-      className: 'custom-map-marker driver-self-marker',
-      html: `<div class="marker-pin pin-driver-self ${currentDriver.vehicleType === 'bike' ? 'bike' : 'car'}">
-               <span class="navigation-arrow">🛞</span>
-             </div>`,
-      iconSize: [28, 28],
-      iconAnchor: [14, 14]
+      className: 'custom-map-marker driver-self-marker-pulsing',
+      html: `
+        <div style="position: relative; display: flex; align-items: center; justify-content: center; width: 36px; height: 36px;">
+          <div style="position: absolute; width: 32px; height: 32px; background-color: rgba(37, 99, 235, 0.25); border-radius: 50%; animation: ping 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>
+          <div style="position: absolute; width: 20px; height: 20px; background-color: #2563eb; border: 2px solid #ffffff; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.4);">
+            <span style="font-size: 8px; color: #ffffff; transform: rotate(0deg); display: inline-block;">▲</span>
+          </div>
+        </div>
+      `,
+      iconSize: [36, 36],
+      iconAnchor: [18, 18]
     });
 
     const pickupIcon = L.divIcon({
       className: 'custom-map-marker',
-      html: `<div class="marker-pin pin-pickup"></div>`,
-      iconSize: [20, 20],
-      iconAnchor: [10, 10]
+      html: `
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
+          <div style="background-color: #16a34a; color: #ffffff; font-size: 7px; font-weight: 900; padding: 2px 4px; border-radius: 4px; border: 1px solid #ffffff; box-shadow: 0 2px 6px rgba(0,0,0,0.3); text-transform: uppercase; margin-bottom: 2px; font-family: sans-serif;">PICKUP</div>
+          <div style="width: 12px; height: 12px; background-color: #16a34a; border: 2px solid #ffffff; border-radius: 50%; box-shadow: 0 2px 6px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center;">
+            <div style="width: 4px; height: 4px; background-color: #ffffff; border-radius: 50%;"></div>
+          </div>
+        </div>
+      `,
+      iconSize: [50, 30],
+      iconAnchor: [25, 25]
     });
 
     const dropoffIcon = L.divIcon({
       className: 'custom-map-marker',
-      html: `<div class="marker-pin pin-dropoff"></div>`,
-      iconSize: [20, 20],
-      iconAnchor: [10, 10]
+      html: `
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
+          <div style="background-color: #dc2626; color: #ffffff; font-size: 7px; font-weight: 900; padding: 2px 4px; border-radius: 4px; border: 1px solid #ffffff; box-shadow: 0 2px 6px rgba(0,0,0,0.3); text-transform: uppercase; margin-bottom: 2px; font-family: sans-serif;">DROP</div>
+          <div style="width: 12px; height: 12px; background-color: #dc2626; border: 2px solid #ffffff; border-radius: 50%; box-shadow: 0 2px 6px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center;">
+            <div style="width: 4px; height: 4px; background-color: #ffffff; border-radius: 50%;"></div>
+          </div>
+        </div>
+      `,
+      iconSize: [50, 30],
+      iconAnchor: [25, 25]
     });
 
     markersRef.current.driver = L.marker([currentDriver.location.lat, currentDriver.location.lng], { icon: driverIcon }).addTo(map);
@@ -348,7 +369,7 @@ export default function DriverApp({ isStandalone }) {
       markersRef.current.pickup = L.marker([activeRide.pickup.lat, activeRide.pickup.lng], { icon: pickupIcon }).addTo(map);
       markersRef.current.dropoff = L.marker([activeRide.dropoff.lat, activeRide.dropoff.lng], { icon: dropoffIcon }).addTo(map);
 
-      // Draw route polylines (split trail: traveled green vs remaining yellow)
+      // Draw route polylines (split trail: traveled grey vs remaining royal blue)
       if (activeRide.route) {
         const idx = activeRide.routeIndex || 0;
         const traveledCoords = activeRide.route.slice(0, idx + 1).map(p => [p.lat, p.lng]);
@@ -356,19 +377,21 @@ export default function DriverApp({ isStandalone }) {
 
         if (traveledCoords.length > 1) {
           markersRef.current.traveledPolyline = L.polyline(traveledCoords, {
-            color: '#00ff66',
-            weight: 5,
-            opacity: 0.9,
-            className: 'glowing-green-trail'
+            color: '#64748b',
+            weight: 4,
+            opacity: 0.5,
+            dashArray: '5, 8'
           }).addTo(map);
         }
 
         if (remainingCoords.length > 0) {
           markersRef.current.remainingPolyline = L.polyline(remainingCoords, {
-            color: '#ffdd00',
-            weight: 5,
-            opacity: 0.8,
-            className: 'animated-route-path'
+            color: '#2563eb',
+            weight: 6,
+            opacity: 0.95,
+            lineJoin: 'round',
+            lineCap: 'round',
+            className: 'glowing-blue-route'
           }).addTo(map);
         }
       }
@@ -588,6 +611,21 @@ export default function DriverApp({ isStandalone }) {
                 <div ref={mapContainerRef} className="map-view-container driver-map"></div>
                 
                 <div style={{ position: 'absolute', top: '8px', right: '8px', zIndex: 999, display: 'flex', gap: '4px' }}>
+                  <button
+                    onClick={() => setMapStyle('dark_navigation')}
+                    style={{
+                      padding: '3px 6px',
+                      fontSize: '8px',
+                      fontWeight: 'extrabold',
+                      borderRadius: '4px',
+                      backgroundColor: mapStyle === 'dark_navigation' ? '#ffdd00' : 'rgba(0,0,0,0.6)',
+                      color: mapStyle === 'dark_navigation' ? '#000' : '#fff',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    ⚡ Ola/Uber Dark
+                  </button>
                   <button
                     onClick={() => setMapStyle('google_roadmap')}
                     style={{

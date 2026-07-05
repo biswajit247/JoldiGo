@@ -3101,3 +3101,19 @@ body {
   filter: drop-shadow(0 0 4px rgba(59, 130, 246, 0.9));
 }
 
+.glowing-blue-route {
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 5px rgba(37, 99, 235, 0.8));
+  animation: route-pulse 2s ease-in-out infinite alternate;
+}
+
+@keyframes route-pulse {
+  0% {
+    stroke-opacity: 0.9;
+  }
+  100% {
+    stroke-opacity: 0.98;
+  }
+}
+
