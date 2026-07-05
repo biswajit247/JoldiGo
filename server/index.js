@@ -692,13 +692,26 @@ app.get('/api/admin/env/get', (req, res) => {
     twilioAuthToken: mask(process.env.TWILIO_AUTH_TOKEN),
     twilioPhoneNumber: process.env.TWILIO_PHONE_NUMBER || '',
     razorpayKeyId: mask(process.env.RAZORPAY_KEY_ID),
-    razorpayKeySecret: mask(process.env.RAZORPAY_KEY_SECRET)
+    razorpayKeySecret: mask(process.env.RAZORPAY_KEY_SECRET),
+    googleMapsKeyWeb: mask(process.env.GOOGLE_MAPS_API_KEY_WEB),
+    googleMapsKeyAndroid: mask(process.env.GOOGLE_MAPS_API_KEY_ANDROID),
+    googleMapsKeyIos: mask(process.env.GOOGLE_MAPS_API_KEY_IOS)
   });
 });
 
 // Update environment variables dynamically
 app.post('/api/admin/env/update', async (req, res) => {
-  const { databaseUrl, twilioSid, twilioAuthToken, twilioPhoneNumber, razorpayKeyId, razorpayKeySecret } = req.body;
+  const { 
+    databaseUrl, 
+    twilioSid, 
+    twilioAuthToken, 
+    twilioPhoneNumber, 
+    razorpayKeyId, 
+    razorpayKeySecret,
+    googleMapsKeyWeb,
+    googleMapsKeyAndroid,
+    googleMapsKeyIos
+  } = req.body;
   
   try {
     const envPath = fileURLToPath(new URL('./.env', import.meta.url));
@@ -713,6 +726,9 @@ app.post('/api/admin/env/update', async (req, res) => {
     const nextTwilioPhone = twilioPhoneNumber ? twilioPhoneNumber : process.env.TWILIO_PHONE_NUMBER;
     const nextRzpId = razorpayKeyId && !razorpayKeyId.includes('****') ? razorpayKeyId : process.env.RAZORPAY_KEY_ID;
     const nextRzpSecret = razorpayKeySecret && !razorpayKeySecret.includes('****') ? razorpayKeySecret : process.env.RAZORPAY_KEY_SECRET;
+    const nextGoogleWeb = googleMapsKeyWeb && !googleMapsKeyWeb.includes('****') ? googleMapsKeyWeb : process.env.GOOGLE_MAPS_API_KEY_WEB;
+    const nextGoogleAndroid = googleMapsKeyAndroid && !googleMapsKeyAndroid.includes('****') ? googleMapsKeyAndroid : process.env.GOOGLE_MAPS_API_KEY_ANDROID;
+    const nextGoogleIos = googleMapsKeyIos && !googleMapsKeyIos.includes('****') ? googleMapsKeyIos : process.env.GOOGLE_MAPS_API_KEY_IOS;
 
     if (nextDb) envLines.push(`DATABASE_URL=${nextDb}`);
     if (nextTwilioSid) envLines.push(`TWILIO_ACCOUNT_SID=${nextTwilioSid}`);
@@ -720,6 +736,9 @@ app.post('/api/admin/env/update', async (req, res) => {
     if (nextTwilioPhone) envLines.push(`TWILIO_PHONE_NUMBER=${nextTwilioPhone}`);
     if (nextRzpId) envLines.push(`RAZORPAY_KEY_ID=${nextRzpId}`);
     if (nextRzpSecret) envLines.push(`RAZORPAY_KEY_SECRET=${nextRzpSecret}`);
+    if (nextGoogleWeb) envLines.push(`GOOGLE_MAPS_API_KEY_WEB=${nextGoogleWeb}`);
+    if (nextGoogleAndroid) envLines.push(`GOOGLE_MAPS_API_KEY_ANDROID=${nextGoogleAndroid}`);
+    if (nextGoogleIos) envLines.push(`GOOGLE_MAPS_API_KEY_IOS=${nextGoogleIos}`);
     
     fs.writeFileSync(envPath, envLines.join('\n'), 'utf-8');
 
@@ -738,6 +757,9 @@ app.post('/api/admin/env/update', async (req, res) => {
     await saveKey('TWILIO_PHONE_NUMBER', nextTwilioPhone);
     await saveKey('RAZORPAY_KEY_ID', nextRzpId);
     await saveKey('RAZORPAY_KEY_SECRET', nextRzpSecret);
+    await saveKey('GOOGLE_MAPS_API_KEY_WEB', nextGoogleWeb);
+    await saveKey('GOOGLE_MAPS_API_KEY_ANDROID', nextGoogleAndroid);
+    await saveKey('GOOGLE_MAPS_API_KEY_IOS', nextGoogleIos);
     
     // Explicitly overwrite process.env variables in-memory (dotenv.config does not overwrite already loaded keys)
     if (nextDb) process.env.DATABASE_URL = nextDb;
@@ -746,6 +768,9 @@ app.post('/api/admin/env/update', async (req, res) => {
     if (nextTwilioPhone) process.env.TWILIO_PHONE_NUMBER = nextTwilioPhone;
     if (nextRzpId) process.env.RAZORPAY_KEY_ID = nextRzpId;
     if (nextRzpSecret) process.env.RAZORPAY_KEY_SECRET = nextRzpSecret;
+    if (nextGoogleWeb) process.env.GOOGLE_MAPS_API_KEY_WEB = nextGoogleWeb;
+    if (nextGoogleAndroid) process.env.GOOGLE_MAPS_API_KEY_ANDROID = nextGoogleAndroid;
+    if (nextGoogleIos) process.env.GOOGLE_MAPS_API_KEY_IOS = nextGoogleIos;
     
     // Re-initialize clients in-memory with new keys
     if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {

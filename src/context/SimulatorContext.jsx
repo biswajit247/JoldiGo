@@ -1404,7 +1404,17 @@ export const SimulatorProvider = ({ children }) => {
     } catch (err) {
       console.error(err);
     }
-    return { databaseUrl: '', twilioSid: '', twilioAuthToken: '', twilioPhoneNumber: '', razorpayKeyId: '', razorpayKeySecret: '' };
+    return { 
+      databaseUrl: '', 
+      twilioSid: '', 
+      twilioAuthToken: '', 
+      twilioPhoneNumber: '', 
+      razorpayKeyId: '', 
+      razorpayKeySecret: '',
+      googleMapsKeyWeb: '',
+      googleMapsKeyAndroid: '',
+      googleMapsKeyIos: ''
+    };
   };
 
   const updateEnvKeys = async (keys) => {
