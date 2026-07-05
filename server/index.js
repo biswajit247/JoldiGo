@@ -541,6 +541,59 @@ app.get('/api/driver/history', async (req, res) => {
   }
 });
 
+// Enroll a brand new real driver
+app.post('/api/driver/enroll', async (req, res) => {
+  const { name, phone, vehicleType, vehicleName, vehicleNumber, licenseNumber, aadharNumber, rcNumber } = req.body;
+  if (!name || !phone || !vehicleType || !vehicleName || !vehicleNumber || !licenseNumber || !aadharNumber || !rcNumber) {
+    return res.status(400).json({ success: false, error: 'All fields are required.' });
+  }
+
+  try {
+    // Generate new driver ID dynamically
+    const countRes = await query("SELECT COUNT(*) FROM drivers");
+    const nextNum = parseInt(countRes.rows[0].count) + 1;
+    const newDriverId = `drv_${nextNum}`;
+
+    // Insert new driver record into PostgreSQL database with pending verification
+    await query(
+      `INSERT INTO drivers (
+        id, name, phone, vehicle_type, vehicle_name, vehicle_number, 
+        status, verification_status, rating, location_lat, location_lng, 
+        license_number, aadhar_number, rc_number
+      ) VALUES ($1, $2, $3, $4, $5, $6, 'offline', 'pending', 5.00, 22.5600, 88.3600, $7, $8, $9)`,
+      [newDriverId, name, phone, vehicleType, vehicleName, vehicleNumber, licenseNumber, aadharNumber, rcNumber]
+    );
+
+    // Fetch and format updated drivers list
+    const allDrvRes = await query('SELECT * FROM drivers ORDER BY id ASC');
+    const formattedDrivers = allDrvRes.rows.map(d => ({
+      id: d.id,
+      name: d.name,
+      phone: d.phone,
+      vehicleType: d.vehicle_type,
+      vehicleName: d.vehicle_name,
+      vehicleNumber: d.vehicle_number,
+      status: d.status,
+      verificationStatus: d.verification_status,
+      rating: parseFloat(d.rating),
+      location: { lat: parseFloat(d.location_lat), lng: parseFloat(d.location_lng) },
+      licenseNumber: d.license_number,
+      aadharNumber: d.aadhar_number,
+      rcNumber: d.rc_number,
+      earnings: { daily: parseFloat(d.earnings_daily), weekly: parseFloat(d.earnings_weekly) },
+      commissionOwed: parseFloat(d.commission_owed)
+    }));
+    
+    // Broadcast updated driver records array to all active maps/admin views
+    broadcastToAll({ type: 'drivers_updated', drivers: formattedDrivers });
+
+    res.json({ success: true, driver: formattedDrivers.find(d => d.id === newDriverId) });
+  } catch (err) {
+    console.error('Error during driver enrollment:', err);
+    res.status(500).json({ success: false, error: 'Database enrollment error: ' + err.message });
+  }
+});
+
 // Get driver subscription details
 app.get('/api/driver/subscription', async (req, res) => {
   const { driverId } = req.query;

@@ -1370,6 +1370,30 @@ export const SimulatorProvider = ({ children }) => {
     }
   };
 
+  const enrollDriver = async (enrollData) => {
+    try {
+      const { api } = getServerEndpoints();
+      const res = await fetch(`${api}/api/driver/enroll`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(enrollData)
+      });
+      const data = await res.json();
+      if (data.success) {
+        addLog(`Driver registration submitted successfully! Awaiting admin verification.`, 'success');
+        fetchInitialData();
+        return data.driver;
+      } else {
+        alert(data.error || 'Failed to submit driver enrollment.');
+        return null;
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error connecting to backend enrollment service.');
+      return null;
+    }
+  };
+
   const verifyDriverStatus = async (driverId, verified) => {
     try {
       const { api } = getServerEndpoints();
@@ -1664,6 +1688,7 @@ export const SimulatorProvider = ({ children }) => {
         logoutPassenger,
         toggleDriverStatus,
         uploadDriverDocs,
+        enrollDriver,
         verifyDriverStatus,
         payoutDriver,
         broadcastNotification,

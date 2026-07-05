@@ -113,6 +113,41 @@ export default function DriverApp({ isStandalone }) {
   const [aadharInput, setAadharInput] = useState('');
   const [rcInput, setRcInput] = useState('');
 
+  const [isEnrolling, setIsEnrolling] = useState(false);
+  const [enrollForm, setEnrollForm] = useState({
+    name: '',
+    phone: '',
+    vehicleType: 'car_ac',
+    vehicleName: '',
+    vehicleNumber: '',
+    licenseNumber: '',
+    aadharNumber: '',
+    rcNumber: ''
+  });
+
+  const handleEnrollSubmit = async (e) => {
+    e.preventDefault();
+    if (!enrollForm.name || !enrollForm.phone || !enrollForm.vehicleName || !enrollForm.vehicleNumber || !enrollForm.licenseNumber || !enrollForm.aadharNumber || !enrollForm.rcNumber) {
+      alert('Please fill out all enrollment fields.');
+      return;
+    }
+    const newDrv = await enrollDriver(enrollForm);
+    if (newDrv) {
+      setSelectedDriverId(newDrv.id);
+      setIsEnrolling(false);
+      setEnrollForm({
+        name: '',
+        phone: '',
+        vehicleType: 'car_ac',
+        vehicleName: '',
+        vehicleNumber: '',
+        licenseNumber: '',
+        aadharNumber: '',
+        rcNumber: ''
+      });
+    }
+  };
+
   const currentDriver = drivers.find((d) => d.id === selectedDriverId) || drivers[0];
 
   // Chat Panel State
@@ -666,6 +701,147 @@ export default function DriverApp({ isStandalone }) {
     );
   };
 
+  if (isEnrolling) {
+    return (
+      <div className="mobile-phone-frame driver-theme" style={{ position: 'relative' }}>
+        {!isStandalone && <div className="phone-notch"></div>}
+        
+        <div className="phone-status-bar">
+          <span className="phone-time">08:18</span>
+          <div className="phone-icons">
+            <span className="signal">📶</span>
+            <span className="battery">🔋 87%</span>
+          </div>
+        </div>
+
+        <div className="phone-screen-content app-screen-layout onboarding-screen" style={{ overflowY: 'auto', padding: '16px', boxSizing: 'border-box', height: 'calc(100% - 60px)', display: 'flex', flexDirection: 'column' }}>
+          <div className="onboarding-header text-center mt-2 mb-4">
+            <UserCheck size={36} className="text-yellow-400 mx-auto" />
+            <h3 className="text-base font-bold text-white mt-1.5">Driver Partner Enrollment</h3>
+            <p className="text-[10px] text-gray-400 mt-0.5">Submit details to join Jaldi Go</p>
+          </div>
+
+          <form className="onboarding-form card-glow flex flex-col gap-3" onSubmit={handleEnrollSubmit} style={{ padding: '12px', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '8px', backgroundColor: 'rgba(0,0,0,0.2)' }}>
+            <div className="flex flex-col gap-1">
+              <label className="text-[9px] uppercase tracking-wider text-gray-400 font-extrabold">Full Name</label>
+              <input 
+                type="text" 
+                placeholder="e.g. Subir Ganguly"
+                value={enrollForm.name}
+                onChange={e => setEnrollForm(prev => ({ ...prev, name: e.target.value }))}
+                style={{ backgroundColor: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', padding: '6px', fontSize: '11px', color: '#fff', outline: 'none' }}
+                required
+              />
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <label className="text-[9px] uppercase tracking-wider text-gray-400 font-extrabold">Phone Number</label>
+              <input 
+                type="text" 
+                placeholder="e.g. +91 98765 43210"
+                value={enrollForm.phone}
+                onChange={e => setEnrollForm(prev => ({ ...prev, phone: e.target.value }))}
+                style={{ backgroundColor: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', padding: '6px', fontSize: '11px', color: '#fff', outline: 'none' }}
+                required
+              />
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <label className="text-[9px] uppercase tracking-wider text-gray-400 font-extrabold">Vehicle Type</label>
+              <select 
+                value={enrollForm.vehicleType}
+                onChange={e => setEnrollForm(prev => ({ ...prev, vehicleType: e.target.value }))}
+                style={{ backgroundColor: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', padding: '6px', fontSize: '11px', color: '#fff', outline: 'none', cursor: 'pointer' }}
+              >
+                <option value="car_ac">Car (Air Conditioned)</option>
+                <option value="car_non_ac">Car (Non-AC)</option>
+                <option value="bike">Motorcycle / Bike</option>
+              </select>
+            </div>
+
+            <div className="flex gap-2">
+              <div className="flex flex-col gap-1 flex-1">
+                <label className="text-[9px] uppercase tracking-wider text-gray-400 font-extrabold">Vehicle Model</label>
+                <input 
+                  type="text" 
+                  placeholder="e.g. Maruti WagonR"
+                  value={enrollForm.vehicleName}
+                  onChange={e => setEnrollForm(prev => ({ ...prev, vehicleName: e.target.value }))}
+                  style={{ backgroundColor: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', padding: '6px', fontSize: '11px', color: '#fff', outline: 'none', width: '100%', boxSizing: 'border-box' }}
+                  required
+                />
+              </div>
+              <div className="flex flex-col gap-1 flex-1">
+                <label className="text-[9px] uppercase tracking-wider text-gray-400 font-extrabold">Vehicle Plate No.</label>
+                <input 
+                  type="text" 
+                  placeholder="e.g. WB-02-AB-1234"
+                  value={enrollForm.vehicleNumber}
+                  onChange={e => setEnrollForm(prev => ({ ...prev, vehicleNumber: e.target.value }))}
+                  style={{ backgroundColor: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', padding: '6px', fontSize: '11px', color: '#fff', outline: 'none', width: '100%', boxSizing: 'border-box' }}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="border-t border-white/5 my-1 pt-2 flex flex-col gap-2.5">
+              <div className="flex flex-col gap-1">
+                <label className="text-[9px] uppercase tracking-wider text-gray-400 font-extrabold">Driving License (DL)</label>
+                <input 
+                  type="text" 
+                  placeholder="e.g. DL-WESTBENGAL-9932"
+                  value={enrollForm.licenseNumber}
+                  onChange={e => setEnrollForm(prev => ({ ...prev, licenseNumber: e.target.value }))}
+                  style={{ backgroundColor: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', padding: '6px', fontSize: '11px', color: '#fff', outline: 'none' }}
+                  required
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-[9px] uppercase tracking-wider text-gray-400 font-extrabold">Aadhar Card Number</label>
+                <input 
+                  type="text" 
+                  placeholder="e.g. 5566 7788 9900"
+                  value={enrollForm.aadharNumber}
+                  onChange={e => setEnrollForm(prev => ({ ...prev, aadharNumber: e.target.value }))}
+                  style={{ backgroundColor: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', padding: '6px', fontSize: '11px', color: '#fff', outline: 'none' }}
+                  required
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-[9px] uppercase tracking-wider text-gray-400 font-extrabold">Vehicle RC Number</label>
+                <input 
+                  type="text" 
+                  placeholder="e.g. RC-WB02AB1234"
+                  value={enrollForm.rcNumber}
+                  onChange={e => setEnrollForm(prev => ({ ...prev, rcNumber: e.target.value }))}
+                  style={{ backgroundColor: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', padding: '6px', fontSize: '11px', color: '#fff', outline: 'none' }}
+                  required
+                />
+              </div>
+            </div>
+
+            <button 
+              type="submit"
+              style={{ backgroundColor: '#ffdd00', border: 'none', color: '#000', fontWeight: 'bold', padding: '8px', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: '4px' }}
+            >
+              Enroll Driver Partner
+            </button>
+            <button 
+              type="button"
+              onClick={() => setIsEnrolling(false)}
+              style={{ backgroundColor: 'transparent', border: 'none', color: '#888', fontWeight: 'bold', padding: '4px', cursor: 'pointer', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}
+            >
+              Cancel
+            </button>
+          </form>
+        </div>
+        <div className="phone-home-bar"></div>
+      </div>
+    );
+  }
+
   return (
     <>
       {/* Simulator Switcher Controls (hidden in standalone native mode) */}
@@ -689,32 +865,50 @@ export default function DriverApp({ isStandalone }) {
           }}
         >
           <span style={{ fontWeight: 'bold' }}>👤 Simulate Driver Profile:</span>
-          <select 
-            value={selectedDriverId} 
-            onChange={(e) => {
-              setSelectedDriverId(e.target.value);
-              setTab('dashboard');
-            }}
-            style={{
-              backgroundColor: 'rgba(0, 0, 0, 0.4)',
-              border: '1px solid rgba(255,255,255,0.1)',
-              color: '#fff',
-              padding: '2px 6px',
-              borderRadius: '4px',
-              outline: 'none',
-              cursor: 'pointer',
-              fontSize: '11px'
-            }}
-          >
-            {drivers.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.name} ({getVehicleLabel(d.vehicleType)} - {d.verificationStatus})
-              </option>
-            ))}
-          </select>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <select 
+              value={selectedDriverId} 
+              onChange={(e) => {
+                setSelectedDriverId(e.target.value);
+                setTab('dashboard');
+              }}
+              style={{
+                backgroundColor: 'rgba(0, 0, 0, 0.4)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                color: '#fff',
+                padding: '2px 6px',
+                borderRadius: '4px',
+                outline: 'none',
+                cursor: 'pointer',
+                fontSize: '11px'
+              }}
+            >
+              {drivers.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name} ({getVehicleLabel(d.vehicleType)} - {d.verificationStatus})
+                </option>
+              ))}
+            </select>
+            <button 
+              onClick={() => setIsEnrolling(true)}
+              style={{
+                backgroundColor: '#ffdd00',
+                border: 'none',
+                color: '#000',
+                fontWeight: 'extrabold',
+                padding: '2px 8px',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '10px',
+                marginLeft: '6px'
+              }}
+              title="Register a new driver partner profile"
+            >
+              ➕ Register
+            </button>
+          </div>
         </div>
       )}
-
       <div className="mobile-phone-frame driver-theme">
         {!isStandalone && <div className="phone-notch"></div>}
         
