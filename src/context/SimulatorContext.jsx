@@ -167,6 +167,7 @@ export const SimulatorProvider = ({ children }) => {
     subscriptionEarnings: 0
   });
   const [isNightMode, setIsNightMode] = useState(false); 
+  const [mapStyle, setMapStyle] = useState('google_roadmap');
   const [passengerWalletBalance, setPassengerWalletBalance] = useState(500.00); 
   const [congestionZones, setCongestionZones] = useState({ HOWRAH_BRIDGE: 'heavy', PARK_STREET: 'medium', SALT_LAKE_SEC5: 'medium' });
   const [activeSmsToast, setActiveSmsToast] = useState(null);
@@ -1523,6 +1524,8 @@ export const SimulatorProvider = ({ children }) => {
         setAdminStats,
         isNightMode,
         setIsNightMode,
+        mapStyle,
+        setMapStyle,
         passengerWalletBalance,
         topUpPassengerWallet,
         sendChatMessage,

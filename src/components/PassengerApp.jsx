@@ -77,6 +77,8 @@ export default function PassengerApp({ isStandalone }) {
     connectPassengerSocket,
     sendOtpRequest,
     triggerPassengerSOS,
+    mapStyle,
+    setMapStyle
   } = useSimulator();
 
   const speakText = (text, langCode) => {
@@ -286,6 +288,7 @@ export default function PassengerApp({ isStandalone }) {
   // Map elements
   const mapContainerRef = useRef(null);
   const mapRef = useRef(null);
+  const tileLayerRef = useRef(null);
   const markersRef = useRef({
     pickup: null,
     dropoff: null,
@@ -332,10 +335,18 @@ export default function PassengerApp({ isStandalone }) {
       zoomControl: false,
     }).setView([22.5726, 88.3639], 12);
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    const MAP_TILE_URLS = {
+      google_roadmap: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
+      google_satellite: 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
+      voyager: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'
+    };
+
+    const tileLayer = L.tileLayer(MAP_TILE_URLS[mapStyle] || MAP_TILE_URLS.google_roadmap, {
       maxZoom: 19,
+      attribution: mapStyle.startsWith('google') ? '&copy; Google Maps' : '&copy; CartoDB'
     }).addTo(map);
 
+    tileLayerRef.current = tileLayer;
     mapRef.current = map;
 
     const geofenceCoords = geofence.map(c => [c.lat, c.lng]);
@@ -355,6 +366,17 @@ export default function PassengerApp({ isStandalone }) {
       }
     };
   }, [tab, passenger.isLoggedIn, geofence]);
+
+  useEffect(() => {
+    if (tileLayerRef.current) {
+      const MAP_TILE_URLS = {
+        google_roadmap: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
+        google_satellite: 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
+        voyager: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'
+      };
+      tileLayerRef.current.setUrl(MAP_TILE_URLS[mapStyle]);
+    }
+  }, [mapStyle]);
 
   // Update Map Markers (including traffic circles)
   useEffect(() => {
@@ -1636,7 +1658,57 @@ export default function PassengerApp({ isStandalone }) {
               </div>
             </div>
 
-            <div ref={mapContainerRef} className="map-view-container"></div>
+            <div style={{ position: 'relative', width: '100%', height: 'calc(100% - 44px)' }}>
+              <div ref={mapContainerRef} className="map-view-container" style={{ height: '100%' }}></div>
+              
+              <div style={{ position: 'absolute', top: '8px', right: '8px', zIndex: 999, display: 'flex', gap: '4px' }}>
+                <button
+                  onClick={() => setMapStyle('google_roadmap')}
+                  style={{
+                    padding: '3px 6px',
+                    fontSize: '8px',
+                    fontWeight: 'extrabold',
+                    borderRadius: '4px',
+                    backgroundColor: mapStyle === 'google_roadmap' ? '#ffdd00' : 'rgba(0,0,0,0.6)',
+                    color: mapStyle === 'google_roadmap' ? '#000' : '#fff',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    cursor: 'pointer'
+                  }}
+                >
+                  🗺️ Google Roadmap
+                </button>
+                <button
+                  onClick={() => setMapStyle('google_satellite')}
+                  style={{
+                    padding: '3px 6px',
+                    fontSize: '8px',
+                    fontWeight: 'extrabold',
+                    borderRadius: '4px',
+                    backgroundColor: mapStyle === 'google_satellite' ? '#ffdd00' : 'rgba(0,0,0,0.6)',
+                    color: mapStyle === 'google_satellite' ? '#000' : '#fff',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    cursor: 'pointer'
+                  }}
+                >
+                  🛰️ Google Sat
+                </button>
+                <button
+                  onClick={() => setMapStyle('voyager')}
+                  style={{
+                    padding: '3px 6px',
+                    fontSize: '8px',
+                    fontWeight: 'extrabold',
+                    borderRadius: '4px',
+                    backgroundColor: mapStyle === 'voyager' ? '#ffdd00' : 'rgba(0,0,0,0.6)',
+                    color: mapStyle === 'voyager' ? '#000' : '#fff',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    cursor: 'pointer'
+                  }}
+                >
+                  🎨 Classic
+                </button>
+              </div>
+            </div>
             {renderPanelOverlay()}
 
             {activeRide && (activeRide.status === 'accepted' || activeRide.status === 'arrived' || activeRide.status === 'in_progress') && (

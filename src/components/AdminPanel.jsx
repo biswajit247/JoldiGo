@@ -66,7 +66,9 @@ export default function AdminPanel() {
     setSimulationSpeed,
     updateFuelPrices,
     addCustomHotspot,
-    resetSimulator
+    resetSimulator,
+    mapStyle,
+    setMapStyle
   } = useSimulator();
 
   useEffect(() => {
@@ -113,6 +115,7 @@ export default function AdminPanel() {
   // Map elements
   const mapContainerRef = useRef(null);
   const mapRef = useRef(null);
+  const tileLayerRef = useRef(null);
   const markersRef = useRef({
     drivers: {},
     activeRide: null,
@@ -125,6 +128,7 @@ export default function AdminPanel() {
   // Geofence map elements
   const geofenceMapContainerRef = useRef(null);
   const geofenceMapRef = useRef(null);
+  const geofenceTileLayerRef = useRef(null);
   const geofencePolygonsRef = useRef({});
 
   // Sync settings inputs with global settings changes
@@ -160,8 +164,18 @@ export default function AdminPanel() {
       attributionControl: false,
     }).setView([22.5726, 88.3639], 12);
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(map);
+    const MAP_TILE_URLS = {
+      google_roadmap: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
+      google_satellite: 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
+      voyager: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'
+    };
 
+    const tileLayer = L.tileLayer(MAP_TILE_URLS[mapStyle] || MAP_TILE_URLS.google_roadmap, {
+      maxZoom: 19,
+      attribution: mapStyle.startsWith('google') ? '&copy; Google Maps' : '&copy; CartoDB'
+    }).addTo(map);
+
+    tileLayerRef.current = tileLayer;
     mapRef.current = map;
 
     // Render Geofence Boundary
@@ -188,6 +202,20 @@ export default function AdminPanel() {
     };
   }, [activeTab, geofence]);
 
+  useEffect(() => {
+    const MAP_TILE_URLS = {
+      google_roadmap: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
+      google_satellite: 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
+      voyager: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'
+    };
+    if (tileLayerRef.current) {
+      tileLayerRef.current.setUrl(MAP_TILE_URLS[mapStyle]);
+    }
+    if (geofenceTileLayerRef.current) {
+      geofenceTileLayerRef.current.setUrl(MAP_TILE_URLS[mapStyle]);
+    }
+  }, [mapStyle]);
+
   // Geofence Map Initialization & Redraw Hook
   useEffect(() => {
     if (activeTab !== 'geofence' || !geofenceMapContainerRef.current) return;
@@ -198,7 +226,18 @@ export default function AdminPanel() {
       attributionControl: false,
     }).setView([22.5726, 88.3639], 12);
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(map);
+    const MAP_TILE_URLS = {
+      google_roadmap: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
+      google_satellite: 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
+      voyager: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'
+    };
+
+    const tileLayer = L.tileLayer(MAP_TILE_URLS[mapStyle] || MAP_TILE_URLS.google_roadmap, {
+      maxZoom: 19,
+      attribution: mapStyle.startsWith('google') ? '&copy; Google Maps' : '&copy; CartoDB'
+    }).addTo(map);
+
+    geofenceTileLayerRef.current = tileLayer;
     geofenceMapRef.current = map;
 
     // 2. Draw standard geofence boundary (green dash polygon)
@@ -852,7 +891,57 @@ export default function AdminPanel() {
                       </div>
                     </div>
                   </div>
-                  <div ref={mapContainerRef} className="admin-leaflet-map-container"></div>
+                  <div style={{ position: 'relative', width: '100%', height: 'calc(100% - 50px)' }}>
+                    <div ref={mapContainerRef} className="admin-leaflet-map-container" style={{ height: '100%' }}></div>
+                    
+                    <div style={{ position: 'absolute', top: '8px', right: '8px', zIndex: 999, display: 'flex', gap: '4px' }}>
+                      <button
+                        onClick={() => setMapStyle('google_roadmap')}
+                        style={{
+                          padding: '3px 6px',
+                          fontSize: '8px',
+                          fontWeight: 'extrabold',
+                          borderRadius: '4px',
+                          backgroundColor: mapStyle === 'google_roadmap' ? '#fbbf24' : 'rgba(0,0,0,0.6)',
+                          color: mapStyle === 'google_roadmap' ? '#000' : '#fff',
+                          border: '1px solid rgba(255,255,255,0.1)',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        🗺️ Google Roadmap
+                      </button>
+                      <button
+                        onClick={() => setMapStyle('google_satellite')}
+                        style={{
+                          padding: '3px 6px',
+                          fontSize: '8px',
+                          fontWeight: 'extrabold',
+                          borderRadius: '4px',
+                          backgroundColor: mapStyle === 'google_satellite' ? '#fbbf24' : 'rgba(0,0,0,0.6)',
+                          color: mapStyle === 'google_satellite' ? '#000' : '#fff',
+                          border: '1px solid rgba(255,255,255,0.1)',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        🛰️ Google Sat
+                      </button>
+                      <button
+                        onClick={() => setMapStyle('voyager')}
+                        style={{
+                          padding: '3px 6px',
+                          fontSize: '8px',
+                          fontWeight: 'extrabold',
+                          borderRadius: '4px',
+                          backgroundColor: mapStyle === 'voyager' ? '#fbbf24' : 'rgba(0,0,0,0.6)',
+                          color: mapStyle === 'voyager' ? '#000' : '#fff',
+                          border: '1px solid rgba(255,255,255,0.1)',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        🎨 Classic
+                      </button>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="ops-terminal-card card-glow" style={{ height: '320px' }}>
