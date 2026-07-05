@@ -184,6 +184,99 @@ export const SimulatorProvider = ({ children }) => {
 
   const [passenger, setPassenger] = useState({ phone: '', isLoggedIn: false, rideHistory: [] });
 
+  // Dynamic VoIP Calling Simulator State
+  const [callState, setCallState] = useState('idle'); // 'idle', 'dialing', 'ringing', 'connected'
+  const [callFrom, setCallFrom] = useState(null); // 'passenger' or 'driver'
+  const [callPartner, setCallPartner] = useState(null); // { id, name, role }
+  const [callDuration, setCallDuration] = useState(0);
+  const callTimerRef = useRef(null);
+
+  const startCallTimer = () => {
+    if (callTimerRef.current) clearInterval(callTimerRef.current);
+    setCallDuration(0);
+    callTimerRef.current = setInterval(() => {
+      setCallDuration(prev => prev + 1);
+    }, 1000);
+  };
+
+  const cleanupCall = () => {
+    if (callTimerRef.current) {
+      clearInterval(callTimerRef.current);
+      callTimerRef.current = null;
+    }
+    setCallState('idle');
+    setCallFrom(null);
+    setCallPartner(null);
+    setCallDuration(0);
+  };
+
+  const initiateCall = (targetRole, targetId, fromName) => {
+    setCallState('dialing');
+    setCallFrom(targetRole === 'driver' ? 'passenger' : 'driver');
+    setCallPartner({ id: targetId, role: targetRole, name: fromName });
+    setCallDuration(0);
+
+    const msg = JSON.stringify({
+      type: 'initiate_call',
+      payload: { targetRole, targetId, fromName }
+    });
+
+    if (targetRole === 'driver') {
+      if (passengerSocketRef.current && passengerSocketRef.current.readyState === WebSocket.OPEN) {
+        passengerSocketRef.current.send(msg);
+      }
+    } else {
+      const driverId = activeRide?.driverId;
+      const ws = driverSocketsRef.current[driverId];
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(msg);
+      }
+    }
+  };
+
+  const acceptCall = (targetRole, targetId) => {
+    setCallState('connected');
+    startCallTimer();
+
+    const msg = JSON.stringify({
+      type: 'accept_call',
+      payload: { targetRole, targetId }
+    });
+
+    if (targetRole === 'driver') {
+      if (passengerSocketRef.current && passengerSocketRef.current.readyState === WebSocket.OPEN) {
+        passengerSocketRef.current.send(msg);
+      }
+    } else {
+      const driverId = activeRide?.driverId;
+      const ws = driverSocketsRef.current[driverId];
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(msg);
+      }
+    }
+  };
+
+  const endCall = (targetRole, targetId) => {
+    cleanupCall();
+
+    const msg = JSON.stringify({
+      type: 'end_call',
+      payload: { targetRole, targetId }
+    });
+
+    if (targetRole === 'driver') {
+      if (passengerSocketRef.current && passengerSocketRef.current.readyState === WebSocket.OPEN) {
+        passengerSocketRef.current.send(msg);
+      }
+    } else {
+      const driverId = activeRide?.driverId;
+      const ws = driverSocketsRef.current[driverId];
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(msg);
+      }
+    }
+  };
+
   // WebSockets Connection References
   const passengerSocketRef = useRef(null);
   const driverSocketsRef = useRef({});
@@ -379,6 +472,19 @@ export const SimulatorProvider = ({ children }) => {
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
       switch (data.type) {
+        case 'incoming_call':
+          setCallState('ringing');
+          setCallFrom(data.fromRole);
+          setCallPartner({ id: data.fromId, role: data.fromRole, name: data.fromName });
+          playSound('match'); // Ring tone simulated sound
+          break;
+        case 'call_accepted':
+          setCallState('connected');
+          startCallTimer();
+          break;
+        case 'call_ended':
+          cleanupCall();
+          break;
         case 'ride_accepted':
           setActiveRide(prev => prev ? { ...prev, status: 'accepted', driverId: data.driverId } : null);
           addLog(`Ride matches! Driver is heading to your pickup.`, 'success');
@@ -436,6 +542,19 @@ export const SimulatorProvider = ({ children }) => {
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
       switch (data.type) {
+        case 'incoming_call':
+          setCallState('ringing');
+          setCallFrom(data.fromRole);
+          setCallPartner({ id: data.fromId, role: data.fromRole, name: data.fromName });
+          playSound('match');
+          break;
+        case 'call_accepted':
+          setCallState('connected');
+          startCallTimer();
+          break;
+        case 'call_ended':
+          cleanupCall();
+          break;
         case 'ride_offer':
           setActiveRide(data.ride);
           playSound('match');
@@ -1579,6 +1698,13 @@ export const SimulatorProvider = ({ children }) => {
         connectPassengerSocket,
         connectDriverSocket,
         connectAdminSocket,
+        callState,
+        callFrom,
+        callPartner,
+        callDuration,
+        initiateCall,
+        acceptCall,
+        endCall,
         sendOtpRequest,
         startGpsTracking,
         stopGpsTracking,

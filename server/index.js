@@ -1394,6 +1394,46 @@ wss.on('connection', (ws) => {
 
       // Handle custom events
       switch (data.type) {
+        case 'initiate_call':
+          // Route call invitation to target client
+          socketClients.forEach((meta, clientWs) => {
+            if (meta.role === data.payload.targetRole && meta.id === data.payload.targetId && clientWs.readyState === WebSocket.OPEN) {
+              clientWs.send(JSON.stringify({
+                type: 'incoming_call',
+                fromRole: clientMeta.role,
+                fromId: clientMeta.id,
+                fromName: data.payload.fromName
+              }));
+            }
+          });
+          break;
+
+        case 'accept_call':
+          // Notify the initiator that call is accepted
+          socketClients.forEach((meta, clientWs) => {
+            if (meta.role === data.payload.targetRole && meta.id === data.payload.targetId && clientWs.readyState === WebSocket.OPEN) {
+              clientWs.send(JSON.stringify({
+                type: 'call_accepted',
+                fromRole: clientMeta.role,
+                fromId: clientMeta.id
+              }));
+            }
+          });
+          break;
+
+        case 'end_call':
+          // Notify both parties that the call has ended
+          socketClients.forEach((meta, clientWs) => {
+            if (meta.role === data.payload.targetRole && meta.id === data.payload.targetId && clientWs.readyState === WebSocket.OPEN) {
+              clientWs.send(JSON.stringify({
+                type: 'call_ended',
+                fromRole: clientMeta.role,
+                fromId: clientMeta.id
+              }));
+            }
+          });
+          break;
+
         case 'driver_location_update':
           // Update database driver coordinates
           await query(

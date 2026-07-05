@@ -11,6 +11,7 @@ import {
   Check, 
   Shield, 
   Phone, 
+  PhoneOff,
   AlertTriangle, 
   CreditCard,
   PlusCircle,
@@ -78,7 +79,14 @@ export default function PassengerApp({ isStandalone }) {
     sendOtpRequest,
     triggerPassengerSOS,
     mapStyle,
-    setMapStyle
+    setMapStyle,
+    callState,
+    callFrom,
+    callPartner,
+    callDuration,
+    initiateCall,
+    acceptCall,
+    endCall
   } = useSimulator();
 
   const speakText = (text, langCode) => {
@@ -1006,9 +1014,13 @@ export default function PassengerApp({ isStandalone }) {
                 <MessageSquare size={16} />
               </button>
 
-              <a href={`tel:${matchedDriver?.phone}`} className="circle-btn-phone">
+              <button 
+                onClick={() => initiateCall('driver', matchedDriver?.id, passenger?.phone || 'Passenger Rider')} 
+                className="circle-btn-phone"
+                title="VoIP Secure Call"
+              >
                 <Phone size={16} />
-              </a>
+              </button>
             </div>
           </div>
 
@@ -1425,6 +1437,184 @@ export default function PassengerApp({ isStandalone }) {
         </div>
       );
     }
+  };
+
+  const renderCallOverlay = () => {
+    if (callState === 'idle') return null;
+
+    const isInvolved = (callPartner?.role === 'driver' && callFrom === 'passenger') || 
+                       (callPartner?.role === 'passenger' && callPartner?.id === passenger.phone);
+                       
+    if (!isInvolved) return null;
+
+    const partnerName = callPartner?.name || 'Driver Partner';
+    const partnerRoleLabel = callPartner?.role === 'driver' ? 'Jaldi Go Driver' : 'Jaldi Go Rider';
+
+    const formatDuration = (sec) => {
+      const m = String(Math.floor(sec / 60)).padStart(2, '0');
+      const s = String(sec % 60).padStart(2, '0');
+      return `${m}:${s}`;
+    };
+
+    return (
+      <div 
+        className="calling-screen-overlay"
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'radial-gradient(circle, #1a2235 0%, #080c14 100%)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '40px 24px',
+          color: '#fff',
+          zIndex: 9999,
+          fontFamily: 'Inter, system-ui, sans-serif'
+        }}
+      >
+        <div style={{ textAlign: 'center', marginTop: '20px' }}>
+          <div style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '2px', color: '#ffdd00', fontWeight: 'bold', marginBottom: '8px' }}>
+            📱 Jaldi Go Secure Call
+          </div>
+          <div style={{ fontSize: '20px', fontWeight: '800', color: '#fff' }}>{partnerName}</div>
+          <div style={{ fontSize: '12px', color: '#718096', marginTop: '4px' }}>{partnerRoleLabel}</div>
+        </div>
+
+        <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '40px 0' }}>
+          <div 
+            className="pulse-circle animate-pulse"
+            style={{
+              width: '120px',
+              height: '120px',
+              borderRadius: '50%',
+              backgroundColor: 'rgba(255, 221, 0, 0.05)',
+              border: '2px solid rgba(255, 221, 0, 0.2)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+          >
+            <div 
+              style={{
+                width: '90px',
+                height: '90px',
+                borderRadius: '50%',
+                backgroundColor: 'rgba(255, 221, 0, 0.1)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '36px'
+              }}
+            >
+              👨‍✈️
+            </div>
+          </div>
+        </div>
+
+        <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+          {callState === 'dialing' && (
+            <div style={{ fontSize: '14px', color: '#a0aec0', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span className="animate-pulse">●</span> Dialing driver...
+            </div>
+          )}
+          {callState === 'ringing' && (
+            <div style={{ fontSize: '14px', color: '#ffdd00', fontWeight: 'bold' }}>
+              Incoming VoIP Call...
+            </div>
+          )}
+          {callState === 'connected' && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+              <div style={{ fontSize: '24px', fontWeight: 'bold', fontFamily: 'monospace', letterSpacing: '1px', color: '#00ff66' }}>
+                {formatDuration(callDuration)}
+              </div>
+              <div style={{ fontSize: '10px', color: '#48bb78', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                ● Connected
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px' }}>
+          {callState === 'ringing' ? (
+            <div style={{ display: 'flex', justifyContent: 'space-around', width: '100%', maxWidth: '240px' }}>
+              <button 
+                onClick={() => endCall('driver', callPartner.id)}
+                style={{
+                  width: '56px',
+                  height: '56px',
+                  borderRadius: '50%',
+                  backgroundColor: '#e53e3e',
+                  border: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  boxShadow: '0 8px 24px rgba(229, 62, 62, 0.4)'
+                }}
+              >
+                <PhoneOff size={22} color="#fff" />
+              </button>
+              <button 
+                onClick={() => acceptCall('driver', callPartner.id)}
+                style={{
+                  width: '56px',
+                  height: '56px',
+                  borderRadius: '50%',
+                  backgroundColor: '#48bb78',
+                  border: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  boxShadow: '0 8px 24px rgba(72, 187, 120, 0.4)'
+                }}
+              >
+                <Phone size={22} color="#fff" />
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px', width: '100%' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', maxWidth: '200px', opacity: 0.6 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', fontSize: '9px', gap: '4px' }}>
+                  <button style={{ width: '40px', height: '40px', borderRadius: '50%', border: '1px solid rgba(255,255,255,0.2)', backgroundColor: 'transparent', color: '#fff', display: 'flex', alignItems: 'center', justify: 'center' }}>🎤</button>
+                  Mute
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', fontSize: '9px', gap: '4px' }}>
+                  <button style={{ width: '40px', height: '40px', borderRadius: '50%', border: '1px solid rgba(255,255,255,0.2)', backgroundColor: 'transparent', color: '#fff', display: 'flex', alignItems: 'center', justify: 'center' }}>🔢</button>
+                  Keypad
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', fontSize: '9px', gap: '4px' }}>
+                  <button style={{ width: '40px', height: '40px', borderRadius: '50%', border: '1px solid rgba(255,255,255,0.2)', backgroundColor: 'transparent', color: '#fff', display: 'flex', alignItems: 'center', justify: 'center' }}>🔊</button>
+                  Speaker
+                </div>
+              </div>
+
+              <button 
+                onClick={() => endCall('driver', callPartner?.id || matchedDriver?.id)}
+                style={{
+                  width: '56px',
+                  height: '56px',
+                  borderRadius: '50%',
+                  backgroundColor: '#e53e3e',
+                  border: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  boxShadow: '0 8px 24px rgba(229, 62, 62, 0.4)'
+                }}
+              >
+                <PhoneOff size={22} color="#fff" />
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -1912,6 +2102,9 @@ export default function PassengerApp({ isStandalone }) {
         )}
 
       </div>
+
+      {/* Dynamic Calling Simulator Overlay */}
+      {renderCallOverlay()}
 
       <div className="phone-home-bar"></div>
     </div>
