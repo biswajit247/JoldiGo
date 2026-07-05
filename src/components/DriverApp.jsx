@@ -105,12 +105,14 @@ export default function DriverApp({ isStandalone }) {
   const [aadharInput, setAadharInput] = useState('');
   const [rcInput, setRcInput] = useState('');
 
+  const currentDriver = drivers.find((d) => d.id === selectedDriverId) || drivers[0];
+
   // Chat Panel State
   const [showChat, setShowChat] = useState(false);
   const [chatInputText, setChatInputText] = useState('');
   const [simulatedSpeed, setSimulatedSpeed] = useState(0);
 
-  const isNavActive = activeRide && activeRide.driverId === selectedDriverId && (activeRide.status === 'accepted' || activeRide.status === 'arrived' || activeRide.status === 'in_progress');
+  const isNavActive = activeRide && activeRide.driverId === currentDriver.id && (activeRide.status === 'accepted' || activeRide.status === 'arrived' || activeRide.status === 'in_progress');
 
   useEffect(() => {
     if (!isNavActive || activeRide?.status === 'arrived') {
@@ -223,8 +225,6 @@ export default function DriverApp({ isStandalone }) {
     routeLine: null,
     heatmapCircles: []
   });
-
-  const currentDriver = drivers.find((d) => d.id === selectedDriverId) || drivers[0];
 
   // Scroll chat drawer to bottom on new messages
   useEffect(() => {
