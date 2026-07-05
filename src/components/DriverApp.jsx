@@ -1153,13 +1153,12 @@ export default function DriverApp({ isStandalone }) {
               </div>
 
               {/* Toggles */}
-              <div className="flex gap-2.5">
+              <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
                   onClick={() => setEnrollVehicleType('bike')}
                   style={{
-                    flex: 1,
-                    padding: '12px 8px',
+                    padding: '8px 4px',
                     border: enrollVehicleType === 'bike' ? '2px solid #ffdd00' : '1px solid rgba(255,255,255,0.08)',
                     backgroundColor: enrollVehicleType === 'bike' ? 'rgba(255,221,0,0.06)' : 'rgba(0,0,0,0.3)',
                     borderRadius: '8px',
@@ -1168,16 +1167,15 @@ export default function DriverApp({ isStandalone }) {
                     cursor: 'pointer'
                   }}
                 >
-                  <span className="text-xl block mb-1">🏍️</span>
-                  <span className="text-[10px] font-bold block">Bike Taxi</span>
-                  <span className="text-[8px] text-gray-400 block mt-0.5">Two-Wheeler</span>
+                  <span className="text-lg block mb-0.5">🏍️</span>
+                  <span className="text-[9px] font-bold block">Bike Taxi</span>
+                  <span className="text-[7px] text-gray-400 block">Two-Wheeler</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setEnrollVehicleType('auto')}
                   style={{
-                    flex: 1,
-                    padding: '12px 8px',
+                    padding: '8px 4px',
                     border: enrollVehicleType === 'auto' ? '2px solid #ffdd00' : '1px solid rgba(255,255,255,0.08)',
                     backgroundColor: enrollVehicleType === 'auto' ? 'rgba(255,221,0,0.06)' : 'rgba(0,0,0,0.3)',
                     borderRadius: '8px',
@@ -1186,9 +1184,43 @@ export default function DriverApp({ isStandalone }) {
                     cursor: 'pointer'
                   }}
                 >
-                  <span className="text-xl block mb-1">🛺</span>
-                  <span className="text-[10px] font-bold block">Auto Rickshaw</span>
-                  <span className="text-[8px] text-gray-400 block mt-0.5">Three-Wheeler</span>
+                  <span className="text-lg block mb-0.5">🛺</span>
+                  <span className="text-[9px] font-bold block">Auto Rickshaw</span>
+                  <span className="text-[7px] text-gray-400 block">Three-Wheeler</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEnrollVehicleType('car_ac')}
+                  style={{
+                    padding: '8px 4px',
+                    border: enrollVehicleType === 'car_ac' ? '2px solid #ffdd00' : '1px solid rgba(255,255,255,0.08)',
+                    backgroundColor: enrollVehicleType === 'car_ac' ? 'rgba(255,221,0,0.06)' : 'rgba(0,0,0,0.3)',
+                    borderRadius: '8px',
+                    color: '#fff',
+                    textAlign: 'center',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <span className="text-lg block mb-0.5">🚗</span>
+                  <span className="text-[9px] font-bold block">Car AC</span>
+                  <span className="text-[7px] text-gray-400 block">Four-Wheeler AC</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEnrollVehicleType('car_non_ac')}
+                  style={{
+                    padding: '8px 4px',
+                    border: enrollVehicleType === 'car_non_ac' ? '2px solid #ffdd00' : '1px solid rgba(255,255,255,0.08)',
+                    backgroundColor: enrollVehicleType === 'car_non_ac' ? 'rgba(255,221,0,0.06)' : 'rgba(0,0,0,0.3)',
+                    borderRadius: '8px',
+                    color: '#fff',
+                    textAlign: 'center',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <span className="text-lg block mb-0.5">🚙</span>
+                  <span className="text-[9px] font-bold block">Car Non-AC</span>
+                  <span className="text-[7px] text-gray-400 block">Four-Wheeler Non-AC</span>
                 </button>
               </div>
 
