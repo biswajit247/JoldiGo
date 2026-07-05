@@ -47,5 +47,15 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Jaldi Go requires location access to track driver routes and calculate trip distances in real-time.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Jaldi Go requires continuous location tracking in the background to ensure reliable driver dispatching and route monitoring.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>Jaldi Go tracks your coordinates even when minimized to allow seamless customer pick-up updates.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>location</string>
+	</array>
 </dict>
 </plist>
