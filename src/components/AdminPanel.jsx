@@ -3197,7 +3197,9 @@ function EnvSettingsPanel({ fetchEnvKeys, updateEnvKeys }) {
     razorpayKeySecret: '',
     googleMapsKeyWeb: '',
     googleMapsKeyAndroid: '',
-    googleMapsKeyIos: ''
+    googleMapsKeyIos: '',
+    pricingEngineUrl: '',
+    pricingEngineApiKey: ''
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -3374,6 +3376,34 @@ function EnvSettingsPanel({ fetchEnvKeys, updateEnvKeys }) {
                     className="bg-black/40 border border-white/10 rounded px-3 py-2 text-xs text-white font-mono placeholder:text-gray-600 focus:outline-none focus:border-yellow-400"
                   />
                 </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="border-t border-white/5 my-3 pt-3">
+            <h4 className="text-[10px] uppercase tracking-wider text-yellow-400 font-extrabold mb-3">Fare & Surge Pricing Engine</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[9px] uppercase tracking-wider text-gray-500 font-extrabold">External Pricing API Endpoint URL</label>
+                <input 
+                  type="text" 
+                  name="pricingEngineUrl" 
+                  value={keys.pricingEngineUrl} 
+                  onChange={handleChange}
+                  placeholder="https://api.jaldigo.com/v1/pricing"
+                  className="bg-black/40 border border-white/10 rounded px-3 py-2 text-xs text-white font-mono placeholder:text-gray-600 focus:outline-none focus:border-yellow-400"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[9px] uppercase tracking-wider text-gray-500 font-extrabold">Pricing Engine API Access Key</label>
+                <input 
+                  type="password" 
+                  name="pricingEngineApiKey" 
+                  value={keys.pricingEngineApiKey} 
+                  onChange={handleChange}
+                  placeholder="••••••••••••••••••••••••••••••••"
+                  className="bg-black/40 border border-white/10 rounded px-3 py-2 text-xs text-white font-mono placeholder:text-gray-600 focus:outline-none focus:border-yellow-400"
+                />
               </div>
             </div>
           </div>

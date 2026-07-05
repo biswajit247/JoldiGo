@@ -695,7 +695,9 @@ app.get('/api/admin/env/get', (req, res) => {
     razorpayKeySecret: mask(process.env.RAZORPAY_KEY_SECRET),
     googleMapsKeyWeb: mask(process.env.GOOGLE_MAPS_API_KEY_WEB),
     googleMapsKeyAndroid: mask(process.env.GOOGLE_MAPS_API_KEY_ANDROID),
-    googleMapsKeyIos: mask(process.env.GOOGLE_MAPS_API_KEY_IOS)
+    googleMapsKeyIos: mask(process.env.GOOGLE_MAPS_API_KEY_IOS),
+    pricingEngineUrl: process.env.PRICING_ENGINE_API_URL || '',
+    pricingEngineApiKey: mask(process.env.PRICING_ENGINE_API_KEY)
   });
 });
 
@@ -710,7 +712,9 @@ app.post('/api/admin/env/update', async (req, res) => {
     razorpayKeySecret,
     googleMapsKeyWeb,
     googleMapsKeyAndroid,
-    googleMapsKeyIos
+    googleMapsKeyIos,
+    pricingEngineUrl,
+    pricingEngineApiKey
   } = req.body;
   
   try {
@@ -729,6 +733,8 @@ app.post('/api/admin/env/update', async (req, res) => {
     const nextGoogleWeb = googleMapsKeyWeb && !googleMapsKeyWeb.includes('****') ? googleMapsKeyWeb : process.env.GOOGLE_MAPS_API_KEY_WEB;
     const nextGoogleAndroid = googleMapsKeyAndroid && !googleMapsKeyAndroid.includes('****') ? googleMapsKeyAndroid : process.env.GOOGLE_MAPS_API_KEY_ANDROID;
     const nextGoogleIos = googleMapsKeyIos && !googleMapsKeyIos.includes('****') ? googleMapsKeyIos : process.env.GOOGLE_MAPS_API_KEY_IOS;
+    const nextPricingUrl = pricingEngineUrl ? pricingEngineUrl : process.env.PRICING_ENGINE_API_URL;
+    const nextPricingKey = pricingEngineApiKey && !pricingEngineApiKey.includes('****') ? pricingEngineApiKey : process.env.PRICING_ENGINE_API_KEY;
 
     if (nextDb) envLines.push(`DATABASE_URL=${nextDb}`);
     if (nextTwilioSid) envLines.push(`TWILIO_ACCOUNT_SID=${nextTwilioSid}`);
@@ -739,6 +745,8 @@ app.post('/api/admin/env/update', async (req, res) => {
     if (nextGoogleWeb) envLines.push(`GOOGLE_MAPS_API_KEY_WEB=${nextGoogleWeb}`);
     if (nextGoogleAndroid) envLines.push(`GOOGLE_MAPS_API_KEY_ANDROID=${nextGoogleAndroid}`);
     if (nextGoogleIos) envLines.push(`GOOGLE_MAPS_API_KEY_IOS=${nextGoogleIos}`);
+    if (nextPricingUrl) envLines.push(`PRICING_ENGINE_API_URL=${nextPricingUrl}`);
+    if (nextPricingKey) envLines.push(`PRICING_ENGINE_API_KEY=${nextPricingKey}`);
     
     fs.writeFileSync(envPath, envLines.join('\n'), 'utf-8');
 
@@ -760,6 +768,8 @@ app.post('/api/admin/env/update', async (req, res) => {
     await saveKey('GOOGLE_MAPS_API_KEY_WEB', nextGoogleWeb);
     await saveKey('GOOGLE_MAPS_API_KEY_ANDROID', nextGoogleAndroid);
     await saveKey('GOOGLE_MAPS_API_KEY_IOS', nextGoogleIos);
+    await saveKey('PRICING_ENGINE_API_URL', nextPricingUrl);
+    await saveKey('PRICING_ENGINE_API_KEY', nextPricingKey);
     
     // Explicitly overwrite process.env variables in-memory (dotenv.config does not overwrite already loaded keys)
     if (nextDb) process.env.DATABASE_URL = nextDb;
@@ -771,6 +781,8 @@ app.post('/api/admin/env/update', async (req, res) => {
     if (nextGoogleWeb) process.env.GOOGLE_MAPS_API_KEY_WEB = nextGoogleWeb;
     if (nextGoogleAndroid) process.env.GOOGLE_MAPS_API_KEY_ANDROID = nextGoogleAndroid;
     if (nextGoogleIos) process.env.GOOGLE_MAPS_API_KEY_IOS = nextGoogleIos;
+    if (nextPricingUrl) process.env.PRICING_ENGINE_API_URL = nextPricingUrl;
+    if (nextPricingKey) process.env.PRICING_ENGINE_API_KEY = nextPricingKey;
     
     // Re-initialize clients in-memory with new keys
     if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {

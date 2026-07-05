@@ -1413,7 +1413,9 @@ export const SimulatorProvider = ({ children }) => {
       razorpayKeySecret: '',
       googleMapsKeyWeb: '',
       googleMapsKeyAndroid: '',
-      googleMapsKeyIos: ''
+      googleMapsKeyIos: '',
+      pricingEngineUrl: '',
+      pricingEngineApiKey: ''
     };
   };
 
