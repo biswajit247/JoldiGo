@@ -481,7 +481,7 @@ export default function DriverApp({ isStandalone }) {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', width: '100%', minHeight: '0' }}>
+    <>
       {/* Simulator Switcher Controls (hidden in standalone native mode) */}
       {!isStandalone && (
         <div 
@@ -490,15 +490,16 @@ export default function DriverApp({ isStandalone }) {
             alignItems: 'center',
             justifyContent: 'space-between',
             width: '100%',
-            maxWidth: '320px',
+            maxWidth: '360px',
             backgroundColor: '#11141a',
             border: '1px solid rgba(255,255,255,0.08)',
             borderRadius: '8px',
             padding: '6px 12px',
             fontSize: '11px',
             color: '#a0aec0',
-            marginBottom: '8px',
-            zIndex: 10
+            marginBottom: '4px',
+            zIndex: 10,
+            boxSizing: 'border-box'
           }}
         >
           <span style={{ fontWeight: 'bold' }}>👤 Simulate Driver Profile:</span>
@@ -528,7 +529,7 @@ export default function DriverApp({ isStandalone }) {
         </div>
       )}
 
-      <div className="mobile-phone-frame driver-theme" style={{ flex: 1, minHeight: '0', height: 'auto' }}>
+      <div className="mobile-phone-frame driver-theme">
         {!isStandalone && <div className="phone-notch"></div>}
         
         {!isStandalone && (
@@ -1723,6 +1724,6 @@ export default function DriverApp({ isStandalone }) {
 
       <div className="phone-home-bar"></div>
     </div>
-  </div>
+    </>
   );
 }
