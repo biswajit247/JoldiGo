@@ -80,6 +80,7 @@ export default function DriverApp({ isStandalone }) {
   const {
     drivers,
     settings,
+    triggerSmsToast,
     activeRide,
     logs,
     disputes,
@@ -174,6 +175,13 @@ export default function DriverApp({ isStandalone }) {
   const [bankAccountNumber, setBankAccountNumber] = useState('');
   const [bankIfscCode, setBankIfscCode] = useState('');
   const [bankHolderName, setBankHolderName] = useState('');
+
+  // Step 6: Safety Training Video & Quiz
+  const [q1Answer, setQ1Answer] = useState('');
+  const [q2Answer, setQ2Answer] = useState('');
+  const [q3Answer, setQ3Answer] = useState('');
+  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+  const [videoProgress, setVideoProgress] = useState(0);
 
   const [activeCamera, setActiveCamera] = useState(null); // 'driver', 'vehicle', 'insurance', 'puc', 'identity', 'license', 'rc'
   const videoRef = useRef(null);
@@ -874,7 +882,7 @@ export default function DriverApp({ isStandalone }) {
   };
 
   if (isEnrolling) {
-    const stepsCount = 5;
+    const stepsCount = 6;
     
     // Check if the current step can advance (form validation)
     const isStepValid = () => {
@@ -888,6 +896,7 @@ export default function DriverApp({ isStandalone }) {
                enrollAadharNumber.trim() !== '' && identityPhoto !== null;
       }
       if (enrollStep === 5) return bankAccountNumber.trim() !== '' && bankIfscCode.trim() !== '' && bankHolderName.trim() !== '';
+      if (enrollStep === 6) return q1Answer === 'B' && q2Answer === 'B' && q3Answer === 'A';
       return true;
     };
 
@@ -906,7 +915,7 @@ export default function DriverApp({ isStandalone }) {
         <div className="phone-screen-content app-screen-layout onboarding-screen" style={{ overflowY: 'auto', padding: '16px', boxSizing: 'border-box', height: 'calc(100% - 60px)', display: 'flex', flexDirection: 'column' }}>
           
           {/* Top Progress Wizard */}
-          {enrollStep <= 5 && (
+          {enrollStep <= 6 && (
             <div className="mb-4">
               <div className="flex justify-between items-center text-[9px] uppercase tracking-wider text-gray-400 font-extrabold mb-1.5">
                 <span>Step {enrollStep} of {stepsCount}</span>
@@ -916,6 +925,7 @@ export default function DriverApp({ isStandalone }) {
                   {enrollStep === 3 && "VEHICLE DETAILS"}
                   {enrollStep === 4 && "KYC UPLOADS"}
                   {enrollStep === 5 && "PAYOUT BANK DETAILS"}
+                  {enrollStep === 6 && "SAFETY COMPLIANCE TRAINING"}
                 </span>
               </div>
               <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden flex gap-0.5">
@@ -1473,7 +1483,7 @@ export default function DriverApp({ isStandalone }) {
                 <button 
                   type="button"
                   disabled={!isStepValid()}
-                  onClick={() => handleEnrollSubmit()}
+                  onClick={() => setEnrollStep(6)}
                   style={{
                     backgroundColor: isStepValid() ? '#ffdd00' : 'rgba(255,255,255,0.05)',
                     color: isStepValid() ? '#000' : '#555',
@@ -1486,7 +1496,187 @@ export default function DriverApp({ isStandalone }) {
                     flex: 1
                   }}
                 >
-                  Submit Profile
+                  Continue
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 6: SAFETY COMPLIANCE TRAINING & QUIZ */}
+          {enrollStep === 6 && (
+            <div className="flex flex-col gap-3 flex-grow pb-4">
+              <div className="text-center mb-1">
+                <UserCheck size={32} className="text-yellow-400 mx-auto animate-pulse" />
+                <h4 className="text-sm font-bold mt-1 text-white">Step 6: Safety Compliance</h4>
+                <p className="text-[10px] text-gray-400">Complete video training & safety quiz to enroll</p>
+              </div>
+
+              {/* Mock Safety Video Player */}
+              <div className="p-3 bg-black/40 border border-white/5 rounded-lg flex flex-col gap-2">
+                <span className="text-[9px] uppercase tracking-wider text-gray-400 font-extrabold">Safety Training Video (1 Min)</span>
+                
+                <div className="w-full h-32 bg-slate-900 rounded-lg relative overflow-hidden flex flex-col justify-between p-2 border border-white/10">
+                  {videoProgress < 100 ? (
+                    <div className="flex-1 flex flex-col items-center justify-center gap-1.5">
+                      <span className="text-2xl">🛡️</span>
+                      <span className="text-[9px] text-gray-400 text-center px-4">Watch driver safety directives to unlock quiz</span>
+                      <button 
+                        type="button"
+                        onClick={() => {
+                          if (isVideoPlaying) return;
+                          setIsVideoPlaying(true);
+                          const interval = setInterval(() => {
+                            setVideoProgress(prev => {
+                              if (prev >= 100) {
+                                clearInterval(interval);
+                                setIsVideoPlaying(false);
+                                return 100;
+                              }
+                              return prev + 25;
+                            });
+                          }, 1000);
+                        }}
+                        className="px-4 py-1.5 bg-yellow-400 hover:bg-yellow-300 text-black text-[10px] font-bold rounded-full cursor-pointer transition-all mt-1"
+                      >
+                        {isVideoPlaying ? `▶️ Playing... ${videoProgress}%` : "▶️ Play Safety Video"}
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex-grow flex flex-col items-center justify-center gap-1">
+                      <span className="text-3xl animate-bounce">✅</span>
+                      <span className="text-[10px] text-green-400 font-bold">Video Completed Successfully</span>
+                    </div>
+                  )}
+
+                  <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
+                    <div className="h-full bg-yellow-400 transition-all duration-300" style={{ width: `${videoProgress}%` }} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Safety Quiz Questions (Only unlocked when video progress is 100) */}
+              {videoProgress >= 100 && (
+                <div className="flex flex-col gap-3">
+                  
+                  {/* Q1 */}
+                  <div className="flex flex-col gap-1 p-2 bg-black/20 border border-white/5 rounded">
+                    <span className="text-[10px] font-bold text-gray-300">Q1: Helmet & Seatbelt compliance policy?</span>
+                    <div className="flex flex-col gap-1 mt-1">
+                      {[
+                        { key: 'A', text: 'Optional for riders' },
+                        { key: 'B', text: 'Mandatory at all times' },
+                        { key: 'C', text: 'Only on high-speed roads' }
+                      ].map(opt => (
+                        <button
+                          key={opt.key}
+                          type="button"
+                          onClick={() => setQ1Answer(opt.key)}
+                          className={`text-[9px] text-left p-1.5 rounded border transition-all ${
+                            q1Answer === opt.key 
+                              ? 'bg-yellow-400/20 text-yellow-300 border-yellow-400/40 font-semibold' 
+                              : 'bg-black/40 text-gray-400 border-white/5 hover:text-white'
+                          }`}
+                        >
+                          {opt.key}) {opt.text}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Q2 */}
+                  <div className="flex flex-col gap-1 p-2 bg-black/20 border border-white/5 rounded">
+                    <span className="text-[10px] font-bold text-gray-300">Q2: How to report route emergencies?</span>
+                    <div className="flex flex-col gap-1 mt-1">
+                      {[
+                        { key: 'A', text: 'Ignore and continue' },
+                        { key: 'B', text: 'Trigger the JoldiGo in-app SOS button' },
+                        { key: 'C', text: 'Cancel the ride immediately' }
+                      ].map(opt => (
+                        <button
+                          key={opt.key}
+                          type="button"
+                          onClick={() => setQ2Answer(opt.key)}
+                          className={`text-[9px] text-left p-1.5 rounded border transition-all ${
+                            q2Answer === opt.key 
+                              ? 'bg-yellow-400/20 text-yellow-300 border-yellow-400/40 font-semibold' 
+                              : 'bg-black/40 text-gray-400 border-white/5 hover:text-white'
+                          }`}
+                        >
+                          {opt.key}) {opt.text}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Q3 */}
+                  <div className="flex flex-col gap-1 p-2 bg-black/20 border border-white/5 rounded">
+                    <span className="text-[10px] font-bold text-gray-300">Q3: When is index surge pricing active?</span>
+                    <div className="flex flex-col gap-1 mt-1">
+                      {[
+                        { key: 'A', text: 'High demand, rain & peak hours' },
+                        { key: 'B', text: 'Only during national holidays' },
+                        { key: 'C', text: 'Determined at random' }
+                      ].map(opt => (
+                        <button
+                          key={opt.key}
+                          type="button"
+                          onClick={() => setQ3Answer(opt.key)}
+                          className={`text-[9px] text-left p-1.5 rounded border transition-all ${
+                            q3Answer === opt.key 
+                              ? 'bg-yellow-400/20 text-yellow-300 border-yellow-400/40 font-semibold' 
+                              : 'bg-black/40 text-gray-400 border-white/5 hover:text-white'
+                          }`}
+                        >
+                          {opt.key}) {opt.text}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Compliance status badge */}
+                  <div className="p-2 rounded text-[9px] font-semibold text-center border mt-1">
+                    {isStepValid() ? (
+                      <div className="text-green-400 bg-green-500/10 border-green-500/20">
+                        🎉 Quiz Passed! You are safety compliant.
+                      </div>
+                    ) : (
+                      <div className="text-yellow-400 bg-yellow-500/10 border-yellow-500/20">
+                        ⚠️ Please watch video & answer all questions correctly.
+                      </div>
+                    )}
+                  </div>
+
+                </div>
+              )}
+
+              <div className="mt-auto pt-3 flex gap-2">
+                <button 
+                  type="button"
+                  onClick={() => setEnrollStep(5)}
+                  style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: 'none', color: '#fff', padding: '8px', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', flex: 1 }}
+                >
+                  Back
+                </button>
+                <button 
+                  type="button"
+                  disabled={!isStepValid()}
+                  onClick={() => {
+                    handleEnrollSubmit();
+                    triggerSmsToast("WhatsApp Alert: Captain profile submitted for review. Documents DL, Aadhar, RC under review.", "WhatsApp Notification");
+                  }}
+                  style={{
+                    backgroundColor: isStepValid() ? '#ffdd00' : 'rgba(255,255,255,0.05)',
+                    color: isStepValid() ? '#000' : '#555',
+                    border: 'none',
+                    fontWeight: 'bold',
+                    padding: '8px',
+                    borderRadius: '4px',
+                    cursor: isStepValid() ? 'pointer' : 'not-allowed',
+                    fontSize: '11px',
+                    flex: 1
+                  }}
+                >
+                  Submit Application
                 </button>
               </div>
             </div>

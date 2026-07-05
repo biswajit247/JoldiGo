@@ -244,6 +244,7 @@ export default function PassengerApp({ isStandalone }) {
   // Razorpay payment sheet state
   const [selectedPayment, setSelectedPayment] = useState('upi');
   const [starRating, setStarRating] = useState(5);
+  const [ratingComment, setRatingComment] = useState('');
   const [paymentStep, setPaymentStep] = useState('select'); 
   const [selectedTip, setSelectedTip] = useState(0); 
   const [customTip, setCustomTip] = useState(''); 
@@ -1335,6 +1336,18 @@ export default function PassengerApp({ isStandalone }) {
                 ))}
               </div>
 
+              {/* FEEDBACK COMMENT INPUT */}
+              <div className="mt-3 flex flex-col gap-1 w-full px-2 text-left">
+                <label className="text-[9px] uppercase tracking-wider text-gray-400 font-extrabold block">Feedback Comment</label>
+                <input 
+                  type="text"
+                  placeholder="e.g. Clean Car, Safe Driving!"
+                  value={ratingComment}
+                  onChange={e => setRatingComment(e.target.value)}
+                  style={{ backgroundColor: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', padding: '6px', fontSize: '11px', color: '#fff', outline: 'none', width: '100%', boxSizing: 'border-box' }}
+                />
+              </div>
+
               {/* HAPPY RIDE TIPS WIDGET */}
               <div className="happy-ride-tips-container mt-3 p-3 bg-black/40 border border-white/5 rounded-xl text-center">
                 <span className="text-[11px] font-extrabold text-amber-500 uppercase tracking-wider block mb-1">🎁 Happy Ride Tips</span>
@@ -1424,10 +1437,11 @@ export default function PassengerApp({ isStandalone }) {
                 className="btn-primary full-width mt-4" 
                 onClick={() => {
                   const finalTip = selectedTip === 'custom' ? (parseInt(customTip) || 0) : selectedTip;
-                  completePaymentAndRate(starRating, finalTip);
+                  completePaymentAndRate(starRating, ratingComment, finalTip);
                   setPaymentStep('select');
                   setSelectedTip(0);
                   setCustomTip('');
+                  setRatingComment('');
                 }}
               >
                 Submit & Book Again

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useSimulator } from '../context/SimulatorContext';
+import { useSimulator, getServerEndpoints } from '../context/SimulatorContext';
 import { 
   Activity, 
   Users, 
@@ -88,6 +88,27 @@ export default function AdminPanel() {
   const [dlChecked, setDlChecked] = useState(false);
   const [aadharChecked, setAadharChecked] = useState(false);
   const [rcChecked, setRcChecked] = useState(false);
+  const [driverReviews, setDriverReviews] = useState([]);
+
+  useEffect(() => {
+    if (selectedDriverForDoc) {
+      const fetchHistory = async () => {
+        try {
+          const { api } = getServerEndpoints();
+          const res = await fetch(`${api}/api/driver/history?driverId=${selectedDriverForDoc.id}`);
+          const data = await res.json();
+          if (data.success) {
+            setDriverReviews(data.history || []);
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      };
+      fetchHistory();
+    } else {
+      setDriverReviews([]);
+    }
+  }, [selectedDriverForDoc]);
 
   // Form states for settings
   const [baseFareCarAC, setBaseFareCarAC] = useState(settings.baseFareCarAC || 50);
@@ -1424,6 +1445,36 @@ export default function AdminPanel() {
                             <span className="font-mono font-semibold text-yellow-400">{selectedDriverForDoc.bankDetails?.ifscCode || 'N/A'}</span>
                           </div>
                         </div>
+                      </div>
+
+                      {/* Passenger Feedback Reviews */}
+                      <div className="bg-black/30 border border-white/5 rounded-lg p-3 text-xs text-left flex flex-col gap-2 mt-3">
+                        <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block border-b border-white/5 pb-1">
+                          ⭐️ Customer Reviews ({driverReviews.length})
+                        </span>
+                        
+                        {driverReviews.length === 0 ? (
+                          <span className="text-[10px] text-gray-500 italic block py-1">No customer feedbacks registered for this driver yet.</span>
+                        ) : (
+                          <div className="max-h-[140px] overflow-y-auto flex flex-col gap-1.5 pr-1" style={{ overflowY: 'auto' }}>
+                            {driverReviews.map((rev, idx) => (
+                              <div key={idx} className="bg-black/40 border border-white/5 p-2 rounded flex flex-col gap-0.5">
+                                <div className="flex justify-between items-center text-[10px]">
+                                  <span className="text-yellow-400 font-bold">
+                                    {Array.from({ length: rev.rating || 5 }).map((_, i) => "⭐")}
+                                  </span>
+                                  <span className="text-gray-500 text-[8px]">{new Date(rev.createdAt).toLocaleDateString()}</span>
+                                </div>
+                                <p className="text-[10px] text-gray-300 italic mt-0.5">
+                                  "{rev.comment || 'Safe and comfortable journey'}"
+                                </p>
+                                <span className="text-[8px] text-gray-500 block text-right">
+                                  {rev.pickupName} ➔ {rev.dropoffName}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
 
                       <div className="kyc-disclaimer mt-3 p-2 bg-amber-500/10 border border-amber-500/20 text-[10px] rounded text-amber-300">

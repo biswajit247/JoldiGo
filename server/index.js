@@ -69,6 +69,8 @@ const loadPersistedSettings = async () => {
     await query("ALTER TABLE drivers ADD COLUMN IF NOT EXISTS insurance_status VARCHAR(50) DEFAULT 'pending'");
     await query("ALTER TABLE drivers ADD COLUMN IF NOT EXISTS puc_status VARCHAR(50) DEFAULT 'pending'");
     await query("ALTER TABLE drivers ADD COLUMN IF NOT EXISTS identity_status VARCHAR(50) DEFAULT 'pending'");
+    await query("ALTER TABLE rides ADD COLUMN IF NOT EXISTS passenger_rating INTEGER DEFAULT NULL");
+    await query("ALTER TABLE rides ADD COLUMN IF NOT EXISTS passenger_comment TEXT DEFAULT NULL");
 
     const res = await query("SELECT * FROM system_settings");
     res.rows.forEach(row => {
@@ -441,7 +443,7 @@ app.get('/api/driver/vehicles', async (req, res) => {
 
 // Rate ride and process tips
 app.post('/api/ride/rate', async (req, res) => {
-  const { rideId, rating, tipAmount } = req.body;
+  const { rideId, rating, comment, tipAmount } = req.body;
   const parsedRating = parseFloat(rating || 5);
   const parsedTip = parseFloat(tipAmount || 0);
   
@@ -452,8 +454,8 @@ app.post('/api/ride/rate', async (req, res) => {
     }
     const ride = rideRes.rows[0];
 
-    // Update ride rating
-    await query('UPDATE rides SET rating = $1 WHERE id = $2', [parsedRating, rideId]);
+    // Update ride rating and passenger comments
+    await query('UPDATE rides SET rating = $1, passenger_rating = $1, passenger_comment = $2 WHERE id = $3', [parsedRating, comment || '', rideId]);
 
     // Recalculate average rating for driver
     const avgRes = await query('SELECT AVG(rating) as avg_rating FROM rides WHERE driver_id = $1 AND rating IS NOT NULL', [ride.driver_id]);

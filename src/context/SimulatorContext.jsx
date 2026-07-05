@@ -1167,7 +1167,7 @@ export const SimulatorProvider = ({ children }) => {
     });
   };
 
-  const completePaymentAndRate = async (rating, tipAmount = 0) => {
+  const completePaymentAndRate = async (rating, comment = '', tipAmount = 0) => {
     if (!activeRide || activeRide.status !== 'completed') return;
     
     try {
@@ -1178,6 +1178,7 @@ export const SimulatorProvider = ({ children }) => {
         body: JSON.stringify({
           rideId: activeRide.id,
           rating: parseFloat(rating || 5),
+          comment: comment || '',
           tipAmount: parseFloat(tipAmount || 0)
         })
       });
@@ -1422,6 +1423,7 @@ export const SimulatorProvider = ({ children }) => {
       const data = await res.json();
       if (data.success) {
         addLog(`Document verification updated successfully!`, 'success');
+        triggerSmsToast(`WhatsApp Alert: Your document (${documentType.toUpperCase()}) has been ${approve ? 'APPROVED ✅' : 'REJECTED ❌'} by JoldiGo Admin.`, 'WhatsApp Notification');
         fetchInitialData();
       }
     } catch (err) {
