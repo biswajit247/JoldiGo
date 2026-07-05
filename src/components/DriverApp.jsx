@@ -1301,7 +1301,9 @@ export default function DriverApp({ isStandalone }) {
                 <div className="p-2 bg-black/40 border border-white/5 rounded flex flex-col gap-2">
                   <div className="flex justify-between items-center">
                     <span className="text-[10px] font-bold text-white">1. Driving License (DL)</span>
-                    <span className="text-[8px] text-yellow-400 font-bold">{licensePhoto ? "✅ Uploaded" : "❌ Missing"}</span>
+                    <span className="text-[8px] font-bold" style={{ color: (licensePhoto && enrollLicenseNumber.trim()) ? '#10b981' : '#f59e0b' }}>
+                      {(licensePhoto && enrollLicenseNumber.trim()) ? "✅ Completed" : "⚠️ Number/Photo Missing"}
+                    </span>
                   </div>
                   <input 
                     type="text" 
@@ -1324,7 +1326,9 @@ export default function DriverApp({ isStandalone }) {
                 <div className="p-2 bg-black/40 border border-white/5 rounded flex flex-col gap-2">
                   <div className="flex justify-between items-center">
                     <span className="text-[10px] font-bold text-white">2. Vehicle RC Book</span>
-                    <span className="text-[8px] text-yellow-400 font-bold">{rcPhoto ? "✅ Uploaded" : "❌ Missing"}</span>
+                    <span className="text-[8px] font-bold" style={{ color: (rcPhoto && enrollRcNumber.trim()) ? '#10b981' : '#f59e0b' }}>
+                      {(rcPhoto && enrollRcNumber.trim()) ? "✅ Completed" : "⚠️ Number/Photo Missing"}
+                    </span>
                   </div>
                   <input 
                     type="text" 
@@ -1379,7 +1383,9 @@ export default function DriverApp({ isStandalone }) {
                 <div className="p-2 bg-black/40 border border-white/5 rounded flex flex-col gap-2">
                   <div className="flex justify-between items-center">
                     <span className="text-[10px] font-bold text-white">5. National ID (Aadhaar/PAN)</span>
-                    <span className="text-[8px] text-yellow-400 font-bold">{identityPhoto ? "✅ Uploaded" : "❌ Missing"}</span>
+                    <span className="text-[8px] font-bold" style={{ color: (identityPhoto && enrollAadharNumber.trim()) ? '#10b981' : '#f59e0b' }}>
+                      {(identityPhoto && enrollAadharNumber.trim()) ? "✅ Completed" : "⚠️ Number/Photo Missing"}
+                    </span>
                   </div>
                   <input 
                     type="text" 
