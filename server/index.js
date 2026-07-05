@@ -56,6 +56,19 @@ const loadPersistedSettings = async () => {
     await query("ALTER TABLE drivers ADD COLUMN IF NOT EXISTS subscription_expires_at TIMESTAMP DEFAULT NULL");
     await query("ALTER TABLE drivers ADD COLUMN IF NOT EXISTS driver_photo TEXT DEFAULT NULL");
     await query("ALTER TABLE drivers ADD COLUMN IF NOT EXISTS vehicle_photo TEXT DEFAULT NULL");
+    await query("ALTER TABLE drivers ADD COLUMN IF NOT EXISTS age INTEGER DEFAULT NULL");
+    await query("ALTER TABLE drivers ADD COLUMN IF NOT EXISTS city VARCHAR(255) DEFAULT NULL");
+    await query("ALTER TABLE drivers ADD COLUMN IF NOT EXISTS vehicle_insurance_photo TEXT DEFAULT NULL");
+    await query("ALTER TABLE drivers ADD COLUMN IF NOT EXISTS vehicle_puc_photo TEXT DEFAULT NULL");
+    await query("ALTER TABLE drivers ADD COLUMN IF NOT EXISTS identity_card_photo TEXT DEFAULT NULL");
+    await query("ALTER TABLE drivers ADD COLUMN IF NOT EXISTS bank_account_number VARCHAR(255) DEFAULT NULL");
+    await query("ALTER TABLE drivers ADD COLUMN IF NOT EXISTS bank_ifsc_code VARCHAR(255) DEFAULT NULL");
+    await query("ALTER TABLE drivers ADD COLUMN IF NOT EXISTS bank_holder_name VARCHAR(255) DEFAULT NULL");
+    await query("ALTER TABLE drivers ADD COLUMN IF NOT EXISTS dl_status VARCHAR(50) DEFAULT 'pending'");
+    await query("ALTER TABLE drivers ADD COLUMN IF NOT EXISTS rc_status VARCHAR(50) DEFAULT 'pending'");
+    await query("ALTER TABLE drivers ADD COLUMN IF NOT EXISTS insurance_status VARCHAR(50) DEFAULT 'pending'");
+    await query("ALTER TABLE drivers ADD COLUMN IF NOT EXISTS puc_status VARCHAR(50) DEFAULT 'pending'");
+    await query("ALTER TABLE drivers ADD COLUMN IF NOT EXISTS identity_status VARCHAR(50) DEFAULT 'pending'");
 
     const res = await query("SELECT * FROM system_settings");
     res.rows.forEach(row => {
@@ -363,29 +376,48 @@ app.post('/api/passenger/wallet/topup', async (req, res) => {
 
 // 2. DRIVER ROUTES
 
+const formatDriverRecord = (drv) => ({
+  id: drv.id,
+  name: drv.name,
+  phone: drv.phone,
+  vehicleType: drv.vehicle_type,
+  vehicleName: drv.vehicle_name,
+  vehicleNumber: drv.vehicle_number,
+  status: drv.status,
+  verificationStatus: drv.verification_status,
+  rating: parseFloat(drv.rating || 5),
+  location: { lat: parseFloat(drv.location_lat || 22.5726), lng: parseFloat(drv.location_lng || 88.3639) },
+  documents: { license: drv.license_number, aadhar: drv.aadhar_number, rc: drv.rc_number },
+  earnings: { daily: parseFloat(drv.earnings_daily || 0), weekly: parseFloat(drv.earnings_weekly || 0), commission: parseFloat(drv.commission_owed || 0) },
+  vehicles: JSON.parse(drv.vehicles || '[]'),
+  subscriptionTier: drv.subscription_tier || 'free',
+  subscriptionExpiresAt: drv.subscription_expires_at,
+  driverPhoto: drv.driver_photo || null,
+  vehiclePhoto: drv.vehicle_photo || null,
+  age: drv.age || null,
+  city: drv.city || null,
+  vehicleInsurancePhoto: drv.vehicle_insurance_photo || null,
+  vehiclePucPhoto: drv.vehicle_puc_photo || null,
+  identityCardPhoto: drv.identity_card_photo || null,
+  bankDetails: {
+    accountNumber: drv.bank_account_number || '',
+    ifscCode: drv.bank_ifsc_code || '',
+    holderName: drv.bank_holder_name || ''
+  },
+  documentStatuses: {
+    dl: drv.dl_status || 'pending',
+    rc: drv.rc_status || 'pending',
+    insurance: drv.insurance_status || 'pending',
+    puc: drv.puc_status || 'pending',
+    identity: drv.identity_status || 'pending'
+  }
+});
+
 // Get All Drivers
 app.get('/api/drivers', async (req, res) => {
   try {
     const driversRes = await query('SELECT * FROM drivers');
-    const formattedDrivers = driversRes.rows.map(drv => ({
-      id: drv.id,
-      name: drv.name,
-      phone: drv.phone,
-      vehicleType: drv.vehicle_type,
-      vehicleName: drv.vehicle_name,
-      vehicleNumber: drv.vehicle_number,
-      status: drv.status,
-      verificationStatus: drv.verification_status,
-      rating: parseFloat(drv.rating),
-      location: { lat: parseFloat(drv.location_lat), lng: parseFloat(drv.location_lng) },
-      documents: { license: drv.license_number, aadhar: drv.aadhar_number, rc: drv.rc_number },
-      earnings: { daily: parseFloat(drv.earnings_daily), weekly: parseFloat(drv.earnings_weekly), commission: parseFloat(drv.commission_owed) },
-      vehicles: JSON.parse(drv.vehicles || '[]'),
-      subscriptionTier: drv.subscription_tier || 'free',
-      subscriptionExpiresAt: drv.subscription_expires_at,
-      driverPhoto: drv.driver_photo || null,
-      vehiclePhoto: drv.vehicle_photo || null
-    }));
+    const formattedDrivers = driversRes.rows.map(drv => formatDriverRecord(drv));
     res.json({ success: true, drivers: formattedDrivers });
   } catch (err) {
     res.status(500).json({ error: 'Failed to retrieve drivers list.' });
@@ -547,9 +579,14 @@ app.get('/api/driver/history', async (req, res) => {
 
 // Enroll a brand new real driver
 app.post('/api/driver/enroll', async (req, res) => {
-  const { name, phone, vehicleType, vehicleName, vehicleNumber, licenseNumber, aadharNumber, rcNumber, driverPhoto, vehiclePhoto } = req.body;
+  const { 
+    name, phone, vehicleType, vehicleName, vehicleNumber, licenseNumber, aadharNumber, rcNumber, 
+    driverPhoto, vehiclePhoto, age, city, vehicleInsurancePhoto, vehiclePucPhoto, identityCardPhoto,
+    bankAccountNumber, bankIfscCode, bankHolderName
+  } = req.body;
+  
   if (!name || !phone || !vehicleType || !vehicleName || !vehicleNumber || !licenseNumber || !aadharNumber || !rcNumber) {
-    return res.status(400).json({ success: false, error: 'All fields are required.' });
+    return res.status(400).json({ success: false, error: 'All primary fields are required.' });
   }
 
   try {
@@ -563,32 +600,26 @@ app.post('/api/driver/enroll', async (req, res) => {
       `INSERT INTO drivers (
         id, name, phone, vehicle_type, vehicle_name, vehicle_number, 
         status, verification_status, rating, location_lat, location_lng, 
-        license_number, aadhar_number, rc_number, driver_photo, vehicle_photo
-      ) VALUES ($1, $2, $3, $4, $5, $6, 'offline', 'pending', 5.00, 22.5600, 88.3600, $7, $8, $9, $10, $11)`,
-      [newDriverId, name, phone, vehicleType, vehicleName, vehicleNumber, licenseNumber, aadharNumber, rcNumber, driverPhoto, vehiclePhoto]
+        license_number, aadhar_number, rc_number, driver_photo, vehicle_photo,
+        age, city, vehicle_insurance_photo, vehicle_puc_photo, identity_card_photo,
+        bank_account_number, bank_ifsc_code, bank_holder_name,
+        dl_status, rc_status, insurance_status, puc_status, identity_status
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6, 'offline', 'pending', 5.00, 22.5600, 88.3600, 
+        $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19,
+        'pending', 'pending', 'pending', 'pending', 'pending'
+      )`,
+      [
+        newDriverId, name, phone, vehicleType, vehicleName, vehicleNumber, 
+        licenseNumber, aadharNumber, rcNumber, driverPhoto, vehiclePhoto,
+        age ? parseInt(age) : null, city || null, vehicleInsurancePhoto || null, vehiclePucPhoto || null, identityCardPhoto || null,
+        bankAccountNumber || null, bankIfscCode || null, bankHolderName || null
+      ]
     );
 
     // Fetch and format updated drivers list
     const allDrvRes = await query('SELECT * FROM drivers ORDER BY id ASC');
-    const formattedDrivers = allDrvRes.rows.map(d => ({
-      id: d.id,
-      name: d.name,
-      phone: d.phone,
-      vehicleType: d.vehicle_type,
-      vehicleName: d.vehicle_name,
-      vehicleNumber: d.vehicle_number,
-      status: d.status,
-      verificationStatus: d.verification_status,
-      rating: parseFloat(d.rating),
-      location: { lat: parseFloat(d.location_lat), lng: parseFloat(d.location_lng) },
-      licenseNumber: d.license_number,
-      aadharNumber: d.aadhar_number,
-      rcNumber: d.rc_number,
-      earnings: { daily: parseFloat(d.earnings_daily), weekly: parseFloat(d.earnings_weekly) },
-      commissionOwed: parseFloat(d.commission_owed),
-      driverPhoto: d.driver_photo || null,
-      vehiclePhoto: d.vehicle_photo || null
-    }));
+    const formattedDrivers = allDrvRes.rows.map(d => formatDriverRecord(d));
     
     // Broadcast updated driver records array to all active maps/admin views
     broadcastToAll({ type: 'drivers_updated', drivers: formattedDrivers });
@@ -1193,6 +1224,57 @@ app.post('/api/admin/driver/verify', async (req, res) => {
   }
 });
 
+// Verify/Reject specific KYC document card
+app.post('/api/admin/driver/verify-doc', async (req, res) => {
+  const { driverId, documentType, approve } = req.body;
+  if (!driverId || !documentType) return res.status(400).json({ error: 'Driver ID and Document Type are required.' });
+
+  const columnMap = {
+    dl: 'dl_status',
+    rc: 'rc_status',
+    insurance: 'insurance_status',
+    puc: 'puc_status',
+    identity: 'identity_status'
+  };
+
+  const col = columnMap[documentType];
+  if (!col) return res.status(400).json({ error: 'Invalid documentType.' });
+
+  const docStatus = approve ? 'verified' : 'rejected';
+
+  try {
+    await query(`UPDATE drivers SET ${col} = $1 WHERE id = $2`, [docStatus, driverId]);
+
+    // Check overall verification status
+    const driverRes = await query("SELECT dl_status, rc_status, insurance_status, puc_status, identity_status FROM drivers WHERE id = $1", [driverId]);
+    if (driverRes.rows.length > 0) {
+      const d = driverRes.rows[0];
+      let nextOverallStatus = 'pending';
+      
+      if (d.dl_status === 'verified' && d.rc_status === 'verified' && d.insurance_status === 'verified' && d.puc_status === 'verified' && d.identity_status === 'verified') {
+        nextOverallStatus = 'verified'; // fully verified!
+      } else if (d.dl_status === 'rejected' || d.rc_status === 'rejected' || d.insurance_status === 'rejected' || d.puc_status === 'rejected' || d.identity_status === 'rejected') {
+        nextOverallStatus = 'rejected'; // rejected
+      }
+
+      await query('UPDATE drivers SET verification_status = $1 WHERE id = $2', [nextOverallStatus, driverId]);
+
+      // Broadcast back to driver
+      const targetDriverWs = findWsClient('driver', driverId);
+      if (targetDriverWs) {
+        targetDriverWs.send(JSON.stringify({ type: 'verification_updated', status: nextOverallStatus }));
+      }
+    }
+
+    await broadcastDriversUpdate();
+    broadcastToAll({ type: 'ledger_update' });
+
+    res.json({ success: true, driverId, documentType, status: docStatus });
+  } catch (err) {
+    res.status(500).json({ error: 'Document verification update failed.', details: err.message });
+  }
+});
+
 // Execute batch driver weekly payout
 app.post('/api/admin/driver/payout', async (req, res) => {
   const { driverId } = req.body;
@@ -1771,25 +1853,7 @@ const findWsClient = (role, id) => {
 const broadcastDriversUpdate = async () => {
   try {
     const driversRes = await query('SELECT * FROM drivers');
-    const formattedDrivers = driversRes.rows.map(drv => ({
-      id: drv.id,
-      name: drv.name,
-      phone: drv.phone,
-      vehicleType: drv.vehicle_type,
-      vehicleName: drv.vehicle_name,
-      vehicleNumber: drv.vehicle_number,
-      status: drv.status,
-      verificationStatus: drv.verification_status,
-      rating: parseFloat(drv.rating || 5),
-      location: { lat: parseFloat(drv.location_lat || 22.5726), lng: parseFloat(drv.location_lng || 88.3639) },
-      documents: { license: drv.license_number, aadhar: drv.aadhar_number, rc: drv.rc_number },
-      earnings: { daily: parseFloat(drv.earnings_daily || 0), weekly: parseFloat(drv.earnings_weekly || 0), commission: parseFloat(drv.commission_owed || 0) },
-      vehicles: JSON.parse(drv.vehicles || '[]'),
-      subscriptionTier: drv.subscription_tier || 'free',
-      subscriptionExpiresAt: drv.subscription_expires_at,
-      driverPhoto: drv.driver_photo || null,
-      vehiclePhoto: drv.vehicle_photo || null
-    }));
+    const formattedDrivers = driversRes.rows.map(drv => formatDriverRecord(drv));
 
     broadcastToAll({ type: 'drivers_updated', drivers: formattedDrivers });
   } catch (err) {

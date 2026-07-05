@@ -39,6 +39,7 @@ export default function AdminPanel() {
     isNightMode,
     setIsNightMode,
     verifyDriverStatus,
+    verifyDriverDoc,
     payoutDriver,
     broadcastNotification,
     updateSettings,
@@ -1256,196 +1257,186 @@ export default function AdminPanel() {
                         )}
 
                         {selectedDocTab === 'license' && (
-                          <div className="w-full max-w-[320px] p-4 rounded-xl relative overflow-hidden" style={{
-                            background: 'linear-gradient(135deg, #1e293b, #0f172a)',
-                            border: '1.5px solid #3b82f6',
-                            color: '#fff',
-                            aspectRatio: '1.586',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            justifyContent: 'space-between',
-                            boxShadow: '0 8px 16px rgba(0,0,0,0.4)'
-                          }}>
-                            <div className="flex justify-between items-start">
-                              <div className="text-left">
-                                <span className="text-[7px] uppercase tracking-wider text-blue-400 block font-bold">UNION OF INDIA</span>
-                                <span className="text-[10px] font-bold text-white block">DRIVING LICENSE</span>
-                              </div>
-                              <span className="text-[7px] bg-blue-500/20 text-blue-300 font-bold px-1.5 py-0.5 rounded border border-blue-500/30">WEST BENGAL</span>
+                          <div className="w-full max-w-[320px] flex flex-col gap-2">
+                            <div className="w-full h-32 bg-black/60 rounded border border-white/10 flex items-center justify-center overflow-hidden">
+                              {selectedDriverForDoc.driverPhoto ? (
+                                <img src={selectedDriverForDoc.driverPhoto} alt="DL snap" className="w-full h-full object-contain" />
+                              ) : (
+                                <span className="text-[10px] text-gray-500">No DL Snapshot Submitted</span>
+                              )}
                             </div>
-
-                            <div className="flex gap-3 my-2 items-center">
-                              <div className="w-10 h-12 bg-gray-800 rounded border border-gray-700 flex items-center justify-center text-xl flex-shrink-0">
-                                {selectedDriverForDoc.avatar || '👤'}
-                              </div>
-                              <div className="flex-1 text-left">
-                                <span className="text-[7px] text-gray-400 block">Name / नाम:</span>
-                                <span className="text-[9px] font-bold block">{selectedDriverForDoc.name}</span>
-                                <span className="text-[7px] text-gray-400 block mt-1">License No:</span>
-                                <span className="text-[9px] font-mono font-bold block text-blue-400">{selectedDriverForDoc.documents?.license || 'N/A'}</span>
-                              </div>
+                            <div className="bg-black/20 p-2 rounded text-left">
+                              <span className="text-[8px] text-gray-400 block">License Number:</span>
+                              <span className="text-xs font-mono font-bold text-blue-400">{selectedDriverForDoc.documents?.license || 'N/A'}</span>
                             </div>
-
-                            <div className="flex justify-between items-center text-[7px] text-gray-400 border-t border-gray-800 pt-1">
-                              <span>Class: LMV, MCWG</span>
-                              <span>Auth: WB RTO KOLKATA</span>
+                            <div className="flex gap-2 justify-center mt-1">
+                              <button 
+                                onClick={() => verifyDriverDoc(selectedDriverForDoc.id, 'dl', true)}
+                                className="px-3 py-1 text-[10px] bg-green-600 hover:bg-green-700 text-white font-bold rounded"
+                              >
+                                Approve DL
+                              </button>
+                              <button 
+                                onClick={() => verifyDriverDoc(selectedDriverForDoc.id, 'dl', false)}
+                                className="px-3 py-1 text-[10px] bg-red-600 hover:bg-red-700 text-white font-bold rounded"
+                              >
+                                Reject DL
+                              </button>
                             </div>
                           </div>
                         )}
 
                         {selectedDocTab === 'aadhar' && (
-                          <div className="w-full max-w-[320px] p-4 rounded-xl relative overflow-hidden" style={{
-                            background: 'linear-gradient(135deg, #f8fafc, #f1f5f9)',
-                            border: '1.5px solid #22c55e',
-                            color: '#0f172a',
-                            aspectRatio: '1.586',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            justifyContent: 'space-between',
-                            boxShadow: '0 8px 16px rgba(0,0,0,0.4)'
-                          }}>
-                            <div className="flex justify-between items-center border-b border-gray-200 pb-1">
-                              <span className="text-[7px] font-bold text-red-600">भारत सरकार / Govt of India</span>
-                              <span className="text-[7px] font-bold text-emerald-600">AADHAR CARD</span>
+                          <div className="w-full max-w-[320px] flex flex-col gap-2">
+                            <div className="w-full h-32 bg-black/60 rounded border border-white/10 flex items-center justify-center overflow-hidden">
+                              {selectedDriverForDoc.identityCardPhoto ? (
+                                <img src={selectedDriverForDoc.identityCardPhoto} alt="Aadhaar snap" className="w-full h-full object-contain" />
+                              ) : (
+                                <span className="text-[10px] text-gray-500">No Aadhaar Snapshot Submitted</span>
+                              )}
                             </div>
-
-                            <div className="flex gap-3 my-2 items-center">
-                              <div className="w-10 h-12 bg-gray-200 rounded border border-gray-300 flex items-center justify-center text-xl flex-shrink-0">
-                                {selectedDriverForDoc.avatar || '👤'}
-                              </div>
-                              <div className="flex-1 text-left">
-                                <span className="text-[7px] text-gray-500 block">Name:</span>
-                                <span className="text-[9px] font-bold block text-gray-900">{selectedDriverForDoc.name}</span>
-                                <span className="text-[7px] text-gray-500 block mt-1">Aadhar Number:</span>
-                                <span className="text-[11px] font-mono font-bold block text-gray-900 tracking-wider text-left">
-                                  {selectedDriverForDoc.documents?.aadhar || 'N/A'}
-                                </span>
-                              </div>
+                            <div className="bg-black/20 p-2 rounded text-left">
+                              <span className="text-[8px] text-gray-400 block">Aadhaar Card Number:</span>
+                              <span className="text-xs font-mono font-bold text-green-400">{selectedDriverForDoc.documents?.aadhar || 'N/A'}</span>
                             </div>
-
-                            <div className="flex justify-between items-center text-[7px] text-gray-500 border-t border-gray-200 pt-1">
-                              <span>mera aadhar, meri pehchan</span>
-                              <span className="font-bold text-red-600 font-mono">UIDAI</span>
+                            <div className="flex gap-2 justify-center mt-1">
+                              <button 
+                                onClick={() => verifyDriverDoc(selectedDriverForDoc.id, 'identity', true)}
+                                className="px-3 py-1 text-[10px] bg-green-600 hover:bg-green-700 text-white font-bold rounded"
+                              >
+                                Approve Aadhaar
+                              </button>
+                              <button 
+                                onClick={() => verifyDriverDoc(selectedDriverForDoc.id, 'identity', false)}
+                                className="px-3 py-1 text-[10px] bg-red-600 hover:bg-red-700 text-white font-bold rounded"
+                              >
+                                Reject Aadhaar
+                              </button>
                             </div>
                           </div>
                         )}
 
                         {selectedDocTab === 'rc' && (
-                          <div className="w-full max-w-[320px] p-4 rounded-xl relative overflow-hidden" style={{
-                            background: 'linear-gradient(135deg, #1e1b4b, #311042)',
-                            border: '1.5px solid #d946ef',
-                            color: '#fff',
-                            aspectRatio: '1.586',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            justifyContent: 'space-between',
-                            boxShadow: '0 8px 16px rgba(0,0,0,0.4)'
-                          }}>
-                            <div className="flex justify-between items-start">
-                              <div className="text-left">
-                                <span className="text-[7px] uppercase tracking-wider text-fuchsia-400 block font-bold">STATE OF WEST BENGAL</span>
-                                <span className="text-[10px] font-bold text-white block">REGISTRATION CERTIFICATE</span>
-                              </div>
-                              <span className="text-[7px] bg-fuchsia-500/20 text-fuchsia-300 font-bold px-1.5 py-0.5 rounded border border-fuchsia-500/30">FORM 23</span>
+                          <div className="w-full max-w-[320px] flex flex-col gap-2">
+                            <div className="w-full h-32 bg-black/60 rounded border border-white/10 flex items-center justify-center overflow-hidden">
+                              {selectedDriverForDoc.vehiclePhoto ? (
+                                <img src={selectedDriverForDoc.vehiclePhoto} alt="RC snap" className="w-full h-full object-contain" />
+                              ) : (
+                                <span className="text-[10px] text-gray-500">No RC Snapshot Submitted</span>
+                              )}
                             </div>
-
-                            <div className="my-2 text-left">
-                              <div className="grid grid-cols-2 gap-x-2 gap-y-1">
-                                <div>
-                                  <span className="text-[6px] text-gray-400 block">Reg. Number:</span>
-                                  <span className="text-[8px] font-mono font-bold text-fuchsia-300">{selectedDriverForDoc.documents?.rc || 'N/A'}</span>
-                                </div>
-                                <div>
-                                  <span className="text-[6px] text-gray-400 block">Owner:</span>
-                                  <span className="text-[8px] font-bold text-white">{selectedDriverForDoc.name}</span>
-                                </div>
-                                <div>
-                                  <span className="text-[6px] text-gray-400 block">Vehicle Class:</span>
-                                  <span className="text-[8px] font-bold text-white capitalize">{selectedDriverForDoc.vehicleType}</span>
-                                </div>
-                                <div>
-                                  <span className="text-[6px] text-gray-400 block">Maker/Model:</span>
-                                  <span className="text-[8px] font-bold text-white">{selectedDriverForDoc.vehicleName}</span>
-                                </div>
-                              </div>
+                            <div className="bg-black/20 p-2 rounded text-left">
+                              <span className="text-[8px] text-gray-400 block">RC Number:</span>
+                              <span className="text-xs font-mono font-bold text-fuchsia-400">{selectedDriverForDoc.documents?.rc || 'N/A'}</span>
                             </div>
+                            <div className="flex gap-2 justify-center mt-1">
+                              <button 
+                                onClick={() => verifyDriverDoc(selectedDriverForDoc.id, 'rc', true)}
+                                className="px-3 py-1 text-[10px] bg-green-600 hover:bg-green-700 text-white font-bold rounded"
+                              >
+                                Approve RC
+                              </button>
+                              <button 
+                                onClick={() => verifyDriverDoc(selectedDriverForDoc.id, 'rc', false)}
+                                className="px-3 py-1 text-[10px] bg-red-600 hover:bg-red-700 text-white font-bold rounded"
+                              >
+                                Reject RC
+                              </button>
+                            </div>
+                          </div>
+                        )}
 
-                            <div className="flex justify-between items-center text-[7px] text-gray-400 border-t border-gray-800 pt-1">
-                              <span>Issued: RTO WEST BENGAL</span>
-                              <span>Fuel: PETROL/CNG</span>
+                        {selectedDocTab === 'insurance' && (
+                          <div className="w-full max-w-[320px] flex flex-col gap-2">
+                            <div className="w-full h-32 bg-black/60 rounded border border-white/10 flex items-center justify-center overflow-hidden">
+                              {selectedDriverForDoc.vehicleInsurancePhoto ? (
+                                <img src={selectedDriverForDoc.vehicleInsurancePhoto} alt="Insurance snap" className="w-full h-full object-contain" />
+                              ) : (
+                                <span className="text-[10px] text-gray-500">No Insurance Snapshot Submitted</span>
+                              )}
+                            </div>
+                            <div className="flex gap-2 justify-center mt-1">
+                              <button 
+                                onClick={() => verifyDriverDoc(selectedDriverForDoc.id, 'insurance', true)}
+                                className="px-3 py-1 text-[10px] bg-green-600 hover:bg-green-700 text-white font-bold rounded"
+                              >
+                                Approve Insurance
+                              </button>
+                              <button 
+                                onClick={() => verifyDriverDoc(selectedDriverForDoc.id, 'insurance', false)}
+                                className="px-3 py-1 text-[10px] bg-red-600 hover:bg-red-700 text-white font-bold rounded"
+                              >
+                                Reject Insurance
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {selectedDocTab === 'puc' && (
+                          <div className="w-full max-w-[320px] flex flex-col gap-2">
+                            <div className="w-full h-32 bg-black/60 rounded border border-white/10 flex items-center justify-center overflow-hidden">
+                              {selectedDriverForDoc.vehiclePucPhoto ? (
+                                <img src={selectedDriverForDoc.vehiclePucPhoto} alt="PUC snap" className="w-full h-full object-contain" />
+                              ) : (
+                                <span className="text-[10px] text-gray-500">No PUC Snapshot Submitted</span>
+                              )}
+                            </div>
+                            <div className="flex gap-2 justify-center mt-1">
+                              <button 
+                                onClick={() => verifyDriverDoc(selectedDriverForDoc.id, 'puc', true)}
+                                className="px-3 py-1 text-[10px] bg-green-600 hover:bg-green-700 text-white font-bold rounded"
+                              >
+                                Approve PUC
+                              </button>
+                              <button 
+                                onClick={() => verifyDriverDoc(selectedDriverForDoc.id, 'puc', false)}
+                                className="px-3 py-1 text-[10px] bg-red-600 hover:bg-red-700 text-white font-bold rounded"
+                              >
+                                Reject PUC
+                              </button>
                             </div>
                           </div>
                         )}
                       </div>
 
-                      {/* Compliance Checklist */}
-                      <div className="kyc-checklist bg-black/30 border border-white/5 rounded-lg p-3">
-                        <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block mb-2">Legal Compliance Checklist</span>
-                        
-                        <div className="flex flex-col gap-2">
-                          <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
-                            <input 
-                              type="checkbox" 
-                              checked={dlChecked} 
-                              onChange={(e) => setDlChecked(e.target.checked)} 
-                              className="w-3.5 h-3.5 accent-amber-500"
-                            />
-                            <span>Driving License matches West Bengal transport directives.</span>
-                          </label>
-
-                          <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
-                            <input 
-                              type="checkbox" 
-                              checked={aadharChecked} 
-                              onChange={(e) => setAadharChecked(e.target.checked)} 
-                              className="w-3.5 h-3.5 accent-amber-500"
-                            />
-                            <span>Aadhar No. matches national biometric records (UIDAI).</span>
-                          </label>
-
-                          <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
-                            <input 
-                              type="checkbox" 
-                              checked={rcChecked} 
-                              onChange={(e) => setRcChecked(e.target.checked)} 
-                              className="w-3.5 h-3.5 accent-amber-500"
-                            />
-                            <span>Vehicle Registration (RC) matches active insurance pool.</span>
-                          </label>
+                      {/* Payout Bank & Demographic Details */}
+                      <div className="bg-black/30 border border-white/5 rounded-lg p-3 text-xs text-left flex flex-col gap-2">
+                        <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block border-b border-white/5 pb-1">Profile & Payout Banking Details</span>
+                        <div className="grid grid-cols-2 gap-2 text-gray-300">
+                          <div>
+                            <span className="text-[9px] text-gray-500 block">Age:</span>
+                            <span className="font-semibold text-white">{selectedDriverForDoc.age || 'N/A'}</span>
+                          </div>
+                          <div>
+                            <span className="text-[9px] text-gray-500 block">City:</span>
+                            <span className="font-semibold text-white">{selectedDriverForDoc.city || 'N/A'}</span>
+                          </div>
+                          <div className="col-span-2 border-t border-white/5 pt-1 mt-1">
+                            <span className="text-[9px] text-gray-500 block">Bank Account Holder:</span>
+                            <span className="font-semibold text-white">{selectedDriverForDoc.bankDetails?.holderName || 'N/A'}</span>
+                          </div>
+                          <div>
+                            <span className="text-[9px] text-gray-500 block">Account Number:</span>
+                            <span className="font-mono font-semibold text-white">{selectedDriverForDoc.bankDetails?.accountNumber || 'N/A'}</span>
+                          </div>
+                          <div>
+                            <span className="text-[9px] text-gray-500 block">IFSC Code:</span>
+                            <span className="font-mono font-semibold text-yellow-400">{selectedDriverForDoc.bankDetails?.ifscCode || 'N/A'}</span>
+                          </div>
                         </div>
                       </div>
 
                       <div className="kyc-disclaimer mt-3 p-2 bg-amber-500/10 border border-amber-500/20 text-[10px] rounded text-amber-300">
-                        🛡️ Approve partner only if all cards match West Bengal aggregators guidelines.
+                        🛡️ Approve individual document cards. Once all 5 are marked verified, the account will be automatically activated.
                       </div>
                     </div>
 
                     <div className="modal-footer-actions mt-4 flex gap-2">
                       <button 
-                        className="btn-modal-reject flex-1 py-2 bg-red-600/10 hover:bg-red-600/20 border border-red-500/30 text-red-400 font-semibold rounded-lg text-xs transition-all"
-                        onClick={() => {
-                          verifyDriverStatus(selectedDriverForDoc.id, false);
-                          setSelectedDriverForDoc(null);
-                        }}
+                        className="btn-modal-reject flex-1 py-2 bg-gray-800 hover:bg-gray-700 border border-gray-700 text-gray-300 font-semibold rounded-lg text-xs transition-all cursor-pointer"
+                        onClick={() => setSelectedDriverForDoc(null)}
                       >
-                        Reject Documents
-                      </button>
-                      <button 
-                        className={`flex-1 py-2 font-semibold rounded-lg text-xs transition-all border ${
-                          (dlChecked && aadharChecked && rcChecked)
-                            ? 'bg-amber-500 border-amber-600 text-black hover:bg-amber-400 cursor-pointer'
-                            : 'bg-gray-800 border-gray-700 text-gray-500 cursor-not-allowed'
-                        }`}
-                        onClick={() => {
-                          if (dlChecked && aadharChecked && rcChecked) {
-                            verifyDriverStatus(selectedDriverForDoc.id, true);
-                            setSelectedDriverForDoc(null);
-                          }
-                        }}
-                        disabled={!(dlChecked && aadharChecked && rcChecked)}
-                        title={!(dlChecked && aadharChecked && rcChecked) ? "Please check all compliance ticks first" : "Authorize Driver Account"}
-                      >
-                        Approve Partner Account
+                        Close KYC Inspector
                       </button>
                     </div>
                   </div>

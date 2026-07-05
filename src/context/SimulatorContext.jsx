@@ -1411,6 +1411,24 @@ export const SimulatorProvider = ({ children }) => {
     }
   };
 
+  const verifyDriverDoc = async (driverId, documentType, approve) => {
+    try {
+      const { api } = getServerEndpoints();
+      const res = await fetch(`${api}/api/admin/driver/verify-doc`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ driverId, documentType, approve })
+      });
+      const data = await res.json();
+      if (data.success) {
+        addLog(`Document verification updated successfully!`, 'success');
+        fetchInitialData();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const payoutDriver = async (driverId) => {
     try {
       const { api } = getServerEndpoints();
@@ -1690,6 +1708,7 @@ export const SimulatorProvider = ({ children }) => {
         uploadDriverDocs,
         enrollDriver,
         verifyDriverStatus,
+        verifyDriverDoc,
         payoutDriver,
         broadcastNotification,
         updateSettings,

@@ -49,6 +49,33 @@ const RainOverlay = ({ weather }) => {
   );
 };
 
+const compressImage = (dataUrl, maxWidth = 600, quality = 0.6) => {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.src = dataUrl;
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      let width = img.width;
+      let height = img.height;
+      
+      if (width > maxWidth) {
+        height = Math.round((height * maxWidth) / width);
+        width = maxWidth;
+      }
+      
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+      const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+      resolve(compressedDataUrl);
+    };
+    img.onerror = () => {
+      resolve(dataUrl);
+    };
+  });
+};
+
 export default function DriverApp({ isStandalone }) {
   const {
     drivers,
@@ -109,26 +136,46 @@ export default function DriverApp({ isStandalone }) {
     }
   }, [selectedDriverId, drivers]);
   
-  // Onboarding Inputs
-  const [licenseInput, setLicenseInput] = useState('');
-  const [aadharInput, setAadharInput] = useState('');
-  const [rcInput, setRcInput] = useState('');
-
+  // 6-Step Onboarding Inputs
   const [isEnrolling, setIsEnrolling] = useState(false);
-  const [enrollForm, setEnrollForm] = useState({
-    name: '',
-    phone: '',
-    vehicleType: 'car_ac',
-    vehicleName: '',
-    vehicleNumber: '',
-    licenseNumber: '',
-    aadharNumber: '',
-    rcNumber: ''
-  });
+  const [enrollStep, setEnrollStep] = useState(1); // Steps 1 to 6
+  
+  // Step 1: Mobile Phone & OTP Verification
+  const [enrollPhone, setEnrollPhone] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
+  const [enrollOtp, setEnrollOtp] = useState('');
+  const [isOtpVerified, setIsOtpVerified] = useState(false);
+  
+  // Step 2: Basic Profile
+  const [enrollName, setEnrollName] = useState('');
+  const [enrollAge, setEnrollAge] = useState('');
+  const [enrollCity, setEnrollCity] = useState('Kolkata');
+  const [driverPhoto, setDriverPhoto] = useState(null); // Selfie Profile Photo
+  
+  // Step 3: Vehicle Type Selection
+  const [enrollVehicleType, setEnrollVehicleType] = useState('bike'); // 'bike' (Two-Wheeler) or 'auto' (Three-Wheeler)
+  const [enrollVehicleName, setEnrollVehicleName] = useState('');
+  const [enrollVehicleNumber, setEnrollVehicleNumber] = useState('');
+  
+  // Step 4: Documents Upload KYC
+  const [enrollLicenseNumber, setEnrollLicenseNumber] = useState('');
+  const [licensePhoto, setLicensePhoto] = useState(null);
+  
+  const [enrollRcNumber, setEnrollRcNumber] = useState('');
+  const [rcPhoto, setRcPhoto] = useState(null);
+  
+  const [insurancePhoto, setInsurancePhoto] = useState(null);
+  const [pucPhoto, setPucPhoto] = useState(null);
+  
+  const [enrollAadharNumber, setEnrollAadharNumber] = useState('');
+  const [identityPhoto, setIdentityPhoto] = useState(null);
+  
+  // Step 5: Bank Details
+  const [bankAccountNumber, setBankAccountNumber] = useState('');
+  const [bankIfscCode, setBankIfscCode] = useState('');
+  const [bankHolderName, setBankHolderName] = useState('');
 
-  const [driverPhoto, setDriverPhoto] = useState(null);
-  const [vehiclePhoto, setVehiclePhoto] = useState(null);
-  const [activeCamera, setActiveCamera] = useState(null); // 'driver' or 'vehicle'
+  const [activeCamera, setActiveCamera] = useState(null); // 'driver', 'vehicle', 'insurance', 'puc', 'identity', 'license', 'rc'
   const videoRef = useRef(null);
   const streamRef = useRef(null);
 
@@ -160,7 +207,7 @@ export default function DriverApp({ isStandalone }) {
     setActiveCamera(null);
   };
 
-  const snapPhoto = (target) => {
+  const snapPhoto = async (target) => {
     if (videoRef.current) {
       const canvas = document.createElement('canvas');
       canvas.width = 320;
@@ -168,11 +215,18 @@ export default function DriverApp({ isStandalone }) {
       const ctx = canvas.getContext('2d');
       ctx.drawImage(videoRef.current, 0, 0, 320, 240);
       const dataUrl = canvas.toDataURL('image/jpeg');
-      if (target === 'driver') {
-        setDriverPhoto(dataUrl);
-      } else {
-        setVehiclePhoto(dataUrl);
-      }
+      
+      // Compress snapped image to reduce bandwidth payload
+      const compressedUrl = await compressImage(dataUrl, 600, 0.6);
+      
+      if (target === 'driver') setDriverPhoto(compressedUrl);
+      else if (target === 'vehicle') setVehiclePhoto(compressedUrl);
+      else if (target === 'insurance') setInsurancePhoto(compressedUrl);
+      else if (target === 'puc') setPucPhoto(compressedUrl);
+      else if (target === 'identity') setIdentityPhoto(compressedUrl);
+      else if (target === 'license') setLicensePhoto(compressedUrl);
+      else if (target === 'rc') setRcPhoto(compressedUrl);
+      
       stopCamera();
     }
   };
@@ -181,12 +235,17 @@ export default function DriverApp({ isStandalone }) {
     const file = e.target.files[0];
     if (file) {
       const reader = new FileReader();
-      reader.onload = (event) => {
-        if (target === 'driver') {
-          setDriverPhoto(event.target.result);
-        } else {
-          setVehiclePhoto(event.target.result);
-        }
+      reader.onload = async (event) => {
+        // Compress uploaded file image
+        const compressedUrl = await compressImage(event.target.result, 600, 0.6);
+        
+        if (target === 'driver') setDriverPhoto(compressedUrl);
+        else if (target === 'vehicle') setVehiclePhoto(compressedUrl);
+        else if (target === 'insurance') setInsurancePhoto(compressedUrl);
+        else if (target === 'puc') setPucPhoto(compressedUrl);
+        else if (target === 'identity') setIdentityPhoto(compressedUrl);
+        else if (target === 'license') setLicensePhoto(compressedUrl);
+        else if (target === 'rc') setRcPhoto(compressedUrl);
       };
       reader.readAsDataURL(file);
     }
@@ -222,31 +281,57 @@ export default function DriverApp({ isStandalone }) {
   };
 
   const handleEnrollSubmit = async (e) => {
-    e.preventDefault();
-    if (!enrollForm.name || !enrollForm.phone || !enrollForm.vehicleName || !enrollForm.vehicleNumber || !enrollForm.licenseNumber || !enrollForm.aadharNumber || !enrollForm.rcNumber) {
-      alert('Please fill out all enrollment fields.');
+    if (e) e.preventDefault();
+    if (!enrollName || !enrollPhone || !enrollVehicleName || !enrollVehicleNumber || !enrollLicenseNumber || !enrollAadharNumber || !enrollRcNumber) {
+      alert('Please complete all document and profile details first.');
       return;
     }
     const newDrv = await enrollDriver({
-      ...enrollForm,
+      name: enrollName,
+      phone: enrollPhone,
+      vehicleType: enrollVehicleType,
+      vehicleName: enrollVehicleName,
+      vehicleNumber: enrollVehicleNumber,
+      licenseNumber: enrollLicenseNumber,
+      aadharNumber: enrollAadharNumber,
+      rcNumber: enrollRcNumber,
       driverPhoto,
-      vehiclePhoto
+      vehiclePhoto: rcPhoto, // mapped to rcPhoto/vehiclePhoto representation
+      age: enrollAge,
+      city: enrollCity,
+      vehicleInsurancePhoto: insurancePhoto,
+      vehiclePucPhoto: pucPhoto,
+      identityCardPhoto: identityPhoto,
+      bankAccountNumber,
+      bankIfscCode,
+      bankHolderName
     });
     if (newDrv) {
       setSelectedDriverId(newDrv.id);
       setIsEnrolling(false);
+      setEnrollStep(1);
+      // Reset forms
+      setEnrollName('');
+      setEnrollPhone('');
+      setEnrollAge('');
+      setEnrollCity('Kolkata');
       setDriverPhoto(null);
-      setVehiclePhoto(null);
-      setEnrollForm({
-        name: '',
-        phone: '',
-        vehicleType: 'car_ac',
-        vehicleName: '',
-        vehicleNumber: '',
-        licenseNumber: '',
-        aadharNumber: '',
-        rcNumber: ''
-      });
+      setEnrollVehicleName('');
+      setEnrollVehicleNumber('');
+      setEnrollLicenseNumber('');
+      setLicensePhoto(null);
+      setEnrollRcNumber('');
+      setRcPhoto(null);
+      setInsurancePhoto(null);
+      setPucPhoto(null);
+      setEnrollAadharNumber('');
+      setIdentityPhoto(null);
+      setBankAccountNumber('');
+      setBankIfscCode('');
+      setBankHolderName('');
+      setOtpSent(false);
+      setEnrollOtp('');
+      setIsOtpVerified(false);
     }
   };
 
@@ -543,22 +628,7 @@ export default function DriverApp({ isStandalone }) {
     }
   }, [activeRide, currentDriver, selectedDriverId, showHeatmap, demandHotspots]);
 
-  // Handle doc upload form
-  const handleOnboardingSubmit = (e) => {
-    e.preventDefault();
-    if (!licenseInput || !aadharInput || !rcInput || !currentDriver) {
-      alert('Please fill out all document fields.');
-      return;
-    }
-    uploadDriverDocs(currentDriver.id, {
-      license: licenseInput,
-      aadhar: aadharInput,
-      rc: rcInput,
-    });
-    setLicenseInput('');
-    setAadharInput('');
-    setRcInput('');
-  };
+
 
   // Chat message send handler
   const handleSendChat = (e) => {
@@ -1116,67 +1186,59 @@ export default function DriverApp({ isStandalone }) {
         <RainOverlay weather={settings.weather} />
 
         {/* 1. Unverified Onboarding Portal */}
+        {/* 1. Unverified Onboarding Portal */}
         {currentDriver.verificationStatus !== 'verified' && (
-          <div className="app-screen-layout onboarding-screen">
-            <div className="onboarding-header text-center">
-              <AlertOctagon size={48} className="text-amber-500 mx-auto" />
-              <h3>Verification Required</h3>
-              <p>You must complete onboarding before you can receive ride alerts.</p>
+          <div className="app-screen-layout onboarding-screen" style={{ padding: '16px', display: 'flex', flexDirection: 'column', overflowY: 'auto', boxSizing: 'border-box' }}>
+            <div className="onboarding-header text-center mb-3">
+              <AlertOctagon size={40} className={currentDriver.verificationStatus === 'rejected' ? "text-red-500 mx-auto animate-bounce" : "text-amber-500 mx-auto animate-pulse"} />
+              <h3 className="text-sm font-bold text-white mt-1">
+                {currentDriver.verificationStatus === 'rejected' ? "Verification Rejected" : "Verification Pending"}
+              </h3>
+              <p className="text-[10px] text-gray-400 mt-0.5">
+                {currentDriver.verificationStatus === 'rejected' 
+                  ? "Some uploaded KYC document cards were rejected. Please review statuses below." 
+                  : "Your onboarding profile and snaps are under review."}
+              </p>
             </div>
 
-            {currentDriver.verificationStatus === 'pending' ? (
-              <div className="onboarding-card card-glow text-center">
-                <div className="verify-pending-pulse"></div>
-                <h4 className="mt-3 font-semibold text-yellow-400">Documents Under Review</h4>
-                <p className="text-sm mt-2 text-gray-300">
-                  Your Driving License, Aadhar Card, and Vehicle RC are currently being reviewed by JoldiGo Admin.
-                </p>
-                <div className="alert alert-warning mt-4 text-xs">
-                  💡 <b>Demo Tip:</b> Head over to the <b>Admin Panel</b> to verify this driver!
-                </div>
+            <div className="onboarding-card card-glow flex flex-col gap-2.5 p-3 rounded-lg border border-white/5 bg-black/40">
+              <span className="text-[9px] uppercase tracking-wider text-gray-400 font-extrabold block border-b border-white/5 pb-1">
+                KYC Document Statuses
+              </span>
+              
+              {/* Document rows */}
+              {[
+                { label: 'Driving License', key: 'dl' },
+                { label: 'Registration Certificate (RC)', key: 'rc' },
+                { label: 'Vehicle Insurance', key: 'insurance' },
+                { label: 'PUC Certificate', key: 'puc' },
+                { label: 'Aadhaar / PAN Card', key: 'identity' }
+              ].map(item => {
+                const status = (currentDriver.documentStatuses && currentDriver.documentStatuses[item.key]) || 'pending';
+                return (
+                  <div key={item.key} className="flex justify-between items-center bg-black/20 p-2 rounded border border-white/5">
+                    <span className="text-[10px] text-gray-300 font-medium">{item.label}</span>
+                    <span 
+                      className={`text-[8px] uppercase px-1.5 py-0.5 rounded font-extrabold ${
+                        status === 'verified' 
+                          ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
+                          : status === 'rejected'
+                          ? 'bg-red-500/20 text-red-400 border border-red-500/30'
+                          : 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 animate-pulse'
+                      }`}
+                    >
+                      {status === 'verified' && "✅ Verified"}
+                      {status === 'rejected' && "❌ Rejected"}
+                      {status === 'pending' && "⏳ Pending"}
+                    </span>
+                  </div>
+                );
+              })}
+
+              <div className="alert mt-2 p-2 bg-yellow-500/10 border border-yellow-500/20 text-[10px] rounded text-yellow-300">
+                💡 <b>Demo Admin Tip:</b> Go to the <b>Admin Panel</b>, select this simulated driver profile, and approve/reject individual documents to check state badge sync.
               </div>
-            ) : (
-              <form className="onboarding-form card-glow" onSubmit={handleOnboardingSubmit}>
-                <h4>Submit Partner Documents</h4>
-                
-                <div className="form-input-stacked mt-3">
-                  <label>Driving License No.</label>
-                  <input 
-                    type="text" 
-                    placeholder="e.g. DL-14201800" 
-                    value={licenseInput}
-                    onChange={(e) => setLicenseInput(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div className="form-input-stacked mt-2">
-                  <label>Aadhar Card No. (12 Digit)</label>
-                  <input 
-                    type="text" 
-                    placeholder="e.g. 5421 8892 0123" 
-                    value={aadharInput}
-                    onChange={(e) => setAadharInput(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div className="form-input-stacked mt-2">
-                  <label>Vehicle RC Certificate Number</label>
-                  <input 
-                    type="text" 
-                    placeholder="e.g. RC-WB02A8842" 
-                    value={rcInput}
-                    onChange={(e) => setRcInput(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <button type="submit" className="btn-primary full-width mt-4">
-                  <Upload size={16} /> Submit Documents
-                </button>
-              </form>
-            )}
+            </div>
           </div>
         )}
 
