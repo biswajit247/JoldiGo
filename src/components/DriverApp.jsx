@@ -81,7 +81,8 @@ export default function DriverApp({ isStandalone }) {
     callDuration,
     initiateCall,
     acceptCall,
-    endCall
+    endCall,
+    enrollDriver
   } = useSimulator();
 
   const speakText = (text, langCode) => {
