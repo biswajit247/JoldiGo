@@ -874,6 +874,23 @@ export default function DriverApp({ isStandalone }) {
   };
 
   if (isEnrolling) {
+    const stepsCount = 5;
+    
+    // Check if the current step can advance (form validation)
+    const isStepValid = () => {
+      if (enrollStep === 1) return isOtpVerified;
+      if (enrollStep === 2) return enrollName.trim() !== '' && enrollAge.trim() !== '' && driverPhoto !== null;
+      if (enrollStep === 3) return enrollVehicleName.trim() !== '' && enrollVehicleNumber.trim() !== '';
+      if (enrollStep === 4) {
+        return enrollLicenseNumber.trim() !== '' && licensePhoto !== null &&
+               enrollRcNumber.trim() !== '' && rcPhoto !== null &&
+               insurancePhoto !== null && pucPhoto !== null &&
+               enrollAadharNumber.trim() !== '' && identityPhoto !== null;
+      }
+      if (enrollStep === 5) return bankAccountNumber.trim() !== '' && bankIfscCode.trim() !== '' && bankHolderName.trim() !== '';
+      return true;
+    };
+
     return (
       <div className="mobile-phone-frame driver-theme" style={{ position: 'relative' }}>
         {!isStandalone && <div className="phone-notch"></div>}
@@ -887,129 +904,186 @@ export default function DriverApp({ isStandalone }) {
         </div>
 
         <div className="phone-screen-content app-screen-layout onboarding-screen" style={{ overflowY: 'auto', padding: '16px', boxSizing: 'border-box', height: 'calc(100% - 60px)', display: 'flex', flexDirection: 'column' }}>
-          <div className="onboarding-header text-center mt-2 mb-4">
-            <UserCheck size={36} className="text-yellow-400 mx-auto" />
-            <h3 className="text-base font-bold text-white mt-1.5">Driver Partner Enrollment</h3>
-            <p className="text-[10px] text-gray-400 mt-0.5">Submit details to join Jaldi Go</p>
-          </div>
-
-          <form className="onboarding-form card-glow flex flex-col gap-3" onSubmit={handleEnrollSubmit} style={{ padding: '12px', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '8px', backgroundColor: 'rgba(0,0,0,0.2)' }}>
-            <div className="flex flex-col gap-1">
-              <label className="text-[9px] uppercase tracking-wider text-gray-400 font-extrabold">Full Name</label>
-              <input 
-                type="text" 
-                placeholder="e.g. Subir Ganguly"
-                value={enrollForm.name}
-                onChange={e => setEnrollForm(prev => ({ ...prev, name: e.target.value }))}
-                style={{ backgroundColor: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', padding: '6px', fontSize: '11px', color: '#fff', outline: 'none' }}
-                required
-              />
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <label className="text-[9px] uppercase tracking-wider text-gray-400 font-extrabold">Phone Number</label>
-              <input 
-                type="text" 
-                placeholder="e.g. +91 98765 43210"
-                value={enrollForm.phone}
-                onChange={e => setEnrollForm(prev => ({ ...prev, phone: e.target.value }))}
-                style={{ backgroundColor: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', padding: '6px', fontSize: '11px', color: '#fff', outline: 'none' }}
-                required
-              />
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <label className="text-[9px] uppercase tracking-wider text-gray-400 font-extrabold">Vehicle Type</label>
-              <select 
-                value={enrollForm.vehicleType}
-                onChange={e => setEnrollForm(prev => ({ ...prev, vehicleType: e.target.value }))}
-                style={{ backgroundColor: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', padding: '6px', fontSize: '11px', color: '#fff', outline: 'none', cursor: 'pointer' }}
-              >
-                <option value="car_ac">Car (Air Conditioned)</option>
-                <option value="car_non_ac">Car (Non-AC)</option>
-                <option value="bike">Motorcycle / Bike</option>
-              </select>
-            </div>
-
-            <div className="flex gap-2">
-              <div className="flex flex-col gap-1 flex-1">
-                <label className="text-[9px] uppercase tracking-wider text-gray-400 font-extrabold">Vehicle Model</label>
-                <input 
-                  type="text" 
-                  placeholder="e.g. Maruti WagonR"
-                  value={enrollForm.vehicleName}
-                  onChange={e => setEnrollForm(prev => ({ ...prev, vehicleName: e.target.value }))}
-                  style={{ backgroundColor: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', padding: '6px', fontSize: '11px', color: '#fff', outline: 'none', width: '100%', boxSizing: 'border-box' }}
-                  required
-                />
+          
+          {/* Top Progress Wizard */}
+          {enrollStep <= 5 && (
+            <div className="mb-4">
+              <div className="flex justify-between items-center text-[9px] uppercase tracking-wider text-gray-400 font-extrabold mb-1.5">
+                <span>Step {enrollStep} of {stepsCount}</span>
+                <span className="text-yellow-400">
+                  {enrollStep === 1 && "OTP VERIFICATION"}
+                  {enrollStep === 2 && "BASIC PROFILE"}
+                  {enrollStep === 3 && "VEHICLE DETAILS"}
+                  {enrollStep === 4 && "KYC UPLOADS"}
+                  {enrollStep === 5 && "PAYOUT BANK DETAILS"}
+                </span>
               </div>
-              <div className="flex flex-col gap-1 flex-1">
-                <label className="text-[9px] uppercase tracking-wider text-gray-400 font-extrabold">Vehicle Plate No.</label>
-                <input 
-                  type="text" 
-                  placeholder="e.g. WB-02-AB-1234"
-                  value={enrollForm.vehicleNumber}
-                  onChange={e => setEnrollForm(prev => ({ ...prev, vehicleNumber: e.target.value }))}
-                  style={{ backgroundColor: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', padding: '6px', fontSize: '11px', color: '#fff', outline: 'none', width: '100%', boxSizing: 'border-box' }}
-                  required
-                />
+              <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden flex gap-0.5">
+                {Array.from({ length: stepsCount }).map((_, idx) => (
+                  <div 
+                    key={idx} 
+                    className="h-full flex-1 transition-all duration-300"
+                    style={{
+                      backgroundColor: idx + 1 <= enrollStep ? '#ffdd00' : 'rgba(255,255,255,0.08)'
+                    }}
+                  />
+                ))}
               </div>
             </div>
+          )}
 
-            <div className="border-t border-white/5 my-1 pt-2 flex flex-col gap-2.5">
-              <div className="flex flex-col gap-1">
-                <label className="text-[9px] uppercase tracking-wider text-gray-400 font-extrabold">Driving License (DL)</label>
-                <input 
-                  type="text" 
-                  placeholder="e.g. DL-WESTBENGAL-9932"
-                  value={enrollForm.licenseNumber}
-                  onChange={e => setEnrollForm(prev => ({ ...prev, licenseNumber: e.target.value }))}
-                  style={{ backgroundColor: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', padding: '6px', fontSize: '11px', color: '#fff', outline: 'none' }}
-                  required
-                />
+          {/* STEP 1: MOBILE OTP VERIFICATION */}
+          {enrollStep === 1 && (
+            <div className="flex flex-col gap-3 flex-1 justify-center py-4">
+              <div className="text-center mb-2">
+                <Phone size={32} className="text-yellow-400 mx-auto animate-bounce" />
+                <h4 className="text-sm font-bold mt-2 text-white">Verify Mobile Number</h4>
+                <p className="text-[10px] text-gray-400 mt-1">Enter your mobile number to get a security verification code</p>
               </div>
 
               <div className="flex flex-col gap-1">
-                <label className="text-[9px] uppercase tracking-wider text-gray-400 font-extrabold">Aadhar Card Number</label>
+                <label className="text-[9px] uppercase tracking-wider text-gray-400 font-extrabold">Phone Number</label>
                 <input 
-                  type="text" 
-                  placeholder="e.g. 5566 7788 9900"
-                  value={enrollForm.aadharNumber}
-                  onChange={e => setEnrollForm(prev => ({ ...prev, aadharNumber: e.target.value }))}
-                  style={{ backgroundColor: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', padding: '6px', fontSize: '11px', color: '#fff', outline: 'none' }}
-                  required
+                  type="tel"
+                  placeholder="e.g. +91 82501 74875"
+                  value={enrollPhone}
+                  disabled={otpSent}
+                  onChange={e => setEnrollPhone(e.target.value)}
+                  style={{ backgroundColor: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', padding: '8px', fontSize: '11px', color: '#fff', outline: 'none' }}
                 />
               </div>
 
-              <div className="flex flex-col gap-1">
-                <label className="text-[9px] uppercase tracking-wider text-gray-400 font-extrabold">Vehicle RC Number</label>
-                <input 
-                  type="text" 
-                  placeholder="e.g. RC-WB02AB1234"
-                  value={enrollForm.rcNumber}
-                  onChange={e => setEnrollForm(prev => ({ ...prev, rcNumber: e.target.value }))}
-                  style={{ backgroundColor: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', padding: '6px', fontSize: '11px', color: '#fff', outline: 'none' }}
-                  required
-                />
-              </div>
-            </div>
+              {!otpSent ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (enrollPhone.trim() === '') {
+                      alert('Please enter phone number.');
+                      return;
+                    }
+                    setOtpSent(true);
+                  }}
+                  style={{ backgroundColor: '#ffdd00', border: 'none', color: '#000', fontWeight: 'bold', padding: '8px', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', textTransform: 'uppercase' }}
+                >
+                  Send OTP Code
+                </button>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  <div className="flex flex-col gap-1">
+                    <div className="flex justify-between items-center">
+                      <label className="text-[9px] uppercase tracking-wider text-gray-400 font-extrabold">6-Digit Verification Code</label>
+                      <span className="text-[9px] text-yellow-400 font-bold">Hint: 123456</span>
+                    </div>
+                    <input 
+                      type="text"
+                      maxLength={6}
+                      placeholder="Enter 6-digit OTP"
+                      value={enrollOtp}
+                      onChange={e => setEnrollOtp(e.target.value)}
+                      style={{ backgroundColor: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', padding: '8px', fontSize: '11px', color: '#fff', outline: 'none', letterSpacing: '4px', textAlign: 'center' }}
+                    />
+                  </div>
 
-            <div className="border-t border-white/5 my-1 pt-2.5 flex flex-col gap-2.5">
-              <label className="text-[10px] uppercase tracking-wider text-yellow-400 font-extrabold block">Live Enrollment Photos</label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (enrollOtp === '123456') {
+                        setIsOtpVerified(true);
+                        setEnrollStep(2);
+                      } else {
+                        alert('Invalid OTP code. Please enter 123456.');
+                      }
+                    }}
+                    style={{ backgroundColor: '#ffdd00', border: 'none', color: '#000', fontWeight: 'bold', padding: '8px', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', textTransform: 'uppercase' }}
+                  >
+                    Verify OTP & Proceed
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOtpSent(false);
+                      setEnrollOtp('');
+                    }}
+                    className="text-[10px] text-gray-500 hover:text-white bg-transparent border-none cursor-pointer"
+                  >
+                    Change Phone Number
+                  </button>
+                </div>
+              )}
               
-              <div className="flex flex-col gap-1 p-2 bg-black/40 border border-white/10 rounded">
+              <button 
+                type="button"
+                onClick={() => setIsEnrolling(false)}
+                className="text-[10px] text-gray-500 hover:text-white bg-transparent border-none cursor-pointer mt-4"
+              >
+                Cancel Registration
+              </button>
+            </div>
+          )}
+
+          {/* STEP 2: BASIC PROFILE */}
+          {enrollStep === 2 && (
+            <div className="flex flex-col gap-3 flex-grow">
+              <div className="text-center mb-1">
+                <UserCheck size={32} className="text-yellow-400 mx-auto" />
+                <h4 className="text-sm font-bold mt-1 text-white">Basic Profile Info</h4>
+                <p className="text-[10px] text-gray-400">Fill in your basic information and take a selfie</p>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-[9px] uppercase tracking-wider text-gray-400 font-extrabold">Full Name</label>
+                <input 
+                  type="text"
+                  placeholder="e.g. Subir Ganguly"
+                  value={enrollName}
+                  onChange={e => setEnrollName(e.target.value)}
+                  style={{ backgroundColor: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', padding: '6px', fontSize: '11px', color: '#fff', outline: 'none' }}
+                />
+              </div>
+
+              <div className="flex gap-2">
+                <div className="flex flex-col gap-1 flex-1">
+                  <label className="text-[9px] uppercase tracking-wider text-gray-400 font-extrabold">Age</label>
+                  <input 
+                    type="number"
+                    placeholder="e.g. 29"
+                    value={enrollAge}
+                    onChange={e => setEnrollAge(e.target.value)}
+                    style={{ backgroundColor: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', padding: '6px', fontSize: '11px', color: '#fff', outline: 'none' }}
+                  />
+                </div>
+                <div className="flex flex-col gap-1 flex-1">
+                  <label className="text-[9px] uppercase tracking-wider text-gray-400 font-extrabold">City</label>
+                  <select 
+                    value={enrollCity}
+                    onChange={e => setEnrollCity(e.target.value)}
+                    style={{ backgroundColor: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', padding: '6px', fontSize: '11px', color: '#fff', outline: 'none', cursor: 'pointer' }}
+                  >
+                    <option value="Kolkata">Kolkata</option>
+                    <option value="Howrah">Howrah</option>
+                    <option value="Salt Lake">Salt Lake</option>
+                    <option value="Rajarhat">Rajarhat</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Profile Photo Selfie snap */}
+              <div className="flex flex-col gap-1 p-2 bg-black/40 border border-white/5 rounded">
                 <label className="text-[9px] uppercase tracking-wider text-gray-400 font-extrabold flex justify-between">
-                  <span>Driver Selfie</span>
-                  <span className="text-yellow-400 font-bold">{driverPhoto ? '✅ Captured' : '⚠️ Required'}</span>
+                  <span>Profile Photo Selfie</span>
+                  <span className={driverPhoto ? "text-green-400" : "text-yellow-400"}>
+                    {driverPhoto ? "✅ Captured" : "⚠️ Selfie Required"}
+                  </span>
                 </label>
-                
+
                 {driverPhoto ? (
-                  <div className="relative w-full h-24 rounded overflow-hidden bg-black/80 flex items-center justify-center">
-                    <img src={driverPhoto} alt="Driver Selfie" className="w-full h-full object-contain" />
+                  <div className="relative w-full h-28 rounded overflow-hidden bg-black/80 flex items-center justify-center">
+                    <img src={driverPhoto} alt="Selfie" className="w-full h-full object-contain" />
                     <button 
                       type="button" 
                       onClick={() => setDriverPhoto(null)}
-                      className="absolute top-1 right-1 bg-red-600 hover:bg-red-700 text-white border-none rounded px-2 py-0.5 text-[8px] font-extrabold cursor-pointer"
+                      className="absolute top-1 right-1 bg-red-600 text-white border-none rounded px-2 py-0.5 text-[8px] font-extrabold cursor-pointer"
                     >
                       Retake
                     </button>
@@ -1018,14 +1092,14 @@ export default function DriverApp({ isStandalone }) {
                   <div className="flex flex-col gap-1.5">
                     <div className="flex gap-2">
                       <button 
-                        type="button" 
+                        type="button"
                         onClick={() => startCamera('driver')}
-                        className="flex-1 bg-yellow-400/20 hover:bg-yellow-400/30 text-yellow-400 border border-yellow-400/30 rounded py-1 text-[9px] font-bold cursor-pointer transition-all"
+                        className="flex-1 bg-yellow-400/20 text-yellow-400 border border-yellow-400/30 rounded py-1 text-[9px] font-bold cursor-pointer"
                       >
-                        📷 Webcam
+                        📷 Webcam snap
                       </button>
-                      <label className="flex-1 bg-white/10 hover:bg-white/15 text-white border border-white/10 rounded py-1 text-[9px] font-bold cursor-pointer text-center transition-all">
-                        📤 Upload File
+                      <label className="flex-1 bg-white/10 text-white border border-white/10 rounded py-1 text-[9px] font-bold cursor-pointer text-center">
+                        📤 Upload file
                         <input 
                           type="file" 
                           accept="image/*" 
@@ -1039,63 +1113,353 @@ export default function DriverApp({ isStandalone }) {
                 )}
               </div>
 
-              <div className="flex flex-col gap-1 p-2 bg-black/40 border border-white/10 rounded">
-                <label className="text-[9px] uppercase tracking-wider text-gray-400 font-extrabold flex justify-between">
-                  <span>Vehicle Picture</span>
-                  <span className="text-yellow-400 font-bold">{vehiclePhoto ? '✅ Captured' : '⚠️ Required'}</span>
-                </label>
-                
-                {vehiclePhoto ? (
-                  <div className="relative w-full h-24 rounded overflow-hidden bg-black/80 flex items-center justify-center">
-                    <img src={vehiclePhoto} alt="Vehicle Snap" className="w-full h-full object-contain" />
-                    <button 
-                      type="button" 
-                      onClick={() => setVehiclePhoto(null)}
-                      className="absolute top-1 right-1 bg-red-600 hover:bg-red-700 text-white border-none rounded px-2 py-0.5 text-[8px] font-extrabold cursor-pointer"
-                    >
-                      Retake
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex flex-col gap-1.5">
-                    <div className="flex gap-2">
-                      <button 
-                        type="button" 
-                        onClick={() => startCamera('vehicle')}
-                        className="flex-1 bg-yellow-400/20 hover:bg-yellow-400/30 text-yellow-400 border border-yellow-400/30 rounded py-1 text-[9px] font-bold cursor-pointer transition-all"
-                      >
-                        📷 Webcam
-                      </button>
-                      <label className="flex-1 bg-white/10 hover:bg-white/15 text-white border border-white/10 rounded py-1 text-[9px] font-bold cursor-pointer text-center transition-all">
-                        📤 Upload File
-                        <input 
-                          type="file" 
-                          accept="image/*" 
-                          onChange={(e) => handlePhotoUpload(e, 'vehicle')} 
-                          style={{ display: 'none' }}
-                        />
-                      </label>
-                    </div>
-                    {activeCamera === 'vehicle' && renderCameraView('vehicle')}
-                  </div>
-                )}
+              <div className="mt-auto pt-3 flex gap-2">
+                <button 
+                  type="button"
+                  onClick={() => setEnrollStep(1)}
+                  style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: 'none', color: '#fff', padding: '8px', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', flex: 1 }}
+                >
+                  Back
+                </button>
+                <button 
+                  type="button"
+                  disabled={!isStepValid()}
+                  onClick={() => setEnrollStep(3)}
+                  style={{
+                    backgroundColor: isStepValid() ? '#ffdd00' : 'rgba(255,255,255,0.05)',
+                    color: isStepValid() ? '#000' : '#555',
+                    border: 'none',
+                    fontWeight: 'bold',
+                    padding: '8px',
+                    borderRadius: '4px',
+                    cursor: isStepValid() ? 'pointer' : 'not-allowed',
+                    fontSize: '11px',
+                    flex: 1
+                  }}
+                >
+                  Continue
+                </button>
               </div>
             </div>
+          )}
 
-            <button 
-              type="submit"
-              style={{ backgroundColor: '#ffdd00', border: 'none', color: '#000', fontWeight: 'bold', padding: '8px', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: '4px' }}
-            >
-              Enroll Driver Partner
-            </button>
-            <button 
-              type="button"
-              onClick={() => setIsEnrolling(false)}
-              style={{ backgroundColor: 'transparent', border: 'none', color: '#888', fontWeight: 'bold', padding: '4px', cursor: 'pointer', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}
-            >
-              Cancel
-            </button>
-          </form>
+          {/* STEP 3: VEHICLE SELECTION */}
+          {enrollStep === 3 && (
+            <div className="flex flex-col gap-3 flex-grow">
+              <div className="text-center mb-1">
+                <ShieldAlert size={32} className="text-yellow-400 mx-auto" />
+                <h4 className="text-sm font-bold mt-1 text-white">Vehicle Selection</h4>
+                <p className="text-[10px] text-gray-400">Select your ride category and input vehicle plate</p>
+              </div>
+
+              {/* Toggles */}
+              <div className="flex gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setEnrollVehicleType('bike')}
+                  style={{
+                    flex: 1,
+                    padding: '12px 8px',
+                    border: enrollVehicleType === 'bike' ? '2px solid #ffdd00' : '1px solid rgba(255,255,255,0.08)',
+                    backgroundColor: enrollVehicleType === 'bike' ? 'rgba(255,221,0,0.06)' : 'rgba(0,0,0,0.3)',
+                    borderRadius: '8px',
+                    color: '#fff',
+                    textAlign: 'center',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <span className="text-xl block mb-1">🏍️</span>
+                  <span className="text-[10px] font-bold block">Bike Taxi</span>
+                  <span className="text-[8px] text-gray-400 block mt-0.5">Two-Wheeler</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEnrollVehicleType('auto')}
+                  style={{
+                    flex: 1,
+                    padding: '12px 8px',
+                    border: enrollVehicleType === 'auto' ? '2px solid #ffdd00' : '1px solid rgba(255,255,255,0.08)',
+                    backgroundColor: enrollVehicleType === 'auto' ? 'rgba(255,221,0,0.06)' : 'rgba(0,0,0,0.3)',
+                    borderRadius: '8px',
+                    color: '#fff',
+                    textAlign: 'center',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <span className="text-xl block mb-1">🛺</span>
+                  <span className="text-[10px] font-bold block">Auto Rickshaw</span>
+                  <span className="text-[8px] text-gray-400 block mt-0.5">Three-Wheeler</span>
+                </button>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-[9px] uppercase tracking-wider text-gray-400 font-extrabold">Vehicle Model</label>
+                <input 
+                  type="text"
+                  placeholder="e.g. Bajaj RE / TVS Sport"
+                  value={enrollVehicleName}
+                  onChange={e => setEnrollVehicleName(e.target.value)}
+                  style={{ backgroundColor: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', padding: '6px', fontSize: '11px', color: '#fff', outline: 'none' }}
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-[9px] uppercase tracking-wider text-gray-400 font-extrabold">Vehicle Plate Number</label>
+                <input 
+                  type="text"
+                  placeholder="e.g. WB-20-AJ-2865"
+                  value={enrollVehicleNumber}
+                  onChange={e => setEnrollVehicleNumber(e.target.value)}
+                  style={{ backgroundColor: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', padding: '6px', fontSize: '11px', color: '#fff', outline: 'none' }}
+                />
+              </div>
+
+              <div className="mt-auto pt-3 flex gap-2">
+                <button 
+                  type="button"
+                  onClick={() => setEnrollStep(2)}
+                  style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: 'none', color: '#fff', padding: '8px', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', flex: 1 }}
+                >
+                  Back
+                </button>
+                <button 
+                  type="button"
+                  disabled={!isStepValid()}
+                  onClick={() => setEnrollStep(4)}
+                  style={{
+                    backgroundColor: isStepValid() ? '#ffdd00' : 'rgba(255,255,255,0.05)',
+                    color: isStepValid() ? '#000' : '#555',
+                    border: 'none',
+                    fontWeight: 'bold',
+                    padding: '8px',
+                    borderRadius: '4px',
+                    cursor: isStepValid() ? 'pointer' : 'not-allowed',
+                    fontSize: '11px',
+                    flex: 1
+                  }}
+                >
+                  Continue
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 4: DOCUMENT KYC UPLOADS */}
+          {enrollStep === 4 && (
+            <div className="flex flex-col gap-3 flex-grow">
+              <div className="text-center mb-1">
+                <Upload size={32} className="text-yellow-400 mx-auto" />
+                <h4 className="text-sm font-bold mt-1 text-white">KYC Document Uploads</h4>
+                <p className="text-[10px] text-gray-400">All 5 documents are required to initiate verification</p>
+              </div>
+
+              <div className="flex flex-col gap-2.5 max-h-[320px] overflow-y-auto pr-1" style={{ overflowY: 'auto' }}>
+                
+                {/* 1. Driving License Card */}
+                <div className="p-2 bg-black/40 border border-white/5 rounded flex flex-col gap-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] font-bold text-white">1. Driving License (DL)</span>
+                    <span className="text-[8px] text-yellow-400 font-bold">{licensePhoto ? "✅ Uploaded" : "❌ Missing"}</span>
+                  </div>
+                  <input 
+                    type="text" 
+                    placeholder="Enter DL Card Number"
+                    value={enrollLicenseNumber}
+                    onChange={e => setEnrollLicenseNumber(e.target.value)}
+                    style={{ backgroundColor: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', padding: '4px 6px', fontSize: '10px', color: '#fff', outline: 'none' }}
+                  />
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => startCamera('license')} className="flex-1 py-1 bg-yellow-400/20 text-yellow-400 border border-yellow-400/20 rounded text-[9px] cursor-pointer">📷 Snap</button>
+                    <label className="flex-1 py-1 bg-white/10 text-white border border-white/10 rounded text-[9px] cursor-pointer text-center">
+                      📤 Upload
+                      <input type="file" accept="image/*" onChange={e => handlePhotoUpload(e, 'license')} style={{ display: 'none' }} />
+                    </label>
+                  </div>
+                  {activeCamera === 'license' && renderCameraView('license')}
+                </div>
+
+                {/* 2. Registration Certificate Card */}
+                <div className="p-2 bg-black/40 border border-white/5 rounded flex flex-col gap-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] font-bold text-white">2. Vehicle RC Book</span>
+                    <span className="text-[8px] text-yellow-400 font-bold">{rcPhoto ? "✅ Uploaded" : "❌ Missing"}</span>
+                  </div>
+                  <input 
+                    type="text" 
+                    placeholder="Enter Vehicle RC Number"
+                    value={enrollRcNumber}
+                    onChange={e => setEnrollRcNumber(e.target.value)}
+                    style={{ backgroundColor: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', padding: '4px 6px', fontSize: '10px', color: '#fff', outline: 'none' }}
+                  />
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => startCamera('rc')} className="flex-1 py-1 bg-yellow-400/20 text-yellow-400 border border-yellow-400/20 rounded text-[9px] cursor-pointer">📷 Snap</button>
+                    <label className="flex-1 py-1 bg-white/10 text-white border border-white/10 rounded text-[9px] cursor-pointer text-center">
+                      📤 Upload
+                      <input type="file" accept="image/*" onChange={e => handlePhotoUpload(e, 'rc')} style={{ display: 'none' }} />
+                    </label>
+                  </div>
+                  {activeCamera === 'rc' && renderCameraView('rc')}
+                </div>
+
+                {/* 3. Vehicle Insurance Card */}
+                <div className="p-2 bg-black/40 border border-white/5 rounded flex flex-col gap-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] font-bold text-white">3. Vehicle Insurance Cover</span>
+                    <span className="text-[8px] text-yellow-400 font-bold">{insurancePhoto ? "✅ Uploaded" : "❌ Missing"}</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => startCamera('insurance')} className="flex-1 py-1 bg-yellow-400/20 text-yellow-400 border border-yellow-400/20 rounded text-[9px] cursor-pointer">📷 Snap</button>
+                    <label className="flex-1 py-1 bg-white/10 text-white border border-white/10 rounded text-[9px] cursor-pointer text-center">
+                      📤 Upload
+                      <input type="file" accept="image/*" onChange={e => handlePhotoUpload(e, 'insurance')} style={{ display: 'none' }} />
+                    </label>
+                  </div>
+                  {activeCamera === 'insurance' && renderCameraView('insurance')}
+                </div>
+
+                {/* 4. PUC Certificate Card */}
+                <div className="p-2 bg-black/40 border border-white/5 rounded flex flex-col gap-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] font-bold text-white">4. Pollution Under Control (PUC)</span>
+                    <span className="text-[8px] text-yellow-400 font-bold">{pucPhoto ? "✅ Uploaded" : "❌ Missing"}</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => startCamera('puc')} className="flex-1 py-1 bg-yellow-400/20 text-yellow-400 border border-yellow-400/20 rounded text-[9px] cursor-pointer">📷 Snap</button>
+                    <label className="flex-1 py-1 bg-white/10 text-white border border-white/10 rounded text-[9px] cursor-pointer text-center">
+                      📤 Upload
+                      <input type="file" accept="image/*" onChange={e => handlePhotoUpload(e, 'puc')} style={{ display: 'none' }} />
+                    </label>
+                  </div>
+                  {activeCamera === 'puc' && renderCameraView('puc')}
+                </div>
+
+                {/* 5. PAN / Aadhaar Card */}
+                <div className="p-2 bg-black/40 border border-white/5 rounded flex flex-col gap-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] font-bold text-white">5. National ID (Aadhaar/PAN)</span>
+                    <span className="text-[8px] text-yellow-400 font-bold">{identityPhoto ? "✅ Uploaded" : "❌ Missing"}</span>
+                  </div>
+                  <input 
+                    type="text" 
+                    placeholder="Enter 12-digit Aadhaar Number"
+                    value={enrollAadharNumber}
+                    onChange={e => setEnrollAadharNumber(e.target.value)}
+                    style={{ backgroundColor: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', padding: '4px 6px', fontSize: '10px', color: '#fff', outline: 'none' }}
+                  />
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => startCamera('identity')} className="flex-1 py-1 bg-yellow-400/20 text-yellow-400 border border-yellow-400/20 rounded text-[9px] cursor-pointer">📷 Snap</button>
+                    <label className="flex-1 py-1 bg-white/10 text-white border border-white/10 rounded text-[9px] cursor-pointer text-center">
+                      📤 Upload
+                      <input type="file" accept="image/*" onChange={e => handlePhotoUpload(e, 'identity')} style={{ display: 'none' }} />
+                    </label>
+                  </div>
+                  {activeCamera === 'identity' && renderCameraView('identity')}
+                </div>
+
+              </div>
+
+              <div className="mt-auto pt-3 flex gap-2">
+                <button 
+                  type="button"
+                  onClick={() => setEnrollStep(3)}
+                  style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: 'none', color: '#fff', padding: '8px', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', flex: 1 }}
+                >
+                  Back
+                </button>
+                <button 
+                  type="button"
+                  disabled={!isStepValid()}
+                  onClick={() => setEnrollStep(5)}
+                  style={{
+                    backgroundColor: isStepValid() ? '#ffdd00' : 'rgba(255,255,255,0.05)',
+                    color: isStepValid() ? '#000' : '#555',
+                    border: 'none',
+                    fontWeight: 'bold',
+                    padding: '8px',
+                    borderRadius: '4px',
+                    cursor: isStepValid() ? 'pointer' : 'not-allowed',
+                    fontSize: '11px',
+                    flex: 1
+                  }}
+                >
+                  Continue
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 5: BANK DETAILS */}
+          {enrollStep === 5 && (
+            <div className="flex flex-col gap-3 flex-grow">
+              <div className="text-center mb-1">
+                <Coins size={32} className="text-yellow-400 mx-auto" />
+                <h4 className="text-sm font-bold mt-1 text-white">Payout Bank Details</h4>
+                <p className="text-[10px] text-gray-400">Provide bank credentials to receive Captain payouts</p>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-[9px] uppercase tracking-wider text-gray-400 font-extrabold">Account Holder Name</label>
+                <input 
+                  type="text"
+                  placeholder="e.g. Subir Ganguly"
+                  value={bankHolderName}
+                  onChange={e => setBankHolderName(e.target.value)}
+                  style={{ backgroundColor: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', padding: '6px', fontSize: '11px', color: '#fff', outline: 'none' }}
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-[9px] uppercase tracking-wider text-gray-400 font-extrabold">Account Number</label>
+                <input 
+                  type="text"
+                  placeholder="e.g. 100344558832"
+                  value={bankAccountNumber}
+                  onChange={e => setBankAccountNumber(e.target.value)}
+                  style={{ backgroundColor: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', padding: '6px', fontSize: '11px', color: '#fff', outline: 'none' }}
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-[9px] uppercase tracking-wider text-gray-400 font-extrabold">Bank IFSC Code</label>
+                <input 
+                  type="text"
+                  placeholder="e.g. SBIN0003010"
+                  value={bankIfscCode}
+                  onChange={e => setBankIfscCode(e.target.value)}
+                  style={{ backgroundColor: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', padding: '6px', fontSize: '11px', color: '#fff', outline: 'none' }}
+                />
+              </div>
+
+              <div className="mt-auto pt-3 flex gap-2">
+                <button 
+                  type="button"
+                  onClick={() => setEnrollStep(4)}
+                  style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: 'none', color: '#fff', padding: '8px', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', flex: 1 }}
+                >
+                  Back
+                </button>
+                <button 
+                  type="button"
+                  disabled={!isStepValid()}
+                  onClick={() => handleEnrollSubmit()}
+                  style={{
+                    backgroundColor: isStepValid() ? '#ffdd00' : 'rgba(255,255,255,0.05)',
+                    color: isStepValid() ? '#000' : '#555',
+                    border: 'none',
+                    fontWeight: 'bold',
+                    padding: '8px',
+                    borderRadius: '4px',
+                    cursor: isStepValid() ? 'pointer' : 'not-allowed',
+                    fontSize: '11px',
+                    flex: 1
+                  }}
+                >
+                  Submit Profile
+                </button>
+              </div>
+            </div>
+          )}
+
         </div>
         <div className="phone-home-bar"></div>
       </div>
