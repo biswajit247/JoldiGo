@@ -614,95 +614,34 @@ export default function DriverApp({ isStandalone }) {
         {currentDriver.verificationStatus === 'verified' && (
           <div className="app-screen-layout relative flex flex-col justify-between">
             
-            <div className="driver-app-header card-glow">
-              <div className="driver-identity">
-                <span className="drv-avatar-mini">{currentDriver.avatar}</span>
-                <div className="drv-text-block">
-                  <span className="drv-name-mini">{currentDriver.name}</span>
-                  <span className="drv-vehicle-mini">{currentDriver.vehicleNumber}</span>
+            {!isNavActive && (
+              <div className="driver-app-header card-glow">
+                <div className="driver-identity">
+                  <span className="drv-avatar-mini">{currentDriver.avatar}</span>
+                  <div className="drv-text-block">
+                    <span className="drv-name-mini">{currentDriver.name}</span>
+                    <span className="drv-vehicle-mini">{currentDriver.vehicleNumber}</span>
+                  </div>
+                </div>
+
+                <div className="online-switch-row">
+                  <span className={`status-pill ${currentDriver.status === 'online' ? 'online' : 'offline'}`}>
+                    {currentDriver.status.toUpperCase()}
+                  </span>
+                  <button 
+                    className="btn-status-toggle"
+                    onClick={() => toggleDriverStatus(currentDriver.id)}
+                    title="Toggle Status"
+                  >
+                    <Power size={18} color={currentDriver.status === 'online' ? '#00ff66' : '#999'} />
+                  </button>
                 </div>
               </div>
-
-              <div className="online-switch-row">
-                <span className={`status-pill ${currentDriver.status === 'online' ? 'online' : 'offline'}`}>
-                  {currentDriver.status.toUpperCase()}
-                </span>
-                <button 
-                  className="btn-status-toggle"
-                  onClick={() => toggleDriverStatus(currentDriver.id)}
-                  title="Toggle Status"
-                >
-                  <Power size={18} color={currentDriver.status === 'online' ? '#00ff66' : '#999'} />
-                </button>
-              </div>
-            </div>
+            )}
 
             {tab === 'dashboard' && (
               <div style={{ position: 'relative', flex: 1, minHeight: '0', display: 'flex', flexDirection: 'column' }}>
                 <div ref={mapContainerRef} className="map-view-container driver-map"></div>
-                
-                <div style={{ position: 'absolute', top: '8px', right: '8px', zIndex: 999, display: 'flex', gap: '4px' }}>
-                  <button
-                    onClick={() => setMapStyle('dark_navigation')}
-                    style={{
-                      padding: '3px 6px',
-                      fontSize: '8px',
-                      fontWeight: 'extrabold',
-                      borderRadius: '4px',
-                      backgroundColor: mapStyle === 'dark_navigation' ? '#ffdd00' : 'rgba(0,0,0,0.6)',
-                      color: mapStyle === 'dark_navigation' ? '#000' : '#fff',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    ⚡ Ola/Uber Dark
-                  </button>
-                  <button
-                    onClick={() => setMapStyle('google_roadmap')}
-                    style={{
-                      padding: '3px 6px',
-                      fontSize: '8px',
-                      fontWeight: 'extrabold',
-                      borderRadius: '4px',
-                      backgroundColor: mapStyle === 'google_roadmap' ? '#ffdd00' : 'rgba(0,0,0,0.6)',
-                      color: mapStyle === 'google_roadmap' ? '#000' : '#fff',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    🗺️ Google Roadmap
-                  </button>
-                  <button
-                    onClick={() => setMapStyle('google_satellite')}
-                    style={{
-                      padding: '3px 6px',
-                      fontSize: '8px',
-                      fontWeight: 'extrabold',
-                      borderRadius: '4px',
-                      backgroundColor: mapStyle === 'google_satellite' ? '#ffdd00' : 'rgba(0,0,0,0.6)',
-                      color: mapStyle === 'google_satellite' ? '#000' : '#fff',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    🛰️ Google Sat
-                  </button>
-                  <button
-                    onClick={() => setMapStyle('voyager')}
-                    style={{
-                      padding: '3px 6px',
-                      fontSize: '8px',
-                      fontWeight: 'extrabold',
-                      borderRadius: '4px',
-                      backgroundColor: mapStyle === 'voyager' ? '#ffdd00' : 'rgba(0,0,0,0.6)',
-                      color: mapStyle === 'voyager' ? '#000' : '#fff',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    🎨 Classic
-                  </button>
-                </div>
 
                 {/* GOOGLE MAPS NAVIGATION TOP HUD BAR */}
                 {isNavActive && (
