@@ -108,6 +108,21 @@ export default function DriverApp({ isStandalone }) {
   // Chat Panel State
   const [showChat, setShowChat] = useState(false);
   const [chatInputText, setChatInputText] = useState('');
+  const [simulatedSpeed, setSimulatedSpeed] = useState(0);
+
+  const isNavActive = activeRide && activeRide.driverId === selectedDriverId && (activeRide.status === 'accepted' || activeRide.status === 'arrived' || activeRide.status === 'in_progress');
+
+  useEffect(() => {
+    if (!isNavActive || activeRide?.status === 'arrived') {
+      setSimulatedSpeed(0);
+      return;
+    }
+    setSimulatedSpeed(Math.floor(35 + Math.random() * 10));
+    const interval = setInterval(() => {
+      setSimulatedSpeed(Math.floor(38 + Math.random() * 12));
+    }, 1500);
+    return () => clearInterval(interval);
+  }, [isNavActive, activeRide?.status]);
   const chatEndRef = useRef(null);
 
   // Safety Pool Claim forms UI
@@ -645,6 +660,205 @@ export default function DriverApp({ isStandalone }) {
                   <span>🔥</span>
                   {showHeatmap ? 'Heatmap: ON' : 'Heatmap: OFF'}
                 </button>
+
+                {/* GOOGLE MAPS NAVIGATION TOP HUD BAR */}
+                {isNavActive && (
+                  <div 
+                    style={{
+                      position: 'absolute',
+                      top: '12px',
+                      left: '12px',
+                      right: '12px',
+                      zIndex: 999,
+                      backgroundColor: '#005043',
+                      borderRadius: '12px',
+                      padding: '12px',
+                      boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
+                      color: '#fff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                      fontFamily: 'Outfit, sans-serif'
+                    }}
+                    className="animate-slide-down"
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
+                      <div 
+                        style={{
+                          width: '36px',
+                          height: '36px',
+                          borderRadius: '50%',
+                          backgroundColor: 'rgba(255,255,255,0.1)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                      >
+                        {activeRide.status === 'accepted' && (
+                          <span style={{ fontSize: '24px', fontWeight: 'bold' }}>↑</span>
+                        )}
+                        {activeRide.status === 'arrived' && (
+                          <span style={{ fontSize: '24px', fontWeight: 'bold' }}>⟳</span>
+                        )}
+                        {activeRide.status === 'in_progress' && (
+                          <span style={{ fontSize: '24px', fontWeight: 'bold' }}>↱</span>
+                        )}
+                      </div>
+                      
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
+                        <span style={{ fontSize: '13px', fontWeight: '800', letterSpacing: '-0.3px', color: '#fff' }}>
+                          {activeRide.status === 'accepted' && 'Head northwest toward pickup'}
+                          {activeRide.status === 'arrived' && 'Awaiting passenger boarding'}
+                          {activeRide.status === 'in_progress' && 'Proceed to destination'}
+                        </span>
+                        <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.7)', fontWeight: '500' }}>
+                          {activeRide.status === 'accepted' && 'Then ↱ Arrive at target location'}
+                          {activeRide.status === 'arrived' && 'Confirm customer coordinates'}
+                          {activeRide.status === 'in_progress' && 'Then ↱ Complete ride session'}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <button 
+                      style={{
+                        width: '30px',
+                        height: '30px',
+                        borderRadius: '50%',
+                        backgroundColor: 'rgba(255,255,255,0.15)',
+                        border: 'none',
+                        color: '#fff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer'
+                      }}
+                      title="Google Voice Input"
+                    >
+                      🎙️
+                    </button>
+                  </div>
+                )}
+
+                {/* GOOGLE MAPS NAVIGATION BOTTOM SPEEDOMETER (BOTTOM LEFT) */}
+                {isNavActive && (
+                  <div 
+                    style={{
+                      position: 'absolute',
+                      bottom: '80px',
+                      left: '12px',
+                      zIndex: 999,
+                      width: '46px',
+                      height: '46px',
+                      borderRadius: '50%',
+                      backgroundColor: '#ffffff',
+                      color: '#000000',
+                      border: '2px solid rgba(0,0,0,0.1)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                      fontFamily: 'Outfit, sans-serif'
+                    }}
+                    className="animate-scale-in"
+                  >
+                    <span style={{ fontSize: '14px', fontWeight: '800', lineHeight: '1' }}>{simulatedSpeed}</span>
+                    <span style={{ fontSize: '7px', fontWeight: 'bold', color: '#666', transform: 'scale(0.85)' }}>km/h</span>
+                  </div>
+                )}
+
+                {/* GOOGLE MAPS FLOATING CONTROLS (BOTTOM RIGHT) */}
+                {isNavActive && (
+                  <div 
+                    style={{
+                      position: 'absolute',
+                      bottom: '80px',
+                      right: '12px',
+                      zIndex: 999,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'end',
+                      gap: '8px',
+                      fontFamily: 'Outfit, sans-serif'
+                    }}
+                    className="animate-fade-in"
+                  >
+                    {/* Compass Needle */}
+                    <div 
+                      style={{
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '50%',
+                        backgroundColor: '#ffffff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                        border: '1px solid rgba(0,0,0,0.08)',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      🧭
+                    </div>
+
+                    {/* Search */}
+                    <div 
+                      style={{
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '50%',
+                        backgroundColor: '#ffffff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                        border: '1px solid rgba(0,0,0,0.08)',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      🔍
+                    </div>
+
+                    {/* Speaker */}
+                    <div 
+                      style={{
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '50%',
+                        backgroundColor: '#ffffff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                        border: '1px solid rgba(0,0,0,0.08)',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      🔊
+                    </div>
+
+                    {/* Report Button */}
+                    <div 
+                      style={{
+                        padding: '4px 10px',
+                        borderRadius: '20px',
+                        backgroundColor: '#ffffff',
+                        color: '#000',
+                        fontSize: '8px',
+                        fontWeight: 'bold',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '3px',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                        border: '1px solid rgba(0,0,0,0.08)',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <span style={{ color: '#d97706', fontSize: '9px' }}>⚠️</span>
+                      Report
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -729,65 +943,162 @@ export default function DriverApp({ isStandalone }) {
             )}
 
             {/* Bottom Overlay: Dashboard / Earnings tabs */}
-            <div className="driver-bottom-overlay card-glow">
+            <div 
+              className="driver-bottom-overlay card-glow"
+              style={isNavActive ? {
+                backgroundColor: '#ffffff',
+                color: '#000000',
+                borderTopLeftRadius: '16px',
+                borderTopRightRadius: '16px',
+                borderTop: '1px solid rgba(0,0,0,0.1)',
+                padding: '16px',
+                boxShadow: '0 -4px 16px rgba(0,0,0,0.15)',
+                bottom: '0px'
+              } : {}}
+            >
               {activeRide && activeRide.driverId === currentDriver.id ? (
                 // Active Job Flow UI
                 <div className="active-job-details relative">
-                  <div className="flex justify-between items-center">
-                    <div className="job-stage-pill flex-1 mr-2">
-                      <Navigation size={12} className="nav-arrow-animated" />
-                      <span className="truncate max-w-[150px]">{getNavText()}</span>
+                  {isNavActive ? (
+                    <div style={{ fontFamily: 'Outfit, sans-serif' }}>
+                      <div className="flex justify-between items-center mb-2">
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <span style={{ fontSize: '18px', fontWeight: '800', color: '#16a34a', lineHeight: '1.2', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            {activeRide.status === 'accepted' ? '4 min' : '8 min'}
+                            <span style={{ fontSize: '12px' }}>🌱</span>
+                          </span>
+                          <span style={{ fontSize: '10px', color: '#555', fontWeight: '600' }}>
+                            {activeRide.status === 'accepted' ? '1.5 km' : '4.2 km'} • {new Date(Date.now() + (activeRide.status === 'accepted' ? 4 : 8)*60000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                          </span>
+                        </div>
+
+                        {/* Control buttons (Chat, Call) */}
+                        <div className="flex gap-2">
+                          <button 
+                            className={`circle-btn-phone relative`} 
+                            onClick={() => setShowChat(!showChat)}
+                            style={{
+                              backgroundColor: showChat ? '#005043' : 'rgba(0,0,0,0.05)',
+                              color: showChat ? '#fff' : '#000',
+                              border: '1px solid rgba(0,0,0,0.1)',
+                              width: '32px',
+                              height: '32px',
+                              borderRadius: '50%',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            <MessageSquare size={13} />
+                            {hasUnreadMessages && (
+                              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full border border-white animate-pulse"></span>
+                            )}
+                          </button>
+                          
+                          <a 
+                            href={`tel:+919830000000`} 
+                            style={{
+                              backgroundColor: 'rgba(0,0,0,0.05)',
+                              color: '#000',
+                              border: '1px solid rgba(0,0,0,0.1)',
+                              width: '32px',
+                              height: '32px',
+                              borderRadius: '50%',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
+                          >
+                            <Phone size={13} />
+                          </a>
+                        </div>
+                      </div>
+
+                      {/* Nav Text Details */}
+                      <div style={{ fontSize: '10px', color: '#444', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }} className="mb-2">
+                        <span>📍</span>
+                        <span className="truncate max-w-[210px]">{getNavText()}</span>
+                      </div>
+
+                      {/* Action buttons */}
+                      {activeRide.status === 'accepted' && (
+                        <div style={{ backgroundColor: 'rgba(22,163,74,0.08)', color: '#16a34a', border: '1px solid rgba(22,163,74,0.2)', borderRadius: '8px', padding: '6px', fontSize: '10px', fontWeight: 'bold', textAlign: 'center' }}>
+                          🚘 Driving towards passenger pickup (Active)
+                        </div>
+                      )}
+
+                      {activeRide.status === 'arrived' && (
+                        <button className="btn-primary full-width text-xs py-2 font-bold cursor-pointer" onClick={startRide} style={{ backgroundColor: '#16a34a', color: '#fff', border: 'none' }}>
+                          Passenger Boarded - Start Ride
+                        </button>
+                      )}
+
+                      {activeRide.status === 'in_progress' && (
+                        <div style={{ backgroundColor: 'rgba(22,163,74,0.08)', color: '#16a34a', border: '1px solid rgba(22,163,74,0.2)', borderRadius: '8px', padding: '6px', fontSize: '10px', fontWeight: 'bold', textAlign: 'center' }}>
+                          🛣️ Navigating to drop-off point (Active)
+                        </div>
+                      )}
                     </div>
+                  ) : (
+                    <>
+                      <div className="flex justify-between items-center">
+                        <div className="job-stage-pill flex-1 mr-2">
+                          <Navigation size={12} className="nav-arrow-animated" />
+                          <span className="truncate max-w-[150px]">{getNavText()}</span>
+                        </div>
 
-                    {/* DRIVER CHAT TRIGGER WITH NOTIFICATION BADGES */}
-                    <div className="flex gap-2">
-                      <button 
-                        className={`circle-btn-phone relative ${showChat ? 'bg-amber-500 text-black' : 'bg-black/50 text-white border border-white/10'}`} 
-                        onClick={() => setShowChat(!showChat)}
-                        title="Bilingual Chat"
-                      >
-                        <MessageSquare size={14} />
-                        {hasUnreadMessages && (
-                          <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border border-[#0c0e12] animate-pulse"></span>
-                        )}
-                      </button>
+                        {/* DRIVER CHAT TRIGGER WITH NOTIFICATION BADGES */}
+                        <div className="flex gap-2">
+                          <button 
+                            className={`circle-btn-phone relative ${showChat ? 'bg-amber-500 text-black' : 'bg-black/50 text-white border border-white/10'}`} 
+                            onClick={() => setShowChat(!showChat)}
+                            title="Bilingual Chat"
+                          >
+                            <MessageSquare size={14} />
+                            {hasUnreadMessages && (
+                              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border border-[#0c0e12] animate-pulse"></span>
+                            )}
+                          </button>
 
-                      <a href={`tel:+919830000000`} className="circle-btn-phone">
-                        <Phone size={14} />
-                      </a>
-                    </div>
-                  </div>
+                          <a href={`tel:+919830000000`} className="circle-btn-phone">
+                            <Phone size={14} />
+                          </a>
+                        </div>
+                      </div>
 
-                  <div className="job-passenger-card mt-3">
-                    <div className="pass-avatar">P</div>
-                    <div className="pass-info">
-                      <span className="pass-name">Passenger ({activeRide.paymentMethod.toUpperCase()})</span>
-                      <span className="pass-trip-meta">{activeRide.distance} km • Net Share: ₹{activeRide.takeHome}</span>
-                    </div>
-                  </div>
+                      <div className="job-passenger-card mt-3">
+                        <div className="pass-avatar">P</div>
+                        <div className="pass-info">
+                          <span className="pass-name">Passenger ({activeRide.paymentMethod.toUpperCase()})</span>
+                          <span className="pass-trip-meta">{activeRide.distance} km • Net Share: ₹{activeRide.takeHome}</span>
+                        </div>
+                      </div>
 
-                  {activeRide.status === 'accepted' && (
-                    <div className="alert alert-success mt-2 text-xs py-1.5 text-center text-green-400">
-                      🚘 Driving towards pickup coordinates (Animated)
-                    </div>
-                  )}
+                      {activeRide.status === 'accepted' && (
+                        <div className="alert alert-success mt-2 text-xs py-1.5 text-center text-green-400">
+                          🚘 Driving towards pickup coordinates (Animated)
+                        </div>
+                      )}
 
-                  {activeRide.status === 'arrived' && (
-                    <button className="btn-primary full-width mt-3 text-xs py-2" onClick={startRide}>
-                      Passenger Boarded - Start Ride
-                    </button>
-                  )}
+                      {activeRide.status === 'arrived' && (
+                        <button className="btn-primary full-width mt-3 text-xs py-2" onClick={startRide}>
+                          Passenger Boarded - Start Ride
+                        </button>
+                      )}
 
-                  {activeRide.status === 'in_progress' && (
-                    <div className="alert alert-success mt-2 text-xs py-1.5 text-center text-green-400">
-                      🛣️ Driving to drop-off destination (Animated)
-                    </div>
-                  )}
+                      {activeRide.status === 'in_progress' && (
+                        <div className="alert alert-success mt-2 text-xs py-1.5 text-center text-green-400">
+                          🛣️ Driving to drop-off destination (Animated)
+                        </div>
+                      )}
 
-                  {activeRide.status === 'completed' && (
-                    <div className="completed-waiting-payout mt-3 py-1.5 text-center text-yellow-400 text-xs font-medium">
-                      ⌛ Awaiting payment split authorization...
-                    </div>
+                      {activeRide.status === 'completed' && (
+                        <div className="completed-waiting-payout mt-3 py-1.5 text-center text-yellow-400 text-xs font-medium">
+                          ⌛ Awaiting payment split authorization...
+                        </div>
+                      )}
+                    </>
                   )}
 
                   {/* DRIVER BILINGUAL SLIDE CHAT DRAWER */}
