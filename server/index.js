@@ -54,6 +54,8 @@ const loadPersistedSettings = async () => {
     await query("ALTER TABLE drivers ADD COLUMN IF NOT EXISTS vehicles TEXT DEFAULT '[]'");
     await query("ALTER TABLE drivers ADD COLUMN IF NOT EXISTS subscription_tier VARCHAR(50) DEFAULT 'free'");
     await query("ALTER TABLE drivers ADD COLUMN IF NOT EXISTS subscription_expires_at TIMESTAMP DEFAULT NULL");
+    await query("ALTER TABLE drivers ADD COLUMN IF NOT EXISTS driver_photo TEXT DEFAULT NULL");
+    await query("ALTER TABLE drivers ADD COLUMN IF NOT EXISTS vehicle_photo TEXT DEFAULT NULL");
 
     const res = await query("SELECT * FROM system_settings");
     res.rows.forEach(row => {
@@ -380,7 +382,9 @@ app.get('/api/drivers', async (req, res) => {
       earnings: { daily: parseFloat(drv.earnings_daily), weekly: parseFloat(drv.earnings_weekly), commission: parseFloat(drv.commission_owed) },
       vehicles: JSON.parse(drv.vehicles || '[]'),
       subscriptionTier: drv.subscription_tier || 'free',
-      subscriptionExpiresAt: drv.subscription_expires_at
+      subscriptionExpiresAt: drv.subscription_expires_at,
+      driverPhoto: drv.driver_photo || null,
+      vehiclePhoto: drv.vehicle_photo || null
     }));
     res.json({ success: true, drivers: formattedDrivers });
   } catch (err) {
@@ -543,7 +547,7 @@ app.get('/api/driver/history', async (req, res) => {
 
 // Enroll a brand new real driver
 app.post('/api/driver/enroll', async (req, res) => {
-  const { name, phone, vehicleType, vehicleName, vehicleNumber, licenseNumber, aadharNumber, rcNumber } = req.body;
+  const { name, phone, vehicleType, vehicleName, vehicleNumber, licenseNumber, aadharNumber, rcNumber, driverPhoto, vehiclePhoto } = req.body;
   if (!name || !phone || !vehicleType || !vehicleName || !vehicleNumber || !licenseNumber || !aadharNumber || !rcNumber) {
     return res.status(400).json({ success: false, error: 'All fields are required.' });
   }
@@ -559,9 +563,9 @@ app.post('/api/driver/enroll', async (req, res) => {
       `INSERT INTO drivers (
         id, name, phone, vehicle_type, vehicle_name, vehicle_number, 
         status, verification_status, rating, location_lat, location_lng, 
-        license_number, aadhar_number, rc_number
-      ) VALUES ($1, $2, $3, $4, $5, $6, 'offline', 'pending', 5.00, 22.5600, 88.3600, $7, $8, $9)`,
-      [newDriverId, name, phone, vehicleType, vehicleName, vehicleNumber, licenseNumber, aadharNumber, rcNumber]
+        license_number, aadhar_number, rc_number, driver_photo, vehicle_photo
+      ) VALUES ($1, $2, $3, $4, $5, $6, 'offline', 'pending', 5.00, 22.5600, 88.3600, $7, $8, $9, $10, $11)`,
+      [newDriverId, name, phone, vehicleType, vehicleName, vehicleNumber, licenseNumber, aadharNumber, rcNumber, driverPhoto, vehiclePhoto]
     );
 
     // Fetch and format updated drivers list
@@ -581,7 +585,9 @@ app.post('/api/driver/enroll', async (req, res) => {
       aadharNumber: d.aadhar_number,
       rcNumber: d.rc_number,
       earnings: { daily: parseFloat(d.earnings_daily), weekly: parseFloat(d.earnings_weekly) },
-      commissionOwed: parseFloat(d.commission_owed)
+      commissionOwed: parseFloat(d.commission_owed),
+      driverPhoto: d.driver_photo || null,
+      vehiclePhoto: d.vehicle_photo || null
     }));
     
     // Broadcast updated driver records array to all active maps/admin views
@@ -1780,7 +1786,9 @@ const broadcastDriversUpdate = async () => {
       earnings: { daily: parseFloat(drv.earnings_daily || 0), weekly: parseFloat(drv.earnings_weekly || 0), commission: parseFloat(drv.commission_owed || 0) },
       vehicles: JSON.parse(drv.vehicles || '[]'),
       subscriptionTier: drv.subscription_tier || 'free',
-      subscriptionExpiresAt: drv.subscription_expires_at
+      subscriptionExpiresAt: drv.subscription_expires_at,
+      driverPhoto: drv.driver_photo || null,
+      vehiclePhoto: drv.vehicle_photo || null
     }));
 
     broadcastToAll({ type: 'drivers_updated', drivers: formattedDrivers });

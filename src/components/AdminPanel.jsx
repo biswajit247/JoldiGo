@@ -1211,10 +1211,50 @@ export default function AdminPanel() {
                         >
                           📄 Vehicle RC
                         </button>
+                        <button 
+                          className={`px-3 py-1 font-bold rounded-t-lg transition-all ${
+                            selectedDocTab === 'driver_photo' 
+                              ? 'bg-yellow-600/20 text-yellow-400 border-b-2 border-yellow-500' 
+                              : 'text-gray-400 hover:text-white hover:bg-white/5'
+                          }`}
+                          onClick={() => setSelectedDocTab('driver_photo')}
+                        >
+                          👤 Driver Selfie
+                        </button>
+                        <button 
+                          className={`px-3 py-1 font-bold rounded-t-lg transition-all ${
+                            selectedDocTab === 'vehicle_photo' 
+                              ? 'bg-cyan-600/20 text-cyan-400 border-b-2 border-cyan-500' 
+                              : 'text-gray-400 hover:text-white hover:bg-white/5'
+                          }`}
+                          onClick={() => setSelectedDocTab('vehicle_photo')}
+                        >
+                          🚗 Vehicle Photo
+                        </button>
                       </div>
 
                       {/* Mock Scan Display Box */}
                       <div className="flex justify-center mb-4 p-2 bg-black/40 rounded-xl border border-white/5">
+                        {selectedDocTab === 'driver_photo' && (
+                          <div className="w-full max-w-[320px] rounded-xl overflow-hidden border border-white/10 bg-black/80 flex flex-col items-center justify-center p-2" style={{ aspectRatio: '1.586' }}>
+                            {selectedDriverForDoc.driverPhoto ? (
+                              <img src={selectedDriverForDoc.driverPhoto} alt="Driver Live Selfie" className="w-full h-full object-contain rounded-lg" />
+                            ) : (
+                              <div className="text-xs text-gray-500 py-8">⚠️ No Live Photo Submitted (Default Avatar Used)</div>
+                            )}
+                          </div>
+                        )}
+
+                        {selectedDocTab === 'vehicle_photo' && (
+                          <div className="w-full max-w-[320px] rounded-xl overflow-hidden border border-white/10 bg-black/80 flex flex-col items-center justify-center p-2" style={{ aspectRatio: '1.586' }}>
+                            {selectedDriverForDoc.vehiclePhoto ? (
+                              <img src={selectedDriverForDoc.vehiclePhoto} alt="Vehicle Status" className="w-full h-full object-contain rounded-lg" />
+                            ) : (
+                              <div className="text-xs text-gray-500 py-8">⚠️ No Vehicle Photo Submitted</div>
+                            )}
+                          </div>
+                        )}
+
                         {selectedDocTab === 'license' && (
                           <div className="w-full max-w-[320px] p-4 rounded-xl relative overflow-hidden" style={{
                             background: 'linear-gradient(135deg, #1e293b, #0f172a)',

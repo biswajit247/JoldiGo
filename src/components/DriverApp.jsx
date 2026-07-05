@@ -126,16 +126,117 @@ export default function DriverApp({ isStandalone }) {
     rcNumber: ''
   });
 
+  const [driverPhoto, setDriverPhoto] = useState(null);
+  const [vehiclePhoto, setVehiclePhoto] = useState(null);
+  const [activeCamera, setActiveCamera] = useState(null); // 'driver' or 'vehicle'
+  const videoRef = useRef(null);
+  const streamRef = useRef(null);
+
+  const startCamera = async (target) => {
+    setActiveCamera(target);
+    try {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(t => t.stop());
+      }
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 320, height: 240 } });
+      streamRef.current = stream;
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+      }, 100);
+    } catch (err) {
+      console.error("Camera access failed:", err);
+      alert("Webcam access failed or blocked. Please upload a file instead.");
+      setActiveCamera(null);
+    }
+  };
+
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => t.stop());
+      streamRef.current = null;
+    }
+    setActiveCamera(null);
+  };
+
+  const snapPhoto = (target) => {
+    if (videoRef.current) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 320;
+      canvas.height = 240;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(videoRef.current, 0, 0, 320, 240);
+      const dataUrl = canvas.toDataURL('image/jpeg');
+      if (target === 'driver') {
+        setDriverPhoto(dataUrl);
+      } else {
+        setVehiclePhoto(dataUrl);
+      }
+      stopCamera();
+    }
+  };
+
+  const handlePhotoUpload = (e, target) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (target === 'driver') {
+          setDriverPhoto(event.target.result);
+        } else {
+          setVehiclePhoto(event.target.result);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const renderCameraView = (target) => {
+    return (
+      <div className="relative mt-2 rounded overflow-hidden bg-black/90 border border-white/10" style={{ width: '100%', height: '180px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+        <video 
+          ref={videoRef} 
+          autoPlay 
+          playsInline 
+          style={{ width: '100%', height: '140px', objectFit: 'cover', transform: 'scaleX(-1)' }}
+        />
+        <div style={{ display: 'flex', gap: '8px', padding: '6px 0', width: '100%', justifyContent: 'center', backgroundColor: '#0d1117' }}>
+          <button 
+            type="button" 
+            onClick={() => snapPhoto(target)}
+            style={{ backgroundColor: '#ffdd00', border: 'none', color: '#000', fontWeight: 'bold', padding: '4px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '9px' }}
+          >
+            Snap Photo
+          </button>
+          <button 
+            type="button" 
+            onClick={stopCamera}
+            style={{ backgroundColor: '#e53e3e', border: 'none', color: '#fff', fontWeight: 'bold', padding: '4px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '9px' }}
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   const handleEnrollSubmit = async (e) => {
     e.preventDefault();
     if (!enrollForm.name || !enrollForm.phone || !enrollForm.vehicleName || !enrollForm.vehicleNumber || !enrollForm.licenseNumber || !enrollForm.aadharNumber || !enrollForm.rcNumber) {
       alert('Please fill out all enrollment fields.');
       return;
     }
-    const newDrv = await enrollDriver(enrollForm);
+    const newDrv = await enrollDriver({
+      ...enrollForm,
+      driverPhoto,
+      vehiclePhoto
+    });
     if (newDrv) {
       setSelectedDriverId(newDrv.id);
       setIsEnrolling(false);
+      setDriverPhoto(null);
+      setVehiclePhoto(null);
       setEnrollForm({
         name: '',
         phone: '',
@@ -820,6 +921,94 @@ export default function DriverApp({ isStandalone }) {
                   style={{ backgroundColor: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', padding: '6px', fontSize: '11px', color: '#fff', outline: 'none' }}
                   required
                 />
+              </div>
+            </div>
+
+            <div className="border-t border-white/5 my-1 pt-2.5 flex flex-col gap-2.5">
+              <label className="text-[10px] uppercase tracking-wider text-yellow-400 font-extrabold block">Live Enrollment Photos</label>
+              
+              <div className="flex flex-col gap-1 p-2 bg-black/40 border border-white/10 rounded">
+                <label className="text-[9px] uppercase tracking-wider text-gray-400 font-extrabold flex justify-between">
+                  <span>Driver Selfie</span>
+                  <span className="text-yellow-400 font-bold">{driverPhoto ? '✅ Captured' : '⚠️ Required'}</span>
+                </label>
+                
+                {driverPhoto ? (
+                  <div className="relative w-full h-24 rounded overflow-hidden bg-black/80 flex items-center justify-center">
+                    <img src={driverPhoto} alt="Driver Selfie" className="w-full h-full object-contain" />
+                    <button 
+                      type="button" 
+                      onClick={() => setDriverPhoto(null)}
+                      className="absolute top-1 right-1 bg-red-600 hover:bg-red-700 text-white border-none rounded px-2 py-0.5 text-[8px] font-extrabold cursor-pointer"
+                    >
+                      Retake
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-1.5">
+                    <div className="flex gap-2">
+                      <button 
+                        type="button" 
+                        onClick={() => startCamera('driver')}
+                        className="flex-1 bg-yellow-400/20 hover:bg-yellow-400/30 text-yellow-400 border border-yellow-400/30 rounded py-1 text-[9px] font-bold cursor-pointer transition-all"
+                      >
+                        📷 Webcam
+                      </button>
+                      <label className="flex-1 bg-white/10 hover:bg-white/15 text-white border border-white/10 rounded py-1 text-[9px] font-bold cursor-pointer text-center transition-all">
+                        📤 Upload File
+                        <input 
+                          type="file" 
+                          accept="image/*" 
+                          onChange={(e) => handlePhotoUpload(e, 'driver')} 
+                          style={{ display: 'none' }}
+                        />
+                      </label>
+                    </div>
+                    {activeCamera === 'driver' && renderCameraView('driver')}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex flex-col gap-1 p-2 bg-black/40 border border-white/10 rounded">
+                <label className="text-[9px] uppercase tracking-wider text-gray-400 font-extrabold flex justify-between">
+                  <span>Vehicle Picture</span>
+                  <span className="text-yellow-400 font-bold">{vehiclePhoto ? '✅ Captured' : '⚠️ Required'}</span>
+                </label>
+                
+                {vehiclePhoto ? (
+                  <div className="relative w-full h-24 rounded overflow-hidden bg-black/80 flex items-center justify-center">
+                    <img src={vehiclePhoto} alt="Vehicle Snap" className="w-full h-full object-contain" />
+                    <button 
+                      type="button" 
+                      onClick={() => setVehiclePhoto(null)}
+                      className="absolute top-1 right-1 bg-red-600 hover:bg-red-700 text-white border-none rounded px-2 py-0.5 text-[8px] font-extrabold cursor-pointer"
+                    >
+                      Retake
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-1.5">
+                    <div className="flex gap-2">
+                      <button 
+                        type="button" 
+                        onClick={() => startCamera('vehicle')}
+                        className="flex-1 bg-yellow-400/20 hover:bg-yellow-400/30 text-yellow-400 border border-yellow-400/30 rounded py-1 text-[9px] font-bold cursor-pointer transition-all"
+                      >
+                        📷 Webcam
+                      </button>
+                      <label className="flex-1 bg-white/10 hover:bg-white/15 text-white border border-white/10 rounded py-1 text-[9px] font-bold cursor-pointer text-center transition-all">
+                        📤 Upload File
+                        <input 
+                          type="file" 
+                          accept="image/*" 
+                          onChange={(e) => handlePhotoUpload(e, 'vehicle')} 
+                          style={{ display: 'none' }}
+                        />
+                      </label>
+                    </div>
+                    {activeCamera === 'vehicle' && renderCameraView('vehicle')}
+                  </div>
+                )}
               </div>
             </div>
 
