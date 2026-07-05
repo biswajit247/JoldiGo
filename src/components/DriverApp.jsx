@@ -135,7 +135,7 @@ export default function DriverApp({ isStandalone }) {
   const [loadingHistory, setLoadingHistory] = useState(false);
 
   // Heatmap Toggle State
-  const [showHeatmap, setShowHeatmap] = useState(false);
+  const [showHeatmap, setShowHeatmap] = useState(true);
 
   // Driver Subscription states
   const [subTier, setSubTier] = useState('free');
@@ -481,27 +481,44 @@ export default function DriverApp({ isStandalone }) {
   }
 
   return (
-    <div className="mobile-phone-frame driver-theme">
-      {!isStandalone && <div className="phone-notch"></div>}
-      
-      {!isStandalone && (
-        <div className="phone-status-bar">
-          <span className="phone-time">08:18</span>
-          <div className="phone-icons">
-            <span className="signal">📶</span>
-            <span className="battery">🔋 87%</span>
-          </div>
-        </div>
-      )}
-
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', width: '100%', minHeight: '0' }}>
       {/* Simulator Switcher Controls (hidden in standalone native mode) */}
       {!isStandalone && (
-        <div className="driver-simulator-picker">
-          <label>Simulate Driver:</label>
-          <select value={selectedDriverId} onChange={(e) => {
-            setSelectedDriverId(e.target.value);
-            setTab('dashboard');
-          }}>
+        <div 
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            width: '100%',
+            maxWidth: '320px',
+            backgroundColor: '#11141a',
+            border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: '8px',
+            padding: '6px 12px',
+            fontSize: '11px',
+            color: '#a0aec0',
+            marginBottom: '8px',
+            zIndex: 10
+          }}
+        >
+          <span style={{ fontWeight: 'bold' }}>👤 Simulate Driver Profile:</span>
+          <select 
+            value={selectedDriverId} 
+            onChange={(e) => {
+              setSelectedDriverId(e.target.value);
+              setTab('dashboard');
+            }}
+            style={{
+              backgroundColor: 'rgba(0, 0, 0, 0.4)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              color: '#fff',
+              padding: '2px 6px',
+              borderRadius: '4px',
+              outline: 'none',
+              cursor: 'pointer',
+              fontSize: '11px'
+            }}
+          >
             {drivers.map((d) => (
               <option key={d.id} value={d.id}>
                 {d.name} ({getVehicleLabel(d.vehicleType)} - {d.verificationStatus})
@@ -511,7 +528,20 @@ export default function DriverApp({ isStandalone }) {
         </div>
       )}
 
-      <div className="phone-screen-content">
+      <div className="mobile-phone-frame driver-theme" style={{ flex: 1, minHeight: '0', height: 'auto' }}>
+        {!isStandalone && <div className="phone-notch"></div>}
+        
+        {!isStandalone && (
+          <div className="phone-status-bar">
+            <span className="phone-time">08:18</span>
+            <div className="phone-icons">
+              <span className="signal">📶</span>
+              <span className="battery">🔋 87%</span>
+            </div>
+          </div>
+        )}
+
+        <div className="phone-screen-content">
         <RainOverlay weather={settings.weather} />
 
         {/* 1. Unverified Onboarding Portal */}
@@ -672,32 +702,6 @@ export default function DriverApp({ isStandalone }) {
                     🎨 Classic
                   </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setShowHeatmap(!showHeatmap)}
-                  style={{
-                    position: 'absolute',
-                    bottom: '12px',
-                    left: '12px',
-                    zIndex: 1000,
-                    backgroundColor: showHeatmap ? 'rgba(239, 68, 68, 0.9)' : 'rgba(17, 24, 39, 0.9)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    color: '#fff',
-                    borderRadius: '6px',
-                    padding: '5px 8px',
-                    fontSize: '9px',
-                    fontWeight: 'bold',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
-                    transition: 'all 0.2s'
-                  }}
-                >
-                  <span>🔥</span>
-                  {showHeatmap ? 'Heatmap: ON' : 'Heatmap: OFF'}
-                </button>
 
                 {/* GOOGLE MAPS NAVIGATION TOP HUD BAR */}
                 {isNavActive && (
@@ -1719,5 +1723,6 @@ export default function DriverApp({ isStandalone }) {
 
       <div className="phone-home-bar"></div>
     </div>
+  </div>
   );
 }
