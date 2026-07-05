@@ -1306,6 +1306,37 @@ export const SimulatorProvider = ({ children }) => {
     }
   };
 
+  const addCustomHotspot = async (lat, lng, weight = 0.8) => {
+    try {
+      const { api } = getServerEndpoints();
+      await fetch(`${api}/api/admin/demand/hotspots`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hotspot: { lat, lng, weight } })
+      });
+      const hotspotsRes = await fetch(`${api}/api/admin/demand/hotspots`);
+      const hotspotsData = await hotspotsRes.json();
+      if (hotspotsData.success) {
+        setDemandHotspots(hotspotsData.hotspots);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const resetSimulator = async () => {
+    try {
+      const { api } = getServerEndpoints();
+      await fetch(`${api}/api/admin/reset`, { method: 'POST' });
+      fetchInitialData();
+      setPassengerWalletBalance(500.00);
+      setSmsLogs([]);
+      setSimulationSpeed(400);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const fileSafetyClaim = async (driverId, claimType, amount, description) => {
     try {
       const { api } = getServerEndpoints();
@@ -1521,7 +1552,9 @@ export const SimulatorProvider = ({ children }) => {
         updateEnvKeys,
         smsLogs,
         simulationSpeed,
-        setSimulationSpeed
+        setSimulationSpeed,
+        addCustomHotspot,
+        resetSimulator
       }}
     >
       {children}

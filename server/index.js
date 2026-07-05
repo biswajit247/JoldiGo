@@ -861,6 +861,8 @@ app.post('/api/admin/surge/schedules/update', async (req, res) => {
   }
 });
 
+let globalCustomHotspots = [];
+
 // Get passenger demand hotspots
 app.get('/api/admin/demand/hotspots', async (req, res) => {
   try {
@@ -881,19 +883,84 @@ app.get('/api/admin/demand/hotspots', async (req, res) => {
       { lat: 22.5726, lng: 88.3639, weight: 0.82 }  // College Street
     ];
 
-    // Jitter function for simulation realism
+    // Jitter function for realism
     const result = [
       ...ridesRes.rows.map(r => ({ lat: parseFloat(r.lat), lng: parseFloat(r.lng), weight: 1.0 })),
       ...mockHotspots.map(h => ({
         lat: h.lat + (Math.random() - 0.5) * 0.006,
         lng: h.lng + (Math.random() - 0.5) * 0.006,
         weight: h.weight
-      }))
+      })),
+      ...globalCustomHotspots
     ];
 
     res.json({ success: true, hotspots: result });
   } catch (err) {
     res.status(500).json({ error: 'Failed to retrieve demand hotspots.', details: err.message });
+  }
+});
+
+// Add a custom passenger demand hotspot
+app.post('/api/admin/demand/hotspots', (req, res) => {
+  const { hotspot } = req.body;
+  if (!hotspot || !hotspot.lat || !hotspot.lng) {
+    return res.status(400).json({ error: 'Invalid hotspot payload.' });
+  }
+  
+  const newHotspot = {
+    lat: parseFloat(hotspot.lat),
+    lng: parseFloat(hotspot.lng),
+    weight: parseFloat(hotspot.weight || 0.8)
+  };
+  globalCustomHotspots.push(newHotspot);
+  
+  broadcastToAll({
+    type: 'settings_updated',
+    settings: globalSettings,
+    fuelPrices: globalFuelPrices,
+    congestionZones: globalCongestionZones
+  });
+  
+  res.json({ success: true, hotspots: globalCustomHotspots });
+});
+
+// Reset JoldiGo Simulator and database transactions
+app.post('/api/admin/reset', async (req, res) => {
+  try {
+    // 1. Clear active ride and reset driver status
+    await query("UPDATE drivers SET status = 'offline', verification_status = 'verified', earnings_daily = 0, earnings_weekly = 0, commission_owed = 0, subscription_tier = 'free', subscription_expires_at = NULL");
+    
+    // 2. Clear rides table, disputes, and safety claims
+    await query("TRUNCATE TABLE disputes CASCADE");
+    await query("TRUNCATE TABLE rides CASCADE");
+    await query("TRUNCATE TABLE safety_claims CASCADE");
+    
+    // 3. Reset settings
+    globalSettings = {
+      baseFareCarAC: 50, perKmCarAC: 20,
+      baseFareCarNonAC: 30, perKmCarNonAC: 15,
+      baseFareBike: 20, perKmBike: 7,
+      surgeMultiplier: 1.0,
+      weather: 'clear'
+    };
+    globalFuelPrices = { cng: 95.5, petrol: 104.5, diesel: 92.75 };
+    globalCongestionZones = { HOWRAH_BRIDGE: 'clear', PARK_STREET: 'clear', SALT_LAKE_SEC5: 'clear' };
+    globalCustomHotspots = [];
+    
+    // Broadcast setting changes
+    broadcastToAll({ 
+      type: 'settings_updated', 
+      settings: globalSettings, 
+      fuelPrices: globalFuelPrices, 
+      congestionZones: globalCongestionZones 
+    });
+    
+    // Broadcast reset completed reload signal to client
+    broadcastToAll({ type: 'reset_completed' });
+    
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to reset simulator state.', details: err.message });
   }
 });
 

@@ -64,7 +64,9 @@ export default function AdminPanel() {
     smsLogs,
     simulationSpeed,
     setSimulationSpeed,
-    updateFuelPrices
+    updateFuelPrices,
+    addCustomHotspot,
+    resetSimulator
   } = useSimulator();
 
   useEffect(() => {
@@ -73,6 +75,11 @@ export default function AdminPanel() {
 
   const [activeTab, setActiveTab] = useState('dashboard'); 
   const [showDemandHeatmap, setShowDemandHeatmap] = useState(false);
+  const [clickToAddHotspots, setClickToAddHotspots] = useState(false);
+  const clickToAddHotspotsRef = useRef(clickToAddHotspots);
+  useEffect(() => {
+    clickToAddHotspotsRef.current = clickToAddHotspots;
+  }, [clickToAddHotspots]);
   const [selectedDriverForDoc, setSelectedDriverForDoc] = useState(null);
   const [selectedDocTab, setSelectedDocTab] = useState('license');
   const [dlChecked, setDlChecked] = useState(false);
@@ -165,6 +172,13 @@ export default function AdminPanel() {
       fillColor: '#ff9900',
       fillOpacity: 0.05,
     }).addTo(map);
+
+    map.on('click', (e) => {
+      if (clickToAddHotspotsRef.current) {
+        const { lat, lng } = e.latlng;
+        addCustomHotspot(lat, lng, 1.0);
+      }
+    });
 
     return () => {
       if (mapRef.current) {
@@ -814,6 +828,21 @@ export default function AdminPanel() {
                         }`}
                       >
                         🔥 Demand Heatmap: {showDemandHeatmap ? 'ON' : 'OFF'}
+                      </button>
+
+                      <button 
+                        onClick={() => {
+                          setClickToAddHotspots(!clickToAddHotspots);
+                          if (!showDemandHeatmap) setShowDemandHeatmap(true);
+                        }}
+                        className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
+                          clickToAddHotspots 
+                            ? 'bg-amber-500 text-black border-amber-400 shadow-[0_0_10px_rgba(245,158,11,0.2)]' 
+                            : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'
+                        }`}
+                        title="Click anywhere on the map to add custom high-demand hotspots"
+                      >
+                        📍 Click-to-Add Hotspots: {clickToAddHotspots ? 'ACTIVE (Click Map)' : 'OFF'}
                       </button>
                       <div className="map-legend">
                         <span className="leg-item"><span className="dot green"></span> Free</span>
@@ -1895,9 +1924,24 @@ export default function AdminPanel() {
 
                 <div className="divider-h mt-4"></div>
 
-                <button type="submit" className="btn-primary mt-4 font-semibold">
-                  Update Pricing Configuration
-                </button>
+                <div className="flex gap-4 mt-4">
+                  <button type="submit" className="btn-primary flex-1 font-semibold">
+                    Update Pricing Configuration
+                  </button>
+                  <button 
+                    type="button" 
+                    onClick={async () => {
+                      if (window.confirm("⚠️ WARNING: This will terminate all active rides, truncate disputes/claims, reset all configuration adjustments, and wipe the session SMS logs. Are you sure you want to proceed?")) {
+                        await resetSimulator();
+                        alert("Simulator state reset completed successfully!");
+                        window.location.reload();
+                      }
+                    }}
+                    className="btn-secondary border border-red-500/30 bg-red-950/20 text-red-400 hover:bg-red-900 hover:text-white flex-1 font-semibold flex items-center justify-center cursor-pointer"
+                  >
+                    ⚡ Reset Simulator State
+                  </button>
+                </div>
               </form>
 
               {/* PEAK SURGE PRICING SCHEDULER WIDGET */}
