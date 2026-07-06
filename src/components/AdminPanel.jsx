@@ -974,69 +974,6 @@ export default function AdminPanel() {
                   </div>
                   <div style={{ position: 'relative', width: '100%', height: 'calc(100% - 50px)' }}>
                     <div ref={mapContainerRef} className="admin-leaflet-map-container" style={{ height: '100%' }}></div>
-                    
-                    <div style={{ position: 'absolute', top: '8px', right: '8px', zIndex: 999, display: 'flex', gap: '4px' }}>
-                      <button
-                        onClick={() => setMapStyle('dark_navigation')}
-                        style={{
-                          padding: '3px 6px',
-                          fontSize: '8px',
-                          fontWeight: 'extrabold',
-                          borderRadius: '4px',
-                          backgroundColor: mapStyle === 'dark_navigation' ? '#fbbf24' : 'rgba(0,0,0,0.6)',
-                          color: mapStyle === 'dark_navigation' ? '#000' : '#fff',
-                          border: '1px solid rgba(255,255,255,0.1)',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        ⚡ Ola/Uber Dark
-                      </button>
-                      <button
-                        onClick={() => setMapStyle('google_roadmap')}
-                        style={{
-                          padding: '3px 6px',
-                          fontSize: '8px',
-                          fontWeight: 'extrabold',
-                          borderRadius: '4px',
-                          backgroundColor: mapStyle === 'google_roadmap' ? '#fbbf24' : 'rgba(0,0,0,0.6)',
-                          color: mapStyle === 'google_roadmap' ? '#000' : '#fff',
-                          border: '1px solid rgba(255,255,255,0.1)',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        🗺️ Google Roadmap
-                      </button>
-                      <button
-                        onClick={() => setMapStyle('google_satellite')}
-                        style={{
-                          padding: '3px 6px',
-                          fontSize: '8px',
-                          fontWeight: 'extrabold',
-                          borderRadius: '4px',
-                          backgroundColor: mapStyle === 'google_satellite' ? '#fbbf24' : 'rgba(0,0,0,0.6)',
-                          color: mapStyle === 'google_satellite' ? '#000' : '#fff',
-                          border: '1px solid rgba(255,255,255,0.1)',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        🛰️ Google Sat
-                      </button>
-                      <button
-                        onClick={() => setMapStyle('voyager')}
-                        style={{
-                          padding: '3px 6px',
-                          fontSize: '8px',
-                          fontWeight: 'extrabold',
-                          borderRadius: '4px',
-                          backgroundColor: mapStyle === 'voyager' ? '#fbbf24' : 'rgba(0,0,0,0.6)',
-                          color: mapStyle === 'voyager' ? '#000' : '#fff',
-                          border: '1px solid rgba(255,255,255,0.1)',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        🎨 Classic
-                      </button>
-                    </div>
                   </div>
                 </div>
 
