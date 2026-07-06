@@ -202,10 +202,10 @@ function App() {
               </div>
               <div className="card-details">
                 <h3>Passenger Client App</h3>
-                <p>Book rides, view safety安全 सेफ्टीafetySafety सेफ्टी safety safety pools, receive SMS OTPs, and travel instantly.</p>
+                <p>Book rides, make payments, receive real-time SMS OTPs, and travel safely across the city.</p>
               </div>
             </button>
-
+ 
             <button 
               className="native-selector-card driver-card"
               onClick={() => selectNativePersona('driver')}
@@ -215,7 +215,7 @@ function App() {
               </div>
               <div className="card-details">
                 <h3>Driver Partner App</h3>
-                <p>Verify documents, search rides on maps, track wallet safety безпека Safety safety Safety safety Safe safety SafetySafetyafety SAFETYSAFETYSafety safety Safety SAFETY SAFETY safety Safety safetySAFETY safety safety safety Safety Safety Safety earnings, and submitSafety Safety safety safetyafety Safety safetySafety claims.</p>
+                <p>Verify KYC documents, track ride offers, manage your wallet earnings, and complete safety training modules.</p>
               </div>
             </button>
           </div>
