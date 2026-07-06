@@ -1953,7 +1953,7 @@ export default function DriverApp({ isStandalone }) {
                   <div 
                     style={{
                       position: 'absolute',
-                      bottom: '80px',
+                      bottom: '144px',
                       left: '12px',
                       zIndex: 999,
                       width: '46px',
@@ -2067,12 +2067,13 @@ export default function DriverApp({ isStandalone }) {
               style={isNavActive ? {
                 backgroundColor: '#ffffff',
                 color: '#000000',
-                borderTopLeftRadius: '16px',
-                borderTopRightRadius: '16px',
-                borderTop: '1px solid rgba(0,0,0,0.1)',
+                borderRadius: '16px',
+                border: '1px solid rgba(0,0,0,0.12)',
                 padding: '16px',
-                boxShadow: '0 -4px 16px rgba(0,0,0,0.15)',
-                bottom: '0px'
+                boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+                bottom: '12px',
+                left: '12px',
+                right: '12px'
               } : {}}
             >
               {activeRide && activeRide.driverId === currentDriver.id ? (
