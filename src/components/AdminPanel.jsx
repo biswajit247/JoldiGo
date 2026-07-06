@@ -80,9 +80,16 @@ export default function AdminPanel() {
   const [showDemandHeatmap, setShowDemandHeatmap] = useState(false);
   const [clickToAddHotspots, setClickToAddHotspots] = useState(false);
   const clickToAddHotspotsRef = useRef(clickToAddHotspots);
+  const [clickToAddSurgeZone, setClickToAddSurgeZone] = useState(false);
+  const clickToAddSurgeZoneRef = useRef(clickToAddSurgeZone);
+
   useEffect(() => {
     clickToAddHotspotsRef.current = clickToAddHotspots;
   }, [clickToAddHotspots]);
+
+  useEffect(() => {
+    clickToAddSurgeZoneRef.current = clickToAddSurgeZone;
+  }, [clickToAddSurgeZone]);
   const [selectedDriverForDoc, setSelectedDriverForDoc] = useState(null);
   const [selectedDocTab, setSelectedDocTab] = useState('license');
   const [dlChecked, setDlChecked] = useState(false);
@@ -210,10 +217,37 @@ export default function AdminPanel() {
       fillOpacity: 0.05,
     }).addTo(map);
 
-    map.on('click', (e) => {
+    map.on('click', async (e) => {
       if (clickToAddHotspotsRef.current) {
         const { lat, lng } = e.latlng;
         addCustomHotspot(lat, lng, 1.0);
+      } else if (clickToAddSurgeZoneRef.current) {
+        const { lat, lng } = e.latlng;
+        const name = prompt("Enter name for this custom Surge Geofence:", "New Surge Hub");
+        if (!name) return;
+        const multiplierStr = prompt("Enter Fare Multiplier (e.g. 1.5, 1.8, 2.2):", "1.5");
+        const multiplier = parseFloat(multiplierStr) || 1.0;
+        
+        // Define a small polygon square box approximating a circle area
+        const r = 0.008; 
+        const points = [
+          [lat + r, lng - r],
+          [lat + r, lng + r],
+          [lat - r, lng + r],
+          [lat - r, lng - r]
+        ];
+        
+        const newZone = {
+          id: 'zone_custom_' + Date.now(),
+          name,
+          points,
+          type: 'surge',
+          multiplier,
+          active: true
+        };
+        
+        await updateGeofencingZones([...geofencingZones, newZone]);
+        setClickToAddSurgeZone(false);
       }
     });
 
@@ -223,7 +257,7 @@ export default function AdminPanel() {
         mapRef.current = null;
       }
     };
-  }, [activeTab, geofence]);
+  }, [activeTab, geofence, geofencingZones, clickToAddSurgeZone, clickToAddHotspots]);
 
   useEffect(() => {
     const MAP_TILE_URLS = {
@@ -386,10 +420,12 @@ export default function AdminPanel() {
         pinColor = isRiding ? '#ffaa00' : '#00ff66'; 
       }
 
+      const vehicleEmoji = d.vehicleType === 'bike' ? '🏍️' : (d.vehicleType === 'auto' ? '🛺' : (d.vehicleType === 'car_ac' ? '🚗' : '🚕'));
       const adminDriverIcon = L.divIcon({
         className: 'admin-driver-marker-div',
-        html: `<div class="admin-marker-dot ${isSOS ? 'sos-pulse' : ''}" style="background-color: ${pinColor}">
+        html: `<div class="admin-marker-dot ${isSOS ? 'sos-pulse' : ''}" style="background-color: ${pinColor}; position: relative;">
                  <span class="lbl-init">${d.avatar}</span>
+                 <span style="position: absolute; bottom: -4px; right: -4px; font-size: 8px; background: rgba(0,0,0,0.85); padding: 2px; border-radius: 50%; width: 11px; height: 11px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.15);">${vehicleEmoji}</span>
                </div>`,
         iconSize: [26, 26],
         iconAnchor: [13, 13]
@@ -485,10 +521,13 @@ export default function AdminPanel() {
     if (showDemandHeatmap && demandHotspots) {
       demandHotspots.forEach(pt => {
         const circle = L.circle([pt.lat, pt.lng], {
-          stroke: false,
+          stroke: true,
+          color: '#ef4444',
+          weight: 1,
+          dashArray: '3, 5',
           fillColor: '#ef4444',
-          fillOpacity: 0.18 * pt.weight,
-          radius: 500 * pt.weight
+          fillOpacity: Math.min(0.3, 0.12 * pt.weight),
+          radius: 400 * pt.weight
         }).addTo(map);
         markersRef.current.demandCircles.push(circle);
       });
@@ -897,6 +936,7 @@ export default function AdminPanel() {
                       <button 
                         onClick={() => {
                           setClickToAddHotspots(!clickToAddHotspots);
+                          if (clickToAddSurgeZone) setClickToAddSurgeZone(false);
                           if (!showDemandHeatmap) setShowDemandHeatmap(true);
                         }}
                         className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
@@ -908,6 +948,22 @@ export default function AdminPanel() {
                       >
                         📍 Click-to-Add Hotspots: {clickToAddHotspots ? 'ACTIVE (Click Map)' : 'OFF'}
                       </button>
+
+                      <button 
+                        onClick={() => {
+                          setClickToAddSurgeZone(!clickToAddSurgeZone);
+                          if (clickToAddHotspots) setClickToAddHotspots(false);
+                        }}
+                        className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
+                          clickToAddSurgeZone 
+                            ? 'bg-yellow-400 text-black border-yellow-300 shadow-[0_0_10px_rgba(255,221,0,0.2)]' 
+                            : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'
+                        }`}
+                        title="Click anywhere on the map to define a geofenced surge hub"
+                      >
+                        ⚡ Draw Surge Geofence: {clickToAddSurgeZone ? 'ACTIVE (Click Map)' : 'OFF'}
+                      </button>
+
                       <div className="map-legend">
                         <span className="leg-item"><span className="dot green"></span> Free</span>
                         <span className="leg-item"><span className="dot orange"></span> In Ride</span>
@@ -2746,12 +2802,15 @@ export default function AdminPanel() {
 
                   {drivers.map(d => {
                     const tier = d.subscription_tier || 'standard';
-                    const commissionCut = tier === 'gold' ? '1.0%' : (tier === 'silver' ? '2.5%' : '5.0%');
-                    const billingStatus = tier === 'standard' ? 'N/A (Free)' : 'Active (Prepaid)';
-                    const renewal = tier === 'standard' ? 'N/A' : 'Auto-renewing (30d)';
+                    const isZeroComm = d.rating >= 4.8;
+                    const commissionCut = isZeroComm ? '0.0% (Zero-Comm)' : (tier === 'gold' ? '1.0%' : (tier === 'silver' ? '2.5%' : '5.0%'));
+                    const billingStatus = isZeroComm ? 'Waived (Reward)' : (tier === 'standard' ? 'N/A (Free)' : 'Active (Prepaid)');
+                    const renewal = isZeroComm ? 'N/A (Zero-Comm)' : (tier === 'standard' ? 'N/A' : 'Auto-renewing (30d)');
                     return (
                       <div key={d.id} className="payout-row" style={{ gridTemplateColumns: '150px 140px 100px 140px 1fr' }}>
-                        <span className="font-semibold text-white">{d.name}</span>
+                        <span className="font-semibold text-white">
+                          {d.name} {isZeroComm && '⚡'}
+                        </span>
                         <span>
                           <span className={`text-[9px] uppercase tracking-wider font-extrabold px-2 py-0.5 rounded ${
                             tier === 'gold' 
@@ -2785,14 +2844,21 @@ export default function AdminPanel() {
                   </div>
 
                   {drivers.map(d => {
+                    const isZeroComm = d.rating >= 4.8;
+                    const commissionFee = isZeroComm ? 0 : d.earnings.commission;
                     const gross = d.earnings.weekly + d.earnings.commission;
+                    const netOwed = isZeroComm ? gross : d.earnings.weekly;
                     return (
                       <div key={d.id} className="payout-row">
-                        <span className="font-semibold">{d.name}</span>
+                        <span className="font-semibold text-white">
+                          {d.name} {isZeroComm && '⚡'}
+                        </span>
                         <span className="font-mono text-xs">{d.documents?.license || 'Not Onboarded'}</span>
                         <span>₹{gross.toFixed(0)}</span>
-                        <span className="text-red-400">₹{d.earnings.commission.toFixed(0)}</span>
-                        <span className="text-green-400 font-semibold">₹{d.earnings.weekly.toFixed(0)}</span>
+                        <span className="text-red-400">
+                          {isZeroComm ? <span className="text-emerald-400 font-bold">₹0 (Zero-Comm)</span> : `₹${commissionFee.toFixed(0)}`}
+                        </span>
+                        <span className="text-green-400 font-semibold">₹{netOwed.toFixed(0)}</span>
                         <span>
                           <button 
                             disabled={d.earnings.weekly <= 0}
@@ -3232,7 +3298,9 @@ export default function AdminPanel() {
                             return (
                               <tr key={drv.id} className="border-b border-white/5 hover:bg-white/5 transition-all">
                                 <td className="py-2.5 px-3 font-bold text-amber-400">{rankLabel}</td>
-                                <td className="py-2.5 px-3 font-semibold text-white">{drv.name}</td>
+                                <td className="py-2.5 px-3 font-semibold text-white">
+                                  {drv.name} {drv.rating >= 4.8 && <span className="ml-1 text-[8px] bg-emerald-500 text-black px-1 rounded font-extrabold uppercase">Zero-Comm</span>}
+                                </td>
                                 <td className="py-2.5 px-3 font-mono text-[10px] text-gray-400">
                                   {drv.vehicleType === 'car_ac' ? 'AC Car' : (drv.vehicleType === 'car_non_ac' ? 'Non-AC Car' : 'Bike')}
                                 </td>

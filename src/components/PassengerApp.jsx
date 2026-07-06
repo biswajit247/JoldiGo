@@ -249,6 +249,17 @@ export default function PassengerApp({ isStandalone }) {
   const [selectedTip, setSelectedTip] = useState(0); 
   const [customTip, setCustomTip] = useState(''); 
 
+  // Razorpay Sandbox Overlay States
+  const [showRazorpaySheet, setShowRazorpaySheet] = useState(false);
+  const [rzpMethod, setRzpMethod] = useState('upi'); // 'upi', 'card', 'netbanking'
+  const [rzpCardNumber, setRzpCardNumber] = useState('');
+  const [rzpCardExpiry, setRzpCardExpiry] = useState('');
+  const [rzpCardCvv, setRzpCardCvv] = useState('');
+  const [rzpUpiOption, setRzpUpiOption] = useState('gpay'); // 'gpay', 'phonepe', 'paytm'
+  const [rzpSelectedBank, setRzpSelectedBank] = useState('SBI');
+  const [rzpPaymentStatus, setRzpPaymentStatus] = useState('idle'); // 'idle', 'authorizing', 'otp', 'success'
+  const [rzpOtpInput, setRzpOtpInput] = useState('');
+
   // Promo code states
   const [promoInput, setPromoInput] = useState('');
   const [appliedPromo, setAppliedPromo] = useState('');
@@ -482,7 +493,7 @@ export default function PassengerApp({ isStandalone }) {
 
     const activeDriverIcon = L.divIcon({
       className: 'custom-map-marker active-driver-marker',
-      html: `<div class="marker-pin pin-driver ${activeRide?.vehicleType === 'bike' ? 'bike' : 'car'}">
+      html: `<div class="marker-pin pin-driver ${activeRide?.vehicleType}">
                <span class="pulse-ring"></span>
              </div>`,
       iconSize: [30, 30],
@@ -552,7 +563,7 @@ export default function PassengerApp({ isStandalone }) {
         if (d.status === 'online' && d.verificationStatus === 'verified') {
           const otherDrvIcon = L.divIcon({
             className: 'custom-map-marker other-driver-marker',
-            html: `<div class="marker-pin-mini ${d.vehicleType === 'bike' ? 'bike' : 'car'}"></div>`,
+            html: `<div class="marker-pin-mini ${d.vehicleType}"></div>`,
             iconSize: [20, 20],
             iconAnchor: [10, 10]
           });
@@ -1209,10 +1220,8 @@ export default function PassengerApp({ isStandalone }) {
                 disabled={selectedPayment === 'upi' && passengerWalletBalance < activeRide.totalFare}
                 style={{ opacity: (selectedPayment === 'upi' && passengerWalletBalance < activeRide.totalFare) ? 0.5 : 1 }}
                 onClick={() => {
-                  setPaymentStep('processing');
-                  setTimeout(() => {
-                    setPaymentStep('feedback');
-                  }, 1200);
+                  setShowRazorpaySheet(true);
+                  setRzpPaymentStatus('idle');
                 }}
               >
                 Proceed to Pay ₹{activeRide.totalFare}
@@ -2119,6 +2128,232 @@ export default function PassengerApp({ isStandalone }) {
 
       {/* Dynamic Calling Simulator Overlay */}
       {renderCallOverlay()}
+
+      {/* Razorpay Sandbox Payment Sheet Overlay */}
+      {showRazorpaySheet && (
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.85)',
+          zIndex: 10000,
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'flex-end',
+          fontFamily: 'system-ui, -apple-system, sans-serif'
+        }}>
+          <div className="bg-[#0e1b2f] border-t border-white/10 rounded-t-2xl p-4 flex flex-col gap-3 text-left text-xs" style={{ maxHeight: '90%', overflowY: 'auto' }}>
+            
+            {/* Razorpay branding header */}
+            <div className="flex justify-between items-center border-b border-white/5 pb-2">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[#3395FF] font-black text-sm tracking-wider">Razorpay</span>
+                <span className="bg-[#3395FF]/10 text-[#3395FF] border border-[#3395FF]/20 px-1 py-0.2 rounded text-[7px] font-bold">SECURED</span>
+              </div>
+              <button 
+                type="button" 
+                onClick={() => setShowRazorpaySheet(false)}
+                className="text-gray-400 hover:text-white font-extrabold text-base bg-transparent border-none cursor-pointer"
+              >
+                ×
+              </button>
+            </div>
+
+            {rzpPaymentStatus === 'idle' && (
+              <>
+                {/* Amount details */}
+                <div className="flex justify-between items-center bg-black/40 border border-white/5 p-3 rounded-lg">
+                  <div>
+                    <span className="text-[10px] text-gray-400 block uppercase tracking-wide">ORDER ID</span>
+                    <span className="font-mono text-white font-semibold text-[10px]">order_joldi_${activeRide?.id?.substr(4,6)}</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[10px] text-gray-400 block uppercase tracking-wide">AMOUNT</span>
+                    <span className="text-yellow-400 font-extrabold text-sm">₹{activeRide?.totalFare}</span>
+                  </div>
+                </div>
+
+                {/* Method selector tabs */}
+                <div className="flex gap-1 border-b border-white/5">
+                  {[
+                    { key: 'upi', label: 'UPI' },
+                    { key: 'card', label: 'Card' },
+                    { key: 'netbanking', label: 'NetBanking' }
+                  ].map(m => (
+                    <button
+                      key={m.key}
+                      type="button"
+                      onClick={() => setRzpMethod(m.key)}
+                      style={{
+                        flex: 1,
+                        padding: '6px',
+                        fontSize: '10px',
+                        fontWeight: 'bold',
+                        color: rzpMethod === m.key ? '#3395FF' : '#718096',
+                        borderBottom: rzpMethod === m.key ? '2px solid #3395FF' : 'none',
+                        background: 'transparent',
+                        border: 'none',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {m.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Method rendering */}
+                {rzpMethod === 'upi' && (
+                  <div className="flex flex-col gap-2.5 py-1">
+                    <span className="text-[9px] uppercase tracking-wider text-gray-500 font-extrabold">Select your UPI App</span>
+                    <div className="flex gap-2">
+                      {[
+                        { key: 'gpay', label: 'GPay', emoji: '📱' },
+                        { key: 'phonepe', label: 'PhonePe', emoji: '🪙' },
+                        { key: 'paytm', label: 'Paytm', emoji: '💳' }
+                      ].map(opt => (
+                        <button
+                          key={opt.key}
+                          type="button"
+                          onClick={() => setRzpUpiOption(opt.key)}
+                          className={`flex-1 p-2 rounded border flex flex-col items-center gap-1 cursor-pointer transition-all ${
+                            rzpUpiOption === opt.key 
+                              ? 'bg-[#3395FF]/10 text-white border-[#3395FF]' 
+                              : 'bg-black/20 text-gray-400 border-white/5'
+                          }`}
+                        >
+                          <span className="text-base">{opt.emoji}</span>
+                          <span className="text-[9px] font-bold">{opt.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {rzpMethod === 'card' && (
+                  <div className="flex flex-col gap-2 py-1">
+                    <span className="text-[9px] uppercase tracking-wider text-gray-500 font-extrabold">Card Details (Sandbox Mode)</span>
+                    <input 
+                      type="text"
+                      placeholder="Card Number (e.g. 4111 2222 3333 4444)"
+                      value={rzpCardNumber}
+                      onChange={e => setRzpCardNumber(e.target.value.replace(/\s?/g, '').replace(/(\d{4})/g, '$1 ').trim())}
+                      style={{ backgroundColor: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', padding: '6px', fontSize: '11px', color: '#fff', outline: 'none' }}
+                      maxLength={19}
+                    />
+                    <div className="flex gap-2">
+                      <input 
+                        type="text"
+                        placeholder="MM/YY"
+                        value={rzpCardExpiry}
+                        onChange={e => setRzpCardExpiry(e.target.value)}
+                        style={{ backgroundColor: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', padding: '6px', fontSize: '11px', color: '#fff', outline: 'none', flex: 1 }}
+                        maxLength={5}
+                      />
+                      <input 
+                        type="password"
+                        placeholder="CVV"
+                        value={rzpCardCvv}
+                        onChange={e => setRzpCardCvv(e.target.value)}
+                        style={{ backgroundColor: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', padding: '6px', fontSize: '11px', color: '#fff', outline: 'none', flex: 1 }}
+                        maxLength={3}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {rzpMethod === 'netbanking' && (
+                  <div className="flex flex-col gap-2 py-1">
+                    <span className="text-[9px] uppercase tracking-wider text-gray-500 font-extrabold">Popular Banks</span>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {['SBI', 'HDFC', 'ICICI', 'AXIS'].map(bank => (
+                        <button
+                          key={bank}
+                          type="button"
+                          onClick={() => setRzpSelectedBank(bank)}
+                          className={`p-2 rounded border text-left font-bold text-[9px] cursor-pointer transition-all ${
+                            rzpSelectedBank === bank 
+                              ? 'bg-[#3395FF]/10 text-white border-[#3395FF]' 
+                              : 'bg-black/20 text-gray-400 border-white/5'
+                          }`}
+                        >
+                          🏦 {bank} Bank
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Submit button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRzpPaymentStatus('authorizing');
+                    setTimeout(() => {
+                      setRzpPaymentStatus('otp');
+                    }, 1200);
+                  }}
+                  className="py-2.5 bg-[#3395FF] hover:bg-[#1d82f5] text-white font-bold text-xs rounded-lg cursor-pointer transition-all flex items-center justify-center gap-1.5"
+                >
+                  🔒 Securely Pay ₹{activeRide?.totalFare}
+                </button>
+              </>
+            )}
+
+            {rzpPaymentStatus === 'authorizing' && (
+              <div className="text-center py-6 flex flex-col items-center justify-center gap-2">
+                <div className="spinner-rzp animate-spin rounded-full h-8 w-8 border-b-2 border-[#3395FF] border-t-transparent" style={{ border: '2px solid transparent', borderTopColor: '#3395FF', borderLeftColor: '#3395FF', borderRadius: '50%', width: '28px', height: '28px', animation: 'spin 1s linear infinite' }}></div>
+                <p className="font-semibold text-white mt-2 text-[11px]">Authorizing Sandbox Transaction...</p>
+                <p className="text-[9px] text-gray-500">Contacting Razorpay Secure Nodes</p>
+              </div>
+            )}
+
+            {rzpPaymentStatus === 'otp' && (
+              <div className="flex flex-col gap-3 py-4 text-center">
+                <span className="text-2xl">⚡</span>
+                <div>
+                  <h4 className="text-xs font-bold text-white">Enter 3D Secure OTP</h4>
+                  <p className="text-[9px] text-gray-400 mt-0.5">Enter mock code to authorize billing.</p>
+                </div>
+                <input 
+                  type="text"
+                  placeholder="Enter 6-digit OTP (e.g. 123456)"
+                  value={rzpOtpInput}
+                  onChange={e => setRzpOtpInput(e.target.value)}
+                  style={{ width: '80%', margin: '0 auto', backgroundColor: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', padding: '6px', color: '#fff', outline: 'none', textAlign: 'center', fontSize: '12px' }}
+                  maxLength={6}
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRzpPaymentStatus('success');
+                    setTimeout(() => {
+                      setShowRazorpaySheet(false);
+                      setPaymentStep('feedback');
+                      // complete the payment on the context!
+                      const finalTip = selectedTip === 'custom' ? (parseInt(customTip) || 0) : selectedTip;
+                      completePaymentAndRate(starRating, ratingComment, finalTip);
+                    }, 1200);
+                  }}
+                  className="py-2 bg-emerald-500 hover:bg-emerald-400 text-white font-bold text-xs rounded-lg cursor-pointer transition-all mt-2"
+                >
+                  Verify & Complete Payment
+                </button>
+              </div>
+            )}
+
+            {rzpPaymentStatus === 'success' && (
+              <div className="text-center py-6 flex flex-col items-center justify-center gap-2">
+                <span className="text-3xl animate-bounce">✅</span>
+                <p className="font-bold text-emerald-400 mt-2 text-xs">Transaction Approved!</p>
+                <p className="text-[9px] text-gray-400">Ledger details synchronized successfully.</p>
+              </div>
+            )}
+
+          </div>
+        </div>
+      )}
 
       <div className="phone-home-bar"></div>
     </div>

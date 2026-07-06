@@ -603,6 +603,18 @@ body {
   content: '🏍️';
 }
 
+.pin-driver.auto::after {
+  content: '🛺';
+}
+
+.pin-driver.car_ac::after {
+  content: '🚗';
+}
+
+.pin-driver.car_non_ac::after {
+  content: '🚕';
+}
+
 .marker-pin-mini {
   width: 16px;
   height: 16px;
@@ -623,6 +635,18 @@ body {
 
 .marker-pin-mini.bike::after {
   content: '🏍️';
+}
+
+.marker-pin-mini.auto::after {
+  content: '🛺';
+}
+
+.marker-pin-mini.car_ac::after {
+  content: '🚗';
+}
+
+.marker-pin-mini.car_non_ac::after {
+  content: '🚕';
 }
 
 .pulse-ring {
