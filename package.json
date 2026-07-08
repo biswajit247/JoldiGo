@@ -8,6 +8,7 @@
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview",
+    "test": "node server/database_twilio_test.js",
     "postinstall": "[ -d server ] && npm install --prefix server || echo 'Skipping server install'"
   },
   "dependencies": {
