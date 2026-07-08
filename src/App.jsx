@@ -175,7 +175,7 @@ function App() {
         <div className="native-selector-container">
           <div className="native-selector-header">
             <div className="native-logo">
-              <Cpu size={32} className="text-yellow-400" />
+              <img src="/logo.jpg" alt="JaldiGo Logo" style={{ width: '56px', height: '56px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 4px 14px rgba(16,185,129,0.2)' }} />
             </div>
             <h1>JoldiGo Platform</h1>
             <p>Select your native application persona to lock this device's workspace.</p>
@@ -237,7 +237,7 @@ function App() {
             <header className="cockpit-global-header">
               <div className="cockpit-brand">
                 <div className="cockpit-icon-wrapper">
-                  <Cpu size={20} className="cockpit-icon" />
+                  <img src="/logo.jpg" alt="JaldiGo Logo" style={{ width: '24px', height: '24px', borderRadius: '6px' }} />
                 </div>
                 <div>
                   <h2>JoldiGo Cockpit Simulator</h2>
