@@ -221,6 +221,7 @@ export default function PassengerApp({ isStandalone }) {
   const [isOtpSent, setIsOtpSent] = useState(false);
   const [otpError, setOtpError] = useState('');
   const [nameInput, setNameInput] = useState('');
+  const [selectedRideForInvoice, setSelectedRideForInvoice] = useState(null);
 
   // Location inputs
   const [pickupKey, setPickupKey] = useState('PARK_STREET');
@@ -1061,6 +1062,11 @@ export default function PassengerApp({ isStandalone }) {
                   <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#fff' }}>Chat with {matchedDriver?.name}</span>
                 </div>
                 <button style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', fontSize: '18px', fontWeight: 'bold' }} onClick={() => setShowChat(false)}>×</button>
+              </div>
+
+              <div style={{ backgroundColor: 'rgba(16,185,129,0.08)', borderBottom: '1px solid rgba(16,185,129,0.12)', padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '9px', color: '#10b981', fontFamily: 'Outfit, sans-serif' }}>
+                <span className="animate-pulse" style={{ fontSize: '10px' }}>🛡️</span>
+                <span><b>Safe Driving Mode:</b> One-tap quick replies are recommended. Auto-translates to driver's Bengali.</span>
               </div>
 
               {/* Message bubbles */}
@@ -2053,15 +2059,23 @@ export default function PassengerApp({ isStandalone }) {
                               </div>
                             </div>
                           ) : (
-                            <button 
-                              className="btn-text-only text-[10px] text-red-400 hover:text-red-300 font-semibold"
-                              onClick={() => {
-                                setActiveDisputeFormId(ride.id);
-                                setComplaintText('');
-                              }}
-                            >
-                              ⚠️ Dispute Ride Payout
-                            </button>
+                            <div className="flex justify-between items-center w-full mt-1">
+                              <button 
+                                className="btn-text-only text-[10px] text-red-400 hover:text-red-300 font-semibold p-0"
+                                onClick={() => {
+                                  setActiveDisputeFormId(ride.id);
+                                  setComplaintText('');
+                                }}
+                              >
+                                ⚠️ Dispute Ride Payout
+                              </button>
+                              <button 
+                                className="btn-text-only text-[10px] text-indigo-400 hover:text-indigo-300 font-semibold flex items-center gap-1 p-0"
+                                onClick={() => setSelectedRideForInvoice(ride)}
+                              >
+                                📄 Get PDF Invoice
+                              </button>
+                            </div>
                           )}
                         </div>
                       )}
@@ -2299,6 +2313,114 @@ export default function PassengerApp({ isStandalone }) {
                 <p className="text-[9px] text-gray-400">Ledger details synchronized successfully.</p>
               </div>
             )}
+
+          </div>
+        </div>
+      )}
+
+      {selectedRideForInvoice && (
+        <div className="admin-modal-overlay" style={{ zIndex: 10000, display: 'flex', alignItems: 'center', justifycontent: 'center', backgroundColor: 'rgba(0,0,0,0.85)', position: 'absolute', top: 0, bottom: 0, left: 0, right: 0 }}>
+          <div className="admin-modal-card card-glow" style={{ width: '92%', maxWidth: '340px', backgroundColor: '#ffffff', color: '#111111', borderRadius: '16px', padding: '16px', position: 'relative', fontFamily: 'Outfit, sans-serif', boxShadow: '0 20px 40px rgba(0,0,0,0.5)', margin: 'auto' }}>
+            
+            {/* Header info */}
+            <div className="flex justify-between items-start border-b border-gray-200 pb-2">
+              <div className="text-left">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontSize: '16px' }}>⚡</span>
+                  <h4 style={{ margin: 0, fontWeight: '900', fontSize: '13px', color: '#005043', letterSpacing: '-0.3px' }}>JaldiGo TAX INVOICE</h4>
+                </div>
+                <p style={{ margin: '2px 0 0 0', fontSize: '7px', color: '#666' }}>Salt Lake IT Core Sector V, Kolkata</p>
+              </div>
+              <button 
+                onClick={() => setSelectedRideForInvoice(null)}
+                style={{ background: 'none', border: 'none', color: '#999', cursor: 'pointer', fontSize: '18px', fontWeight: 'bold', padding: '0 4px' }}
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Invoice Details */}
+            <div className="text-left" style={{ marginTop: '10px', fontSize: '9px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 12px', borderBottom: '1px solid #eee', paddingBottom: '10px' }}>
+              <div>
+                <span style={{ color: '#888', display: 'block', fontSize: '7px', textTransform: 'uppercase' }}>Invoice No</span>
+                <span className="font-mono font-semibold" style={{ color: '#000' }}>JG-INV-{selectedRideForInvoice.id.slice(0, 8).toUpperCase()}</span>
+              </div>
+              <div>
+                <span style={{ color: '#888', display: 'block', fontSize: '7px', textTransform: 'uppercase' }}>Date & Time</span>
+                <span className="font-semibold" style={{ color: '#000' }}>{selectedRideForInvoice.date}</span>
+              </div>
+              <div>
+                <span style={{ color: '#888', display: 'block', fontSize: '7px', textTransform: 'uppercase' }}>Passenger Phone</span>
+                <span className="font-semibold" style={{ color: '#000' }}>+91 ******{passenger.phone.slice(-4)}</span>
+              </div>
+              <div>
+                <span style={{ color: '#888', display: 'block', fontSize: '7px', textTransform: 'uppercase' }}>Driver Partner</span>
+                <span className="font-semibold" style={{ color: '#000' }}>{selectedRideForInvoice.driverName}</span>
+              </div>
+            </div>
+
+            {/* Travel Path */}
+            <div className="text-left" style={{ marginTop: '10px', paddingBottom: '10px', borderBottom: '1px solid #eee' }}>
+              <span style={{ color: '#888', display: 'block', fontSize: '7px', textTransform: 'uppercase', marginBottom: '4px' }}>Ride Summary</span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '9px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ color: '#22c55e', fontSize: '8px' }}>●</span>
+                  <span className="truncate" style={{ fontWeight: '500', color: '#000' }}>{selectedRideForInvoice.pickupName}</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ color: '#ef4444', fontSize: '8px' }}>●</span>
+                  <span className="truncate" style={{ fontWeight: '500', color: '#000' }}>{selectedRideForInvoice.dropoffName}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Payout Breakdown */}
+            <div className="text-left" style={{ marginTop: '10px', paddingBottom: '10px', borderBottom: '1px solid #eee', fontSize: '9px' }}>
+              <span style={{ color: '#888', display: 'block', fontSize: '7px', textTransform: 'uppercase', marginBottom: '4px' }}>Fare Details</span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                <div className="flex justify-between text-gray-700">
+                  <span>Base Ride Fare:</span>
+                  <span>₹{(selectedRideForInvoice.fare / (selectedRideForInvoice.surgeMultiplier || 1)).toFixed(2)}</span>
+                </div>
+                {selectedRideForInvoice.surgeMultiplier > 1 && (
+                  <div className="flex justify-between text-amber-600 font-medium">
+                    <span>Surge Surcharge ({selectedRideForInvoice.surgeMultiplier}x):</span>
+                    <span>+₹{(selectedRideForInvoice.fare - (selectedRideForInvoice.fare / selectedRideForInvoice.surgeMultiplier)).toFixed(2)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-gray-700">
+                  <span>GST Transport Levy (5%):</span>
+                  <span>₹{(selectedRideForInvoice.fare * 0.05).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-gray-700 border-t border-dashed border-gray-200 pt-1.5 mt-1 font-bold text-xs" style={{ color: '#000' }}>
+                  <span>Total Amount Paid:</span>
+                  <span style={{ color: '#005043' }}>₹{(selectedRideForInvoice.fare * 1.05).toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Razorpay Ledger metadata */}
+            <div style={{ marginTop: '10px', backgroundColor: '#f8fafc', padding: '6px 10px', borderRadius: '6px', border: '1px dashed #e2e8f0', fontSize: '7px', color: '#64748b' }} className="text-left font-mono">
+              <div>RAZORPAY ID: pay_{selectedRideForInvoice.id.slice(2, 14)}</div>
+              <div style={{ marginTop: '2px' }}>LEDGER HASH: {selectedRideForInvoice.contractHash?.slice(0, 24)}...</div>
+              <div style={{ marginTop: '2px' }}>STATUS: SETTLED (COMMISSION SPLIT: 20%)</div>
+            </div>
+
+            {/* Print trigger */}
+            <div className="flex gap-2 mt-3">
+              <button
+                onClick={() => window.print()}
+                style={{ flex: 1, backgroundColor: '#005043', color: '#ffffff', border: 'none', borderRadius: '6px', padding: '8px', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+              >
+                🖨️ Print Receipt
+              </button>
+              <button
+                onClick={() => setSelectedRideForInvoice(null)}
+                style={{ flex: 1, backgroundColor: '#f1f5f9', color: '#334155', border: 'none', borderRadius: '6px', padding: '8px', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer' }}
+              >
+                Close
+              </button>
+            </div>
 
           </div>
         </div>

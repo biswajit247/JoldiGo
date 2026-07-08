@@ -85,6 +85,8 @@ export default function AdminPanel() {
 
   const [activeTab, setActiveTab] = useState('dashboard'); 
   const [driverSubTab, setDriverSubTab] = useState('drivers'); // 'drivers', 'passengers'
+  const [ledgerSearchText, setLedgerSearchText] = useState('');
+  const [ledgerVehicleFilter, setLedgerVehicleFilter] = useState('all');
   const [showDemandHeatmap, setShowDemandHeatmap] = useState(false);
   const [clickToAddHotspots, setClickToAddHotspots] = useState(false);
   const clickToAddHotspotsRef = useRef(clickToAddHotspots);
@@ -2841,7 +2843,49 @@ export default function AdminPanel() {
 
               {/* Driver Payout Breakdown Ledger */}
               <div className="payouts-section card-glow mt-4">
-                <h4>Driver Payout Breakdown Ledger (95% Base splits)</h4>
+                <div className="flex justify-between items-center flex-wrap gap-2 mb-3">
+                  <h4 style={{ margin: 0 }}>Driver Payout Breakdown Ledger (95% Base splits)</h4>
+                  
+                  {/* Search and Filters */}
+                  <div className="flex gap-2">
+                    <input 
+                      type="text"
+                      placeholder="Search Driver Name / License..."
+                      value={ledgerSearchText}
+                      onChange={(e) => setLedgerSearchText(e.target.value)}
+                      style={{
+                        backgroundColor: 'rgba(0,0,0,0.4)',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        borderRadius: '6px',
+                        padding: '4px 10px',
+                        fontSize: '11px',
+                        color: '#fff',
+                        outline: 'none',
+                        width: '200px'
+                      }}
+                    />
+                    <select
+                      value={ledgerVehicleFilter}
+                      onChange={(e) => setLedgerVehicleFilter(e.target.value)}
+                      style={{
+                        backgroundColor: 'rgba(0,0,0,0.4)',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        borderRadius: '6px',
+                        padding: '4px 10px',
+                        fontSize: '11px',
+                        color: '#fff',
+                        outline: 'none',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <option value="all">All Vehicles</option>
+                      <option value="bike">Bike Taxi</option>
+                      <option value="auto">Auto Rickshaw</option>
+                      <option value="car_ac">AC Car</option>
+                      <option value="car_non_ac">Non-AC Car</option>
+                    </select>
+                  </div>
+                </div>
                 
                 <div className="payout-table-grid mt-3">
                   <div className="payout-header">
@@ -2853,34 +2897,47 @@ export default function AdminPanel() {
                     <span>Action</span>
                   </div>
 
-                  {drivers.map(d => {
-                    const isZeroComm = d.rating >= 4.8;
-                    const commissionFee = isZeroComm ? 0 : d.earnings.commission;
-                    const gross = d.earnings.weekly + d.earnings.commission;
-                    const netOwed = isZeroComm ? gross : d.earnings.weekly;
-                    return (
-                      <div key={d.id} className="payout-row">
-                        <span className="font-semibold text-white">
-                          {d.name} {isZeroComm && '⚡'}
-                        </span>
-                        <span className="font-mono text-xs">{d.documents?.license || 'Not Onboarded'}</span>
-                        <span>₹{gross.toFixed(0)}</span>
-                        <span className="text-red-400">
-                          {isZeroComm ? <span className="text-emerald-400 font-bold">₹0 (Zero-Comm)</span> : `₹${commissionFee.toFixed(0)}`}
-                        </span>
-                        <span className="text-green-400 font-semibold">₹{netOwed.toFixed(0)}</span>
-                        <span>
-                          <button 
-                            disabled={d.earnings.weekly <= 0}
-                            onClick={() => payoutDriver(d.id)}
-                            className="bg-emerald-500 hover:bg-emerald-400 disabled:opacity-30 disabled:cursor-not-allowed text-black font-bold px-2 py-0.5 rounded text-[10px] uppercase transition-all"
-                          >
-                            Payout
-                          </button>
-                        </span>
-                      </div>
-                    );
-                  })}
+                  {(() => {
+                    const filteredDrivers = drivers.filter(d => {
+                      const matchesSearch = d.name.toLowerCase().includes(ledgerSearchText.toLowerCase()) || 
+                                            (d.documents?.license || '').toLowerCase().includes(ledgerSearchText.toLowerCase());
+                      const matchesVehicle = ledgerVehicleFilter === 'all' || d.vehicleType === ledgerVehicleFilter;
+                      return matchesSearch && matchesVehicle;
+                    });
+
+                    if (filteredDrivers.length === 0) {
+                      return <div className="text-center py-6 text-xs text-gray-500 italic" style={{ gridColumn: 'span 6' }}>No matching driver payout records found.</div>;
+                    }
+
+                    return filteredDrivers.map(d => {
+                      const isZeroComm = d.rating >= 4.8;
+                      const commissionFee = isZeroComm ? 0 : d.earnings.commission;
+                      const gross = d.earnings.weekly + d.earnings.commission;
+                      const netOwed = isZeroComm ? gross : d.earnings.weekly;
+                      return (
+                        <div key={d.id} className="payout-row">
+                          <span className="font-semibold text-white">
+                            {d.name} {isZeroComm && '⚡'}
+                          </span>
+                          <span className="font-mono text-xs">{d.documents?.license || 'Not Onboarded'}</span>
+                          <span>₹{gross.toFixed(0)}</span>
+                          <span className="text-red-400">
+                            {isZeroComm ? <span className="text-emerald-400 font-bold">₹0 (Zero-Comm)</span> : `₹${commissionFee.toFixed(0)}`}
+                          </span>
+                          <span className="text-green-400 font-semibold">₹{netOwed.toFixed(0)}</span>
+                          <span>
+                            <button 
+                              disabled={d.earnings.weekly <= 0}
+                              onClick={() => payoutDriver(d.id)}
+                              className="bg-emerald-500 hover:bg-emerald-400 disabled:opacity-30 disabled:cursor-not-allowed text-black font-bold px-2 py-0.5 rounded text-[10px] uppercase transition-all"
+                            >
+                              Payout
+                            </button>
+                          </span>
+                        </div>
+                      );
+                    });
+                  })()}
                 </div>
               </div>
 

@@ -101,6 +101,7 @@ export default function DriverApp({ isStandalone }) {
     stopGpsTracking,
     isGpsActive,
     demandHotspots,
+    geofencingZones,
     mapStyle,
     setMapStyle,
     callState,
@@ -461,7 +462,8 @@ export default function DriverApp({ isStandalone }) {
     pickup: null,
     dropoff: null,
     routeLine: null,
-    heatmapCircles: []
+    heatmapCircles: [],
+    geofencePolygons: []
   });
 
   // Scroll chat drawer to bottom on new messages
@@ -544,6 +546,11 @@ export default function DriverApp({ isStandalone }) {
       markersRef.current.heatmapCircles = [];
     }
 
+    if (markersRef.current.geofencePolygons) {
+      markersRef.current.geofencePolygons.forEach(p => map.removeLayer(p));
+      markersRef.current.geofencePolygons = [];
+    }
+
     if (showHeatmap && demandHotspots) {
       markersRef.current.heatmapCircles = demandHotspots.map(spot => {
         return L.circle([spot.lat, spot.lng], {
@@ -554,6 +561,29 @@ export default function DriverApp({ isStandalone }) {
           weight: 1.5,
           dashArray: '3, 6'
         }).addTo(map);
+      });
+    }
+
+    if (geofencingZones) {
+      geofencingZones.forEach(zone => {
+        if (zone.active) {
+          const color = zone.type === 'ban' ? '#ef4444' : '#f59e0b';
+          const fillOpacity = zone.type === 'ban' ? 0.15 : 0.08;
+          const poly = L.polygon(zone.points, {
+            color: color,
+            weight: 1.5,
+            fillColor: color,
+            fillOpacity: fillOpacity,
+            dashArray: '3, 5'
+          }).addTo(map);
+
+          const label = zone.type === 'ban' 
+            ? `<b>⛔ ${zone.name}</b><br/><span style="color:#ef4444;font-weight:bold;">SERVICE TEMPORARILY SUSPENDED</span>`
+            : `<b>⚡ ${zone.name}</b><br/><span style="color:#f59e0b;font-weight:bold;">Active Surge: ${zone.multiplier}x Surcharge</span>`;
+          poly.bindPopup(label);
+
+          markersRef.current.geofencePolygons.push(poly);
+        }
       });
     }
 
@@ -637,7 +667,7 @@ export default function DriverApp({ isStandalone }) {
         }
       }
     }
-  }, [activeRide, currentDriver, selectedDriverId, showHeatmap, demandHotspots]);
+  }, [activeRide, currentDriver, selectedDriverId, showHeatmap, demandHotspots, geofencingZones]);
 
 
 
@@ -2236,6 +2266,11 @@ export default function DriverApp({ isStandalone }) {
                           <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#fff' }}>Chat with Passenger</span>
                         </div>
                         <button style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', fontSize: '18px', fontWeight: 'bold' }} onClick={() => setShowChat(false)}>×</button>
+                      </div>
+
+                      <div style={{ backgroundColor: 'rgba(245,158,11,0.08)', borderBottom: '1px solid rgba(245,158,11,0.12)', padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '9px', color: '#f59e0b', fontFamily: 'Outfit, sans-serif' }}>
+                        <span className="animate-pulse" style={{ fontSize: '10px' }}>🛡️</span>
+                        <span><b>নিরাপদ ড্রাইভিং মুড:</b> ওয়ান-ট্যাপ কুইক রিপ্লাই ব্যবহার করুন। এটি স্বয়ংক্রিয়ভাবে ইংরেজিতে অনুবাদ হবে।</span>
                       </div>
 
                       {/* Messages list */}
