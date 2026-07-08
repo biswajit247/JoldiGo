@@ -3,6 +3,7 @@ import { SimulatorProvider } from './context/SimulatorContext';
 import PassengerApp from './components/PassengerApp';
 import DriverApp from './components/DriverApp';
 import AdminPanel from './components/AdminPanel';
+import MobileBuilder from './components/MobileBuilder';
 import { LayoutGrid, Smartphone, Monitor, ShieldCheck, Cpu, Car, User, RefreshCw } from 'lucide-react';
 import './index.css';
 
@@ -282,6 +283,15 @@ function App() {
                   <Monitor size={16} />
                   <span>Admin Panel</span>
                 </button>
+
+                <button 
+                  className={`view-btn ${viewMode === 'native-builder' ? 'active' : ''}`}
+                  onClick={() => setViewMode('native-builder')}
+                  title="Mobile App Builder & Compiler Console"
+                >
+                  <Smartphone size={16} />
+                  <span>Mobile Builder</span>
+                </button>
               </div>
 
               {/* Connection Status Badge & Server Config */}
@@ -332,6 +342,13 @@ function App() {
               <div className={isStandalone ? "standalone-viewport-admin" : "simulator-desktop-wrapper"} key="admin-view">
                 {!isStandalone && <div className="simulator-title-tag">🖥️ Central Operations Admin (admin.joldigo.in)</div>}
                 <AdminPanel />
+              </div>
+            )}
+
+            {viewMode === 'native-builder' && (
+              <div className="simulator-desktop-wrapper" key="builder-view">
+                {!isStandalone && <div className="simulator-title-tag">🛠️ Native Mobile App Builder</div>}
+                <MobileBuilder />
               </div>
             )}
 
