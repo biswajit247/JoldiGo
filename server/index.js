@@ -71,6 +71,7 @@ const loadPersistedSettings = async () => {
     await query("ALTER TABLE drivers ADD COLUMN IF NOT EXISTS identity_status VARCHAR(50) DEFAULT 'pending'");
     await query("ALTER TABLE rides ADD COLUMN IF NOT EXISTS passenger_rating INTEGER DEFAULT NULL");
     await query("ALTER TABLE rides ADD COLUMN IF NOT EXISTS passenger_comment TEXT DEFAULT NULL");
+    await query("ALTER TABLE passengers ADD COLUMN IF NOT EXISTS name VARCHAR(100) DEFAULT NULL");
 
     const res = await query("SELECT * FROM system_settings");
     res.rows.forEach(row => {
@@ -232,7 +233,7 @@ app.post('/api/otp/send', async (req, res) => {
 
 // Verify OTP & Login/Register Passenger
 app.post('/api/otp/verify', async (req, res) => {
-  const { phone, otp } = req.body;
+  const { phone, otp, name } = req.body;
   if (!phone || !otp) return res.status(400).json({ error: 'Phone and OTP are required.' });
 
   const cachedOtp = otpCache.get(phone);
@@ -243,7 +244,10 @@ app.post('/api/otp/verify', async (req, res) => {
       let passengerRes = await query('SELECT * FROM passengers WHERE phone = $1', [phone]);
       
       if (passengerRes.rows.length === 0) {
-        await query('INSERT INTO passengers (phone, wallet_balance) VALUES ($1, 500.00)', [phone]);
+        await query('INSERT INTO passengers (phone, wallet_balance, name) VALUES ($1, 500.00, $2)', [phone, name || 'Guest Passenger']);
+        passengerRes = await query('SELECT * FROM passengers WHERE phone = $1', [phone]);
+      } else if (name) {
+        await query('UPDATE passengers SET name = $2 WHERE phone = $1', [phone, name]);
         passengerRes = await query('SELECT * FROM passengers WHERE phone = $1', [phone]);
       }
       
@@ -260,16 +264,29 @@ app.post('/api/otp/verify', async (req, res) => {
 
 // Keep login route fallback for backwards compatibility
 app.post('/api/passenger/login', async (req, res) => {
-  const { phone } = req.body;
+  const { phone, name } = req.body;
   try {
     let passengerRes = await query('SELECT * FROM passengers WHERE phone = $1', [phone]);
     if (passengerRes.rows.length === 0) {
-      await query('INSERT INTO passengers (phone, wallet_balance) VALUES ($1, 500.00)', [phone]);
+      await query('INSERT INTO passengers (phone, wallet_balance, name) VALUES ($1, 500.00, $2)', [phone, name || 'Guest Passenger']);
+      passengerRes = await query('SELECT * FROM passengers WHERE phone = $1', [phone]);
+    } else if (name) {
+      await query('UPDATE passengers SET name = $2 WHERE phone = $1', [phone, name]);
       passengerRes = await query('SELECT * FROM passengers WHERE phone = $1', [phone]);
     }
     res.json({ success: true, passenger: passengerRes.rows[0] });
   } catch (err) {
     res.status(500).json({ error: 'Login failed.', details: err.message });
+  }
+});
+
+// Get All Passengers (Admin Panel)
+app.get('/api/admin/passengers', async (req, res) => {
+  try {
+    const passengersRes = await query('SELECT * FROM passengers ORDER BY created_at DESC');
+    res.json({ success: true, passengers: passengersRes.rows });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch passengers.', details: err.message });
   }
 });
 

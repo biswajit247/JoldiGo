@@ -150,6 +150,7 @@ export const SimulatorProvider = ({ children }) => {
   const [surgeSchedules, setSurgeSchedules] = useState([]);
   const [activeScheduledSurge, setActiveScheduledSurge] = useState(null);
   const [demandHotspots, setDemandHotspots] = useState([]);
+  const [passengersList, setPassengersList] = useState([]);
 
   // Server state parameters
   const [fuelPrices, setFuelPrices] = useState({ cng: 95.50, petrol: 104.50, diesel: 92.75 });
@@ -652,10 +653,23 @@ export const SimulatorProvider = ({ children }) => {
       const data = await res.json();
       if (data.success) {
         setPassengerWalletBalance(parseFloat(data.passenger.wallet_balance || 0));
-        setPassenger(prev => ({ ...prev, rideHistory: data.rideHistory }));
+        setPassenger(prev => ({ ...prev, name: data.passenger.name || prev.name || 'Passenger', rideHistory: data.rideHistory }));
       }
     } catch (err) {
       console.warn("Failed to reload profile.");
+    }
+  };
+
+  const refreshPassengersList = async () => {
+    try {
+      const { api } = getServerEndpoints();
+      const res = await fetch(`${api}/api/admin/passengers`);
+      const data = await res.json();
+      if (data.success) {
+        setPassengersList(data.passengers);
+      }
+    } catch (err) {
+      console.warn("Failed to load passengers list.", err);
     }
   };
 
@@ -730,17 +744,17 @@ export const SimulatorProvider = ({ children }) => {
     }
   };
 
-  const loginPassenger = async (phone, otp) => {
+  const loginPassenger = async (phone, otp, name) => {
     try {
       const { api } = getServerEndpoints();
       const res = await fetch(`${api}/api/otp/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, otp })
+        body: JSON.stringify({ phone, otp, name })
       });
       const data = await res.json();
       if (data.success) {
-        setPassenger({ phone, isLoggedIn: true, rideHistory: [] });
+        setPassenger({ phone, name: data.passenger.name || name || 'Passenger', isLoggedIn: true, rideHistory: [] });
         await refreshPassengerProfile(phone);
         connectPassengerSocket(phone);
         addLog(`Passenger verified and logged in.`, 'success');
@@ -751,7 +765,7 @@ export const SimulatorProvider = ({ children }) => {
     } catch (err) {
       console.warn("Offline verification fallback.", err);
       if (otp === '1234' || otp.length === 4) {
-        setPassenger({ phone, isLoggedIn: true, rideHistory: [] });
+        setPassenger({ phone, name: name || 'Passenger', isLoggedIn: true, rideHistory: [] });
         connectPassengerSocket(phone);
         addLog(`Passenger logged in with phone: ${phone} (Offline verification)`, 'success');
         return { success: true };
@@ -1761,7 +1775,9 @@ export const SimulatorProvider = ({ children }) => {
         simulationSpeed,
         setSimulationSpeed,
         addCustomHotspot,
-        resetSimulator
+        resetSimulator,
+        passengersList,
+        refreshPassengersList
       }}
     >
       {children}

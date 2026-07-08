@@ -220,6 +220,7 @@ export default function PassengerApp({ isStandalone }) {
   const [otpInput, setOtpInput] = useState('');
   const [isOtpSent, setIsOtpSent] = useState(false);
   const [otpError, setOtpError] = useState('');
+  const [nameInput, setNameInput] = useState('');
 
   // Location inputs
   const [pickupKey, setPickupKey] = useState('PARK_STREET');
@@ -588,12 +589,13 @@ export default function PassengerApp({ isStandalone }) {
 
   const handleVerifyOtp = async (e) => {
     e.preventDefault();
-    const res = await loginPassenger(phoneInput, otpInput);
+    const res = await loginPassenger(phoneInput, otpInput, nameInput);
     if (res.success) {
       setTab('home');
       setIsOtpSent(false);
       setPhoneInput('');
       setOtpInput('');
+      setNameInput('');
     } else {
       setOtpError(res.error || 'Incorrect OTP. Try "1234" for testing.');
     }
@@ -1785,8 +1787,19 @@ export default function PassengerApp({ isStandalone }) {
               {!isOtpSent ? (
                 <form onSubmit={handleSendOtp}>
                   <h3 className="auth-card-title">Welcome to JoldiGo</h3>
-                  <p className="auth-card-desc">Enter your mobile number to get started booking rides in Kolkata.</p>
+                  <p className="auth-card-desc">Enter your name and mobile number to get started booking rides in Kolkata.</p>
                   
+                  <div className="input-group" style={{ marginBottom: '12px' }}>
+                    <input 
+                      type="text" 
+                      placeholder="Enter Full Name" 
+                      value={nameInput}
+                      onChange={(e) => setNameInput(e.target.value)}
+                      style={{ paddingLeft: '12px' }}
+                      required
+                    />
+                  </div>
+
                   <div className="input-group">
                     <span className="input-prefix">+91</span>
                     <input 

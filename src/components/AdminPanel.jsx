@@ -69,14 +69,22 @@ export default function AdminPanel() {
     addCustomHotspot,
     resetSimulator,
     mapStyle,
-    setMapStyle
+    setMapStyle,
+    passengersList,
+    refreshPassengersList
   } = useSimulator();
 
   useEffect(() => {
     connectAdminSocket();
+    refreshPassengersList();
+    const interval = setInterval(() => {
+      refreshPassengersList();
+    }, 10000);
+    return () => clearInterval(interval);
   }, []);
 
   const [activeTab, setActiveTab] = useState('dashboard'); 
+  const [driverSubTab, setDriverSubTab] = useState('drivers'); // 'drivers', 'passengers'
   const [showDemandHeatmap, setShowDemandHeatmap] = useState(false);
   const [clickToAddHotspots, setClickToAddHotspots] = useState(false);
   const clickToAddHotspotsRef = useRef(clickToAddHotspots);
@@ -725,7 +733,7 @@ export default function AdminPanel() {
               onClick={() => setActiveTab('drivers')}
             >
               <Users size={18} />
-              <span>Partner Documents</span>
+              <span>Partners & Customers</span>
               {drivers.filter(d => d.verificationStatus === 'pending').length > 0 && (
                 <span className="pending-badge">{drivers.filter(d => d.verificationStatus === 'pending').length}</span>
               )}
@@ -1132,53 +1140,118 @@ export default function AdminPanel() {
           {activeTab === 'drivers' && (
             <div className="admin-tab-content">
               <div className="section-title-flex">
-                <h3>Driver Partner Management</h3>
-                <p className="text-gray-400 text-sm">Review onboard documents for legal compliance to authorize rides.</p>
+                <h3>Partners & Customers Management</h3>
+                <p className="text-gray-400 text-sm">Review onboard documents for partner drivers and track registered customer profiles.</p>
               </div>
 
-              <div className="driver-list-table card-glow mt-3">
-                <div className="table-header">
-                  <span>Partner Name</span>
-                  <span>Vehicle Type</span>
-                  <span>Registration (RC)</span>
-                  <span>Aadhar Verification</span>
-                  <span>License Status</span>
-                  <span>Documents Review</span>
-                </div>
+              {/* Sub-tab Selectors */}
+              <div className="flex gap-2 mt-3 border-b border-white/5 pb-2">
+                <button
+                  type="button"
+                  onClick={() => setDriverSubTab('drivers')}
+                  style={{
+                    padding: '6px 14px',
+                    fontSize: '10px',
+                    fontWeight: 'bold',
+                    borderRadius: '6px',
+                    backgroundColor: driverSubTab === 'drivers' ? '#3b82f6' : 'rgba(255,255,255,0.05)',
+                    color: '#fff',
+                    border: 'none',
+                    cursor: 'pointer'
+                  }}
+                >
+                  🏍️ Driver Partners ({drivers.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDriverSubTab('passengers')}
+                  style={{
+                    padding: '6px 14px',
+                    fontSize: '10px',
+                    fontWeight: 'bold',
+                    borderRadius: '6px',
+                    backgroundColor: driverSubTab === 'passengers' ? '#3b82f6' : 'rgba(255,255,255,0.05)',
+                    color: '#fff',
+                    border: 'none',
+                    cursor: 'pointer'
+                  }}
+                >
+                  👥 Passenger Customers ({passengersList.length})
+                </button>
+              </div>
 
-                {drivers.map(d => (
-                  <div key={d.id} className="table-row">
-                    <div className="col-partner">
-                      <span className="drv-avatar-mini">{d.avatar}</span>
-                      <div className="drv-details">
-                        <span className="bold">{d.name}</span>
-                        <span className="text-xs text-gray-400">{d.phone}</span>
+              {driverSubTab === 'drivers' ? (
+                <div className="driver-list-table card-glow mt-3">
+                  <div className="table-header">
+                    <span>Partner Name</span>
+                    <span>Vehicle Type</span>
+                    <span>Registration (RC)</span>
+                    <span>Aadhar Verification</span>
+                    <span>License Status</span>
+                    <span>Documents Review</span>
+                  </div>
+
+                  {drivers.map(d => (
+                    <div key={d.id} className="table-row">
+                      <div className="col-partner">
+                        <span className="drv-avatar-mini">{d.avatar}</span>
+                        <div className="drv-details">
+                          <span className="bold">{d.name}</span>
+                          <span className="text-xs text-gray-400">{d.phone}</span>
+                        </div>
+                      </div>
+                      <span>{getVehicleLabel(d.vehicleType)} ({d.vehicleName})</span>
+                      <span className="font-mono text-xs">{d.documents?.rc || 'Not Uploaded'}</span>
+                      <span className="font-mono text-xs">{d.documents?.aadhar || 'Not Uploaded'}</span>
+                      <span className="font-mono text-xs">{d.documents?.license || 'Not Uploaded'}</span>
+                      
+                      <div>
+                        {d.verificationStatus === 'verified' && (
+                          <span className="badge-status-table verified">Approved ✓</span>
+                        )}
+                        {d.verificationStatus === 'rejected' && (
+                          <span className="badge-status-table rejected">Rejected ✗</span>
+                        )}
+                        {d.verificationStatus === 'pending' && (
+                          <button 
+                            className="btn-action-verify animate-pulse-btn"
+                            onClick={() => setSelectedDriverForDoc(d)}
+                          >
+                            Review Docs
+                          </button>
+                        )}
                       </div>
                     </div>
-                    <span>{getVehicleLabel(d.vehicleType)} ({d.vehicleName})</span>
-                    <span className="font-mono text-xs">{d.documents?.rc || 'Not Uploaded'}</span>
-                    <span className="font-mono text-xs">{d.documents?.aadhar || 'Not Uploaded'}</span>
-                    <span className="font-mono text-xs">{d.documents?.license || 'Not Uploaded'}</span>
-                    
-                    <div>
-                      {d.verificationStatus === 'verified' && (
-                        <span className="badge-status-table verified">Approved ✓</span>
-                      )}
-                      {d.verificationStatus === 'rejected' && (
-                        <span className="badge-status-table rejected">Rejected ✗</span>
-                      )}
-                      {d.verificationStatus === 'pending' && (
-                        <button 
-                          className="btn-action-verify animate-pulse-btn"
-                          onClick={() => setSelectedDriverForDoc(d)}
-                        >
-                          Review Docs
-                        </button>
-                      )}
-                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="driver-list-table card-glow mt-3">
+                  <div className="table-header" style={{ gridTemplateColumns: '1.2fr 1.5fr 1fr 1.2fr' }}>
+                    <span>Customer Name</span>
+                    <span>Mobile Number</span>
+                    <span>Wallet Balance</span>
+                    <span>Registration Date</span>
                   </div>
-                ))}
-              </div>
+
+                  {passengersList.length === 0 ? (
+                    <div className="text-center py-6 text-xs text-gray-500 italic">No passenger records registered on this server.</div>
+                  ) : (
+                    passengersList.map(pass => (
+                      <div key={pass.phone} className="table-row" style={{ gridTemplateColumns: '1.2fr 1.5fr 1fr 1.2fr', padding: '10px 14px' }}>
+                        <div className="col-partner text-left">
+                          <span className="drv-avatar-mini" style={{ backgroundColor: '#10b981', color: '#fff', fontSize: '9px' }}>👤</span>
+                          <div className="drv-details ml-2">
+                            <span className="bold text-white">{pass.name || 'Guest Passenger'}</span>
+                          </div>
+                        </div>
+                        <span className="font-mono text-xs text-gray-300 text-left">+91 {pass.phone}</span>
+                        <span className="font-bold text-emerald-400 text-left">₹{parseFloat(pass.wallet_balance || 0).toFixed(2)}</span>
+                        <span className="text-xs text-gray-500 text-left">{new Date(pass.created_at).toLocaleString()}</span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
 
               {/* Doc Review Modal */}
               {selectedDriverForDoc && (
