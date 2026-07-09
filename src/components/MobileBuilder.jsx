@@ -147,7 +147,7 @@ export default function MobileBuilder() {
               <div className="text-gray-600 italic mt-8 text-center">Press compile to view real-time log outputs...</div>
             )}
             {logs.map((log, idx) => {
-              const isSuccess = log.includes('✅') || log.includes('successful!');
+              const isSuccess = log && typeof log === 'string' && (log.includes('✅') || log.includes('successful!'));
               return (
                 <div key={idx} style={{ color: isSuccess ? '#10b981' : '#a0aec0', marginBottom: '4.5px', lineHeight: '1.4' }}>
                   {log}

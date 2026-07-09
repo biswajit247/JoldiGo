@@ -2899,7 +2899,7 @@ export default function AdminPanel() {
 
                   {(() => {
                     const filteredDrivers = drivers.filter(d => {
-                      const matchesSearch = d.name.toLowerCase().includes(ledgerSearchText.toLowerCase()) || 
+                      const matchesSearch = (d.name || '').toLowerCase().includes(ledgerSearchText.toLowerCase()) || 
                                             (d.documents?.license || '').toLowerCase().includes(ledgerSearchText.toLowerCase());
                       const matchesVehicle = ledgerVehicleFilter === 'all' || d.vehicleType === ledgerVehicleFilter;
                       return matchesSearch && matchesVehicle;
