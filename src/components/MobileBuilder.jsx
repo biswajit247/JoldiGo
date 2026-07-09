@@ -46,6 +46,48 @@ export default function MobileBuilder() {
     }
   }, [logs]);
 
+  const downloadBuildInstructions = () => {
+    const content = `JoldiGo Mobile App Installer Compilation Instructions
+===================================================
+
+To compile the real APK/IPA installers for your phone:
+
+1. Prerequisite tools:
+   - Node.js (v18+)
+   - Android Studio (for Android APK generation)
+   - Xcode (for iOS, macOS only)
+
+2. Step-by-Step CLI Commands:
+   a. Open your terminal in the JoldiGo project folder.
+   b. Compile web assets:
+      $ npm run build
+   c. Synchronize assets to native directories:
+      $ npx cap sync
+   d. Open workspace in Android Studio:
+      $ npx cap open android
+   e. Open workspace in Xcode:
+      $ npx cap open ios
+
+3. Generating the Android APK:
+   - In Android Studio, wait for Gradle sync to finish.
+   - Go to Build -> Build Bundle(s) / APK(s) -> Build APK(s).
+   - Once completed, click "Locate" to find your "app-debug.apk" file.
+   - Copy "app-debug.apk" to your phone and install!
+
+For support, visit: https://github.com/biswajit247/JoldiGo
+`;
+
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = platform === 'android' ? 'jaldigo-android-build-guide.txt' : 'jaldigo-ios-build-guide.txt';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   const handleStartCompile = () => {
     setIsCompiling(true);
     setBuildComplete(false);
@@ -168,7 +210,7 @@ export default function MobileBuilder() {
                 </div>
               </div>
               <button
-                onClick={() => alert(`Simulated Download: Starting download of ${platform === 'android' ? 'jaldigo-debug.apk' : 'jaldigo-ios-test.zip'}`)}
+                onClick={downloadBuildInstructions}
                 className="py-1 px-3 bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-[10px] rounded flex items-center gap-1 cursor-pointer transition-all"
               >
                 <Download size={10} /> Download
