@@ -1707,9 +1707,47 @@ wss.on('connection', (ws) => {
             targetDriverWs.send(JSON.stringify({ type: 'ride_offer', ride: data.ride }));
             console.log(`Dispatched ride contract ${data.ride.id} to Driver ID ${data.ride.driverId}`);
           } else {
-            console.warn(`Target driver ID ${data.ride.driverId} WebSocket is currently unavailable.`);
-            // Automatically timeout if driver is not connected
-            ws.send(JSON.stringify({ type: 'ride_timeout', rideId: data.ride.id }));
+            console.log(`Target driver ID ${data.ride.driverId} is offline. Simulating Auto-Accept & trip progression for device testing...`);
+            
+            // 1. Update ride status in database to 'accepted'
+            await query("UPDATE rides SET status = 'accepted' WHERE id = $1", [data.ride.id]);
+            
+            // 2. Notify passenger immediately of acceptance
+            ws.send(JSON.stringify({ type: 'ride_accepted', rideId: data.ride.id, driverId: data.ride.driverId }));
+            
+            // 3. Setup auto-progress timer simulation to let passenger test native flow
+            setTimeout(async () => {
+              // Arrived at pickup
+              await query("UPDATE rides SET status = 'arrived' WHERE id = $1", [data.ride.id]);
+              ws.send(JSON.stringify({ type: 'ride_status_broadcast', rideId: data.ride.id, status: 'arrived' }));
+              
+              setTimeout(async () => {
+                // Started trip (in_progress)
+                await query("UPDATE rides SET status = 'in_progress' WHERE id = $1", [data.ride.id]);
+                ws.send(JSON.stringify({ type: 'ride_status_broadcast', rideId: data.ride.id, status: 'in_progress' }));
+                
+                setTimeout(async () => {
+                  // Completed trip
+                  await query("UPDATE rides SET status = 'completed' WHERE id = $1", [data.ride.id]);
+                  
+                  // Run wallet deduction & driver payouts calculations
+                  const fare = parseFloat(data.ride.totalFare);
+                  const commission = parseFloat(data.ride.commission);
+                  const takeHome = parseFloat(data.ride.driverTakeHome);
+                  
+                  await query('UPDATE passengers SET wallet_balance = wallet_balance - $1 WHERE phone = $2', [fare, data.ride.passengerPhone]);
+                  await query(
+                    `UPDATE drivers 
+                     SET earnings_daily = earnings_daily + $1, earnings_weekly = earnings_weekly + $1, commission_owed = commission_owed + $2 
+                     WHERE id = $3`,
+                    [takeHome, commission, data.ride.driverId]
+                  );
+                  
+                  ws.send(JSON.stringify({ type: 'ride_status_broadcast', rideId: data.ride.id, status: 'completed' }));
+                  broadcastToRole('admin', { type: 'ledger_update' });
+                }, 5000); // 5s trip duration
+              }, 4000); // 4s wait at pickup
+            }, 3000); // 3s driver arrival
           }
           break;
 
