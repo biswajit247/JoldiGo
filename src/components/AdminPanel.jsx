@@ -701,7 +701,7 @@ export default function AdminPanel() {
           <div className="sos-banner-content">
             <ShieldAlert size={20} className="banner-icon" />
             <span>
-              <b>CRITICAL EMERGENCY (24/7 Control Room Active):</b> {sosAlerts.filter(a => a.status === 'dispatch' || alert.status === 'secured').length} Active SOS Panic Signal(s) triggered! Police interceptor units dispatched.
+              <b>CRITICAL EMERGENCY (24/7 Control Room Active):</b> {sosAlerts.filter(a => a.status === 'dispatch' || a.status === 'secured').length} Active SOS Panic Signal(s) triggered! Police interceptor units dispatched.
             </span>
           </div>
           <button className="btn-resolve-banner" onClick={() => setActiveTab('dashboard')}>

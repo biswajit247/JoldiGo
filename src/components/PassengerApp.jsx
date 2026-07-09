@@ -642,14 +642,43 @@ export default function PassengerApp({ isStandalone }) {
   };
 
   const executeWalletTopUp = () => {
+    if (rzpOtpInput !== '123456') {
+      alert("Invalid OTP code! Please use 123456.");
+      return;
+    }
     setTopUpStep('processing');
-    setTimeout(() => {
-      topUpPassengerWallet(topUpAmount);
-      setTopUpStep('success');
-      setTimeout(() => {
-        setShowTopUpModal(false);
-        setTopUpStep('select');
-      }, 1000);
+    setTimeout(async () => {
+      try {
+        const { api } = getServerEndpoints();
+        const verifyRes = await fetch(`${api}/api/passenger/wallet/topup`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone: passenger.phone, amount: topUpAmount })
+        });
+        const verifyData = await verifyRes.json();
+        if (verifyData.success) {
+          setPassengerWalletBalance(parseFloat(verifyData.wallet_balance || 0));
+          setTopUpStep('success');
+          setRzpOtpInput('');
+          setTimeout(() => {
+            setShowTopUpModal(false);
+            setTopUpStep('select');
+          }, 1500);
+        } else {
+          alert("Top-up request failed!");
+          setTopUpStep('verify');
+        }
+      } catch (err) {
+        console.error(err);
+        // Local fallback
+        setPassengerWalletBalance(prev => prev + topUpAmount);
+        setTopUpStep('success');
+        setRzpOtpInput('');
+        setTimeout(() => {
+          setShowTopUpModal(false);
+          setTopUpStep('select');
+        }, 1500);
+      }
     }, 1200);
   };
 
@@ -674,9 +703,15 @@ export default function PassengerApp({ isStandalone }) {
     if (!pick || !drop) return { distance: 0, totalFare: 0, contractHash: '', baseFare: 0, fuelSurcharge: 0, grossBaseRideFare: 0, gstAmount: 0, tollEstimate: 0, commission: 0, takeHome: 0, insurancePremium: 0, surgeMultiplier: 1.0, trafficMultiplier: 1.0, trafficZoneName: null };
     
     const dist = calculateDistance(pick.lat, pick.lng, drop.lat, drop.lng);
+    const calculated = calculateDetailedFare(dist, vType === 'auto' ? 'bike' : vType, pick, drop);
+    if (vType === 'auto') {
+      calculated.totalFare = Math.round(calculated.totalFare * 1.35);
+      calculated.grossBaseRideFare = calculated.grossBaseRideFare * 1.35;
+      calculated.gstAmount = calculated.gstAmount * 1.35;
+    }
     return {
       distance: dist,
-      ...calculateDetailedFare(dist, vType, pick, drop)
+      ...calculated
     };
   };
 
@@ -684,6 +719,7 @@ export default function PassengerApp({ isStandalone }) {
   const acMetrics = getPreviewMetrics('car_ac');
   const nonAcMetrics = getPreviewMetrics('car_non_ac');
   const bikeMetrics = getPreviewMetrics('bike');
+  const autoMetrics = getPreviewMetrics('auto');
 
   const renderPanelOverlay = () => {
     if (!activeRide) {
@@ -741,34 +777,7 @@ export default function PassengerApp({ isStandalone }) {
 
           {/* Vehicle Selection Cards */}
           <div className="vehicle-selector">
-            <button 
-              className={`vehicle-card ${vehicleType === 'car_ac' ? 'selected' : ''}`}
-              onClick={() => setVehicleType('car_ac')}
-            >
-              <div className="vehicle-icon-bg car-bg">
-                <Car className="vh-icon" />
-              </div>
-              <div className="vehicle-info">
-                <span className="vh-name">JoldiGo AC Car</span>
-                <span className="vh-eta">Premium Air-Conditioned sedan</span>
-              </div>
-              <span className="vh-price">₹{acMetrics.totalFare}</span>
-            </button>
- 
-            <button 
-              className={`vehicle-card ${vehicleType === 'car_non_ac' ? 'selected' : ''}`}
-              onClick={() => setVehicleType('car_non_ac')}
-            >
-              <div className="vehicle-icon-bg car-bg" style={{ backgroundColor: 'rgba(255,160,0,0.1)', color: '#ff9c00' }}>
-                <Car className="vh-icon" />
-              </div>
-              <div className="vehicle-info">
-                <span className="vh-name">JoldiGo Non-AC Car</span>
-                <span className="vh-eta">Standard budget transport</span>
-              </div>
-              <span className="vh-price">₹{nonAcMetrics.totalFare}</span>
-            </button>
- 
+            {/* 1. Bike */}
             <button 
               className={`vehicle-card ${vehicleType === 'bike' ? 'selected' : ''} ${bikeMetrics.totalFare === 0 ? 'opacity-40 cursor-not-allowed' : ''}`}
               onClick={() => bikeMetrics.totalFare > 0 && setVehicleType('bike')}
@@ -779,10 +788,83 @@ export default function PassengerApp({ isStandalone }) {
                 <Bike className="vh-icon" />
               </div>
               <div className="vehicle-info">
-                <span className="vh-name">JoldiGo Bike</span>
-                <span className="vh-eta">{bikeMetrics.totalFare === 0 ? 'Safety Suspended (Flooding)' : 'Fast & nimble bike commute'}</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="vh-name">JoldiGo Bike</span>
+                  {bikeMetrics.surgeMultiplier > 1 && (
+                    <span className="bg-amber-500/20 text-amber-400 text-[8px] font-bold px-1.5 py-0.2 rounded font-mono">
+                      {bikeMetrics.surgeMultiplier}x Surge
+                    </span>
+                  )}
+                </div>
+                <span className="vh-eta">{bikeMetrics.totalFare === 0 ? 'Safety Suspended (Flooding)' : `ETA: 2 mins • Fast & nimble`}</span>
               </div>
-              <span className="vh-price">{bikeMetrics.totalFare === 0 ? 'Suspended' : `₹${bikeMetrics.totalFare}`}</span>
+              <span className="vh-price">{bikeMetrics.totalFare === 0 ? 'Suspended' : `₹${bikeMetrics.totalFare.toFixed(0)}`}</span>
+            </button>
+
+            {/* 2. Auto */}
+            <button 
+              className={`vehicle-card ${vehicleType === 'auto' ? 'selected' : ''}`}
+              onClick={() => setVehicleType('auto')}
+            >
+              <div className="vehicle-icon-bg auto-bg" style={{ backgroundColor: 'rgba(16,185,129,0.1)', color: '#10b981' }}>
+                <Car className="vh-icon" />
+              </div>
+              <div className="vehicle-info">
+                <div className="flex items-center gap-1.5">
+                  <span className="vh-name">JoldiGo Auto</span>
+                  {bikeMetrics.surgeMultiplier > 1 && (
+                    <span className="bg-amber-500/20 text-amber-400 text-[8px] font-bold px-1.5 py-0.2 rounded font-mono">
+                      {bikeMetrics.surgeMultiplier}x Surge
+                    </span>
+                  )}
+                </div>
+                <span className="vh-eta">ETA: 3 mins • Open-air local ride</span>
+              </div>
+              <span className="vh-price">₹{autoMetrics.totalFare.toFixed(0)}</span>
+            </button>
+
+            {/* 3. Non-AC Car */}
+            <button 
+              className={`vehicle-card ${vehicleType === 'car_non_ac' ? 'selected' : ''}`}
+              onClick={() => setVehicleType('car_non_ac')}
+            >
+              <div className="vehicle-icon-bg car-bg" style={{ backgroundColor: 'rgba(255,160,0,0.1)', color: '#ff9c00' }}>
+                <Car className="vh-icon" />
+              </div>
+              <div className="vehicle-info">
+                <div className="flex items-center gap-1.5">
+                  <span className="vh-name">JoldiGo Non-AC Car</span>
+                  {nonAcMetrics.surgeMultiplier > 1 && (
+                    <span className="bg-amber-500/20 text-amber-400 text-[8px] font-bold px-1.5 py-0.2 rounded font-mono">
+                      {nonAcMetrics.surgeMultiplier}x Surge
+                    </span>
+                  )}
+                </div>
+                <span className="vh-eta">ETA: 5 mins • Standard budget transport</span>
+              </div>
+              <span className="vh-price">₹{nonAcMetrics.totalFare.toFixed(0)}</span>
+            </button>
+
+            {/* 4. AC Car */}
+            <button 
+              className={`vehicle-card ${vehicleType === 'car_ac' ? 'selected' : ''}`}
+              onClick={() => setVehicleType('car_ac')}
+            >
+              <div className="vehicle-icon-bg car-bg">
+                <Car className="vh-icon" />
+              </div>
+              <div className="vehicle-info">
+                <div className="flex items-center gap-1.5">
+                  <span className="vh-name">JoldiGo AC Car</span>
+                  {acMetrics.surgeMultiplier > 1 && (
+                    <span className="bg-amber-500/20 text-amber-400 text-[8px] font-bold px-1.5 py-0.2 rounded font-mono">
+                      {acMetrics.surgeMultiplier}x Surge
+                    </span>
+                  )}
+                </div>
+                <span className="vh-eta">ETA: 4 mins • Premium AC Sedan</span>
+              </div>
+              <span className="vh-price">₹{acMetrics.totalFare.toFixed(0)}</span>
             </button>
           </div>
 
@@ -1935,9 +2017,33 @@ export default function PassengerApp({ isStandalone }) {
 
                       <button 
                         className="btn-pay-rzp mt-4 w-full py-2 bg-amber-500 text-black hover:bg-amber-600 font-bold rounded-lg text-xs"
-                        onClick={executeWalletTopUp}
+                        onClick={() => setTopUpStep('verify')}
                       >
                         Authorize Top Up ₹{topUpAmount}
+                      </button>
+                    </div>
+                  )}
+
+                  {topUpStep === 'verify' && (
+                    <div className="payment-body mt-3 text-center flex flex-col gap-2">
+                      <div className="text-left mb-2">
+                        <label className="text-[10px] text-gray-400 font-bold uppercase">Enter Mock OTP Code:</label>
+                        <p className="text-[9px] text-gray-500 mt-0.5">Input 123456 to approve mock wallet deposit.</p>
+                      </div>
+                      <input 
+                        type="text"
+                        placeholder="Enter 6-digit OTP"
+                        value={rzpOtpInput}
+                        onChange={e => setRzpOtpInput(e.target.value)}
+                        style={{ width: '100%', backgroundColor: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', padding: '8px', color: '#fff', outline: 'none', textAlign: 'center', fontSize: '14px', fontFamily: 'monospace' }}
+                        maxLength={6}
+                      />
+                      <button
+                        type="button"
+                        onClick={executeWalletTopUp}
+                        className="py-2 bg-emerald-500 hover:bg-emerald-400 text-white font-bold text-xs rounded-lg cursor-pointer transition-all mt-2"
+                      >
+                        Verify & Complete Deposit
                       </button>
                     </div>
                   )}
