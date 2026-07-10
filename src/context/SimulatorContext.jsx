@@ -1045,10 +1045,24 @@ export const SimulatorProvider = ({ children }) => {
       return;
     }
 
-    const availableDrivers = drivers.filter(d => d.status === 'online' && d.verificationStatus === 'verified' && d.vehicleType === vehicleType);
+    let availableDrivers = drivers.filter(d => d.status === 'online' && d.verificationStatus === 'verified' && d.vehicleType === vehicleType);
     if (availableDrivers.length === 0) {
-      alert(`No online drivers matching type "${vehicleType.replace('_', ' ').toUpperCase()}" available nearby.`);
-      return;
+      console.log(`No active online drivers of type ${vehicleType}. Generating virtual fallback driver...`);
+      const virtualDriver = {
+        id: 'driver_virtual_' + vehicleType,
+        name: vehicleType === 'bike' ? 'Captain Joydev (Bike)' : (vehicleType === 'auto' ? 'Captain Subrata (Auto)' : 'Captain Bikram (Car)'),
+        phone: '+91 9830012345',
+        vehicleType: vehicleType,
+        vehicleNumber: vehicleType === 'bike' ? 'WB-02-B-9988' : (vehicleType === 'auto' ? 'WB-04-A-1122' : 'WB-20-C-5566'),
+        rating: 4.8,
+        status: 'online',
+        verificationStatus: 'verified',
+        location: { lat: pickup.lat + 0.005, lng: pickup.lng - 0.004 }
+      };
+      
+      // Update local state temporarily
+      setDrivers(prev => [...prev.filter(d => d.id !== virtualDriver.id), virtualDriver]);
+      availableDrivers = [virtualDriver];
     }
 
     let closestDriver = availableDrivers[0];
