@@ -727,6 +727,32 @@ export default function DriverApp({ isStandalone }) {
         <p style={{ margin: '0 0 16px 0', fontSize: '11px', lineHeight: '1.5' }}>
           Waiting for active driver profile. Make sure your local Express server is running on port 5001 or set the correct address in the Cockpit header.
         </p>
+        
+        <button
+          onClick={() => {
+            const currentUrl = localStorage.getItem('joldigo_server_url') || 'https://joldigo-backend.onrender.com';
+            const newUrl = window.prompt("Enter JoldiGo Server URL:", currentUrl);
+            if (newUrl !== null) {
+              localStorage.setItem('joldigo_server_url', newUrl.trim());
+              window.location.reload();
+            }
+          }}
+          style={{
+            marginTop: '16px',
+            backgroundColor: '#ffdd00',
+            color: '#000',
+            border: 'none',
+            borderRadius: '6px',
+            padding: '8px 16px',
+            fontSize: '11px',
+            fontWeight: 'bold',
+            cursor: 'pointer',
+            boxShadow: '0 4px 10px rgba(255, 221, 0, 0.2)'
+          }}
+        >
+          ⚙️ Change Server Address
+        </button>
+
         <style>{`
           @keyframes spin {
             to { transform: rotate(360deg); }
