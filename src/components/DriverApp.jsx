@@ -414,6 +414,7 @@ export default function DriverApp({ isStandalone }) {
   const [subTier, setSubTier] = useState('free');
   const [subExpires, setSubExpires] = useState(null);
   const [loadingSub, setLoadingSub] = useState(false);
+  const [showSettingsDrawer, setShowSettingsDrawer] = useState(false);
 
   const fetchSubscription = async () => {
     if (!selectedDriverId) return;
@@ -1944,11 +1945,11 @@ export default function DriverApp({ isStandalone }) {
                   <button
                     type="button"
                     className="btn-status-toggle"
-                    onClick={() => setIsNightMode(!isNightMode)}
-                    title={isNightMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+                    onClick={() => setShowSettingsDrawer(true)}
+                    title="Settings"
                     style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '28px', height: '28px', backgroundColor: 'rgba(255,255,255,0.05)', border: 'none', borderRadius: '50%', cursor: 'pointer' }}
                   >
-                    <span style={{ fontSize: '12px' }}>{isNightMode ? "🌙" : "☀️"}</span>
+                    <span style={{ fontSize: '11px' }}>⚙️</span>
                   </button>
 
                   <span className={`status-pill ${currentDriver.status === 'online' ? 'online' : 'offline'}`}>
@@ -2986,6 +2987,125 @@ export default function DriverApp({ isStandalone }) {
               );
             })()}
 
+          </div>
+        )}
+
+        {/* APPEARANCE THEME SETTINGS DRAWER */}
+        {showSettingsDrawer && (
+          <div 
+            style={{
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              right: 0,
+              backgroundColor: 'var(--bg-panel)',
+              borderTop: '1px solid var(--border-light)',
+              borderTopLeftRadius: '16px',
+              borderTopRightRadius: '16px',
+              zIndex: 9999,
+              padding: '20px 16px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '16px',
+              boxShadow: '0 -4px 30px rgba(0, 0, 0, 0.7)',
+            }}
+            className="animate-slide-up text-left"
+          >
+            <div className="flex justify-between items-center pb-2 border-b border-white/5">
+              <span className="text-xs font-black uppercase text-amber-500 tracking-wider">⚙️ Appearance Settings</span>
+              <button
+                type="button"
+                onClick={() => setShowSettingsDrawer(false)}
+                className="text-[10px] text-gray-400 hover:text-white font-bold bg-white/5 hover:bg-white/10 px-2 py-0.5 rounded cursor-pointer border-none"
+              >
+                Close
+              </button>
+            </div>
+
+            {/* Side-by-side Light/Dark Selector */}
+            <div className="flex gap-4 justify-center py-2">
+              
+              {/* Light Mode Selector Card */}
+              <button 
+                type="button"
+                className="flex-1 flex flex-col items-center gap-3 bg-transparent border-none cursor-pointer outline-none focus:outline-none"
+                onClick={() => setIsNightMode(false)}
+              >
+                {/* Visual Card graphic representing Light Mode */}
+                <div 
+                  className={`w-[110px] h-[70px] rounded-xl p-2 flex flex-col gap-1 transition-all ${
+                    !isNightMode 
+                      ? 'bg-slate-200 border-2 border-amber-400 shadow-md shadow-amber-400/20' 
+                      : 'bg-slate-300 opacity-60 hover:opacity-100 border-2 border-transparent'
+                  }`}
+                  style={{ boxSizing: 'border-box' }}
+                >
+                  <div className="w-full bg-white/90 rounded p-1 flex flex-col gap-1">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                      <div className="h-1 w-10 bg-slate-300 rounded-sm"></div>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                      <div className="h-1 w-10 bg-slate-300 rounded-sm"></div>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Text Label */}
+                <span className={`text-[11px] font-extrabold transition-all ${!isNightMode ? 'text-amber-400' : 'text-gray-400'}`}>
+                  Light Mode
+                </span>
+                
+                {/* Radio Circle */}
+                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all ${
+                  !isNightMode ? 'border-amber-400 bg-amber-400/10' : 'border-gray-600'
+                }`}>
+                  {!isNightMode && <div className="w-2 h-2 rounded-full bg-amber-400"></div>}
+                </div>
+              </button>
+
+              {/* Dark Mode Selector Card */}
+              <button 
+                type="button"
+                className="flex-1 flex flex-col items-center gap-3 bg-transparent border-none cursor-pointer outline-none focus:outline-none"
+                onClick={() => setIsNightMode(true)}
+              >
+                {/* Visual Card graphic representing Dark Mode */}
+                <div 
+                  className={`w-[110px] h-[70px] rounded-xl p-2 flex flex-col gap-1 transition-all ${
+                    isNightMode 
+                      ? 'bg-slate-800 border-2 border-amber-400 shadow-md shadow-amber-400/20' 
+                      : 'bg-slate-900 opacity-60 hover:opacity-100 border-2 border-transparent'
+                  }`}
+                  style={{ boxSizing: 'border-box' }}
+                >
+                  <div className="w-full bg-slate-950/80 rounded p-1 flex flex-col gap-1">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-2 h-2 rounded-full bg-blue-600"></div>
+                      <div className="h-1 w-10 bg-slate-800 rounded-sm"></div>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-2 h-2 rounded-full bg-blue-600"></div>
+                      <div className="h-1 w-10 bg-slate-800 rounded-sm"></div>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Text Label */}
+                <span className={`text-[11px] font-extrabold transition-all ${isNightMode ? 'text-amber-400' : 'text-gray-400'}`}>
+                  Dark Mode
+                </span>
+                
+                {/* Radio Circle */}
+                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all ${
+                  isNightMode ? 'border-amber-400 bg-amber-400/10' : 'border-gray-600'
+                }`}>
+                  {isNightMode && <div className="w-2 h-2 rounded-full bg-amber-400"></div>}
+                </div>
+              </button>
+
+            </div>
           </div>
         )}
 
