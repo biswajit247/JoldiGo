@@ -87,7 +87,8 @@ function App() {
       if (saved) {
         return saved;
       }
-      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      const isCapacitor = !!window.Capacitor;
+      if (!isCapacitor && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
         return 'http://localhost:5001';
       }
     }
