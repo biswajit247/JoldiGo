@@ -163,7 +163,7 @@ export const SimulatorProvider = ({ children }) => {
     freeCount: 0,
     subscriptionEarnings: 0
   });
-  const [isNightMode, setIsNightMode] = useState(false); 
+  const [isNightMode, setIsNightMode] = useState(true); 
   const [mapStyle, setMapStyle] = useState('dark_navigation');
   const [passengerWalletBalance, setPassengerWalletBalance] = useState(500.00); 
   const [congestionZones, setCongestionZones] = useState({ HOWRAH_BRIDGE: 'heavy', PARK_STREET: 'medium', SALT_LAKE_SEC5: 'medium' });
