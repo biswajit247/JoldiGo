@@ -765,8 +765,8 @@ export default function DriverApp({ isStandalone }) {
   const renderCallOverlay = () => {
     if (callState === 'idle') return null;
 
-    const isInvolved = (callPartner?.role === 'passenger' && callFrom === 'driver') || 
-                       (callPartner?.role === 'driver' && callPartner?.id === currentDriver.id);
+    const isInvolved = (callFrom === 'driver') || 
+                       (callFrom === 'passenger' && callPartner?.role === 'driver' && callPartner?.id === currentDriver.id);
                        
     if (!isInvolved) return null;
 

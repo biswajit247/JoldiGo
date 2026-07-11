@@ -1629,8 +1629,8 @@ export default function PassengerApp({ isStandalone }) {
   const renderCallOverlay = () => {
     if (callState === 'idle') return null;
 
-    const isInvolved = (callPartner?.role === 'driver' && callFrom === 'passenger') || 
-                       (callPartner?.role === 'passenger' && callPartner?.id === passenger.phone);
+    const isInvolved = (callFrom === 'passenger') || 
+                       (callFrom === 'driver' && callPartner?.role === 'passenger' && callPartner?.id === passenger.phone);
                        
     if (!isInvolved) return null;
 
