@@ -307,8 +307,15 @@ function App() {
                       window.location.reload();
                     }
                   }}
+                  onBlur={() => {
+                    // Automatically reload and apply if changed
+                    const saved = localStorage.getItem('joldigo_server_url') || '';
+                    if (saved.trim() !== '') {
+                      window.location.reload();
+                    }
+                  }}
                   placeholder="http://localhost:5001"
-                  title="Backend Server Endpoint URL (e.g. https://joldigo.onrender.com). Press Enter to apply."
+                  title="Backend Server Endpoint URL (e.g. https://joldigo.onrender.com). Press Enter or click away to apply."
                 />
               </div>
             </header>
