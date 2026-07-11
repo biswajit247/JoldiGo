@@ -352,6 +352,15 @@ export const SimulatorProvider = ({ children }) => {
     fetchInitialData();
   }, []);
 
+  // Handle theme toggling (isNightMode = true (Dark Theme), isNightMode = false (Light Theme))
+  useEffect(() => {
+    if (isNightMode) {
+      document.body.classList.remove('light-theme');
+    } else {
+      document.body.classList.add('light-theme');
+    }
+  }, [isNightMode]);
+
   // Poll server state updates periodically for admin ledger
   useEffect(() => {
     const interval = setInterval(() => {

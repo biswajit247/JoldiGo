@@ -2228,6 +2228,9 @@ export default function PassengerApp({ isStandalone }) {
                   <button className="header-icon-btn" onClick={() => setTab('history')} title="Ride History">
                     <History size={14} />
                   </button>
+                  <button className="header-icon-btn" onClick={() => setIsNightMode(!isNightMode)} title={isNightMode ? "Switch to Light Mode" : "Switch to Dark Mode"}>
+                    <span style={{ fontSize: '11px' }}>{isNightMode ? "🌙" : "☀️"}</span>
+                  </button>
                   <button className="header-icon-btn logout" onClick={logoutPassenger} title="Logout">
                     <LogOut size={14} />
                   </button>

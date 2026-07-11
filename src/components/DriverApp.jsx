@@ -88,6 +88,7 @@ export default function DriverApp({ isStandalone }) {
     sendChatMessage,
     toggleDriverStatus,
     uploadDriverDocs,
+    payoutDriver,
     acceptRide,
     rejectRide,
     startRide,
@@ -111,7 +112,9 @@ export default function DriverApp({ isStandalone }) {
     initiateCall,
     acceptCall,
     endCall,
-    enrollDriver
+    enrollDriver,
+    isNightMode,
+    setIsNightMode
   } = useSimulator();
 
   const speakText = (text, langCode) => {
@@ -1936,7 +1939,18 @@ export default function DriverApp({ isStandalone }) {
                   </div>
                 </div>
 
-                <div className="online-switch-row">
+                <div className="online-switch-row" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {/* Theme Toggle Button */}
+                  <button
+                    type="button"
+                    className="btn-status-toggle"
+                    onClick={() => setIsNightMode(!isNightMode)}
+                    title={isNightMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '28px', height: '28px', backgroundColor: 'rgba(255,255,255,0.05)', border: 'none', borderRadius: '50%', cursor: 'pointer' }}
+                  >
+                    <span style={{ fontSize: '12px' }}>{isNightMode ? "🌙" : "☀️"}</span>
+                  </button>
+
                   <span className={`status-pill ${currentDriver.status === 'online' ? 'online' : 'offline'}`}>
                     {currentDriver.status.toUpperCase()}
                   </span>
@@ -2470,15 +2484,70 @@ export default function DriverApp({ isStandalone }) {
                       <div className="earnings-quick-stats">
                         <div className="stat-box">
                           <span className="stat-label">Daily Net</span>
-                          <span className="stat-value">₹{currentDriver.earnings.daily.toFixed(0)}</span>
+                          <span className="stat-value">₹{currentDriver.earnings.daily.toFixed(2)}</span>
                         </div>
                         <div className="stat-box">
                           <span className="stat-label">Weekly Net</span>
-                          <span className="stat-value">₹{currentDriver.earnings.weekly.toFixed(0)}</span>
+                          <span className="stat-value font-bold text-yellow-400">₹{currentDriver.earnings.weekly.toFixed(2)}</span>
                         </div>
                         <div className="stat-box">
                           <span className="stat-label">Comm (5%)</span>
-                          <span className="stat-value text-red-400">₹{currentDriver.earnings.commission.toFixed(0)}</span>
+                          <span className="stat-value text-red-400">₹{currentDriver.earnings.commission.toFixed(2)}</span>
+                        </div>
+                      </div>
+
+                      {/* Cash Out / Payout Request Card */}
+                      <div className="p-3 bg-black/40 border border-white/5 rounded-lg flex flex-col gap-2 text-left">
+                        <div className="flex justify-between items-center">
+                          <span className="text-[10px] text-gray-400 font-extrabold uppercase tracking-wider">🏦 Instant Wallet Payout</span>
+                          <span className="text-[9px] bg-green-500/20 text-green-400 border border-green-500/30 px-1 py-0.5 rounded font-extrabold">Instant Transfer</span>
+                        </div>
+                        <p className="text-[10px] text-gray-500">Transfer your weekly net earnings directly to your registered bank account ({currentDriver.bankAccountNumber ? `Account Ending ${currentDriver.bankAccountNumber.slice(-4)}` : 'Bank Pending'}).</p>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (currentDriver.earnings.weekly <= 0) {
+                              alert("No weekly earnings available to withdraw.");
+                              return;
+                            }
+                            const amount = currentDriver.earnings.weekly;
+                            await payoutDriver(currentDriver.id);
+                            alert(`💸 Instant transfer completed! ₹${amount.toFixed(2)} successfully sent to your bank account.`);
+                          }}
+                          disabled={currentDriver.earnings.weekly <= 0}
+                          className="w-full py-2 bg-yellow-400 text-black font-bold rounded text-xs cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:bg-yellow-300 transition-colors"
+                        >
+                          🏦 Withdraw to Bank Account
+                        </button>
+                      </div>
+
+                      {/* Interactive Weekly Bar Chart */}
+                      <div className="bg-black/30 border border-white/5 rounded-lg p-2.5 text-xs text-left">
+                        <span className="text-[10px] text-gray-500 font-extrabold uppercase block tracking-wider mb-2">📊 Weekly Earnings Trend (₹)</span>
+                        
+                        <div className="flex justify-between items-end h-[80px] px-2 pt-4 bg-black/40 border border-white/5 rounded-lg">
+                          {[
+                            { day: 'Mon', amt: 850 },
+                            { day: 'Tue', amt: 1200 },
+                            { day: 'Wed', amt: 950 },
+                            { day: 'Thu', amt: 1500 },
+                            { day: 'Fri', amt: 1850 },
+                            { day: 'Sat', amt: 2200 },
+                            { day: 'Sun', amt: Math.max(1600, Math.round(currentDriver.earnings.daily)) }
+                          ].map((d, idx) => {
+                            const maxAmt = 2200;
+                            const pctHeight = (d.amt / maxAmt) * 100;
+                            return (
+                              <div key={idx} className="flex flex-col items-center flex-1 group">
+                                <span className="text-[7px] text-yellow-400 opacity-0 group-hover:opacity-100 transition-all font-mono font-bold">₹{d.amt}</span>
+                                <div 
+                                  style={{ height: `${Math.max(4, pctHeight * 0.55)}px` }} 
+                                  className="w-3 bg-yellow-400/35 group-hover:bg-yellow-400 border-t-2 border-yellow-400 rounded-t-sm transition-all"
+                                ></div>
+                                <span className="text-[8px] text-gray-500 font-bold mt-1">{d.day}</span>
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
 

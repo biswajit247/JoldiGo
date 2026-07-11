@@ -24,6 +24,21 @@
   --shadow-glow: 0 0 20px rgba(255, 221, 0, 0.15);
 }
 
+.light-theme {
+  --bg-cockpit: #f4f6fa;
+  --bg-panel: #ffffff;
+  --bg-phone: #f0f2f5;
+  --bg-card: rgba(255, 255, 255, 0.9);
+  --border-glow: rgba(255, 221, 0, 0.35);
+  --border-light: rgba(0, 0, 0, 0.08);
+  
+  --text-primary: #1a202c;
+  --text-secondary: #4a5568;
+  --text-muted: #718096;
+  
+  --shadow-premium: 0 10px 30px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
