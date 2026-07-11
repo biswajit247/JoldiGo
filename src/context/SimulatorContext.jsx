@@ -207,7 +207,16 @@ export const SimulatorProvider = ({ children }) => {
   const initiateCall = (targetRole, targetId, fromName) => {
     setCallState('dialing');
     setCallFrom(targetRole === 'driver' ? 'passenger' : 'driver');
-    setCallPartner({ id: targetId, role: targetRole, name: fromName });
+    
+    let partnerDisplayName = 'JoldiGo Partner';
+    if (targetRole === 'driver') {
+      const targetDrv = drivers.find(d => d.id === targetId);
+      partnerDisplayName = targetDrv ? `Captain ${targetDrv.name}` : 'JoldiGo Captain';
+    } else {
+      partnerDisplayName = 'Passenger Rider';
+    }
+
+    setCallPartner({ id: targetId, role: targetRole, name: partnerDisplayName });
     setCallDuration(0);
 
     const msg = JSON.stringify({
