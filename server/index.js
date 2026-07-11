@@ -1231,6 +1231,36 @@ app.get('/api/admin/demand/hotspots', async (req, res) => {
   }
 });
 
+// AI Predictive Driver Dispatch Pre-allocation
+app.post('/api/admin/predictive/dispatch', (req, res) => {
+  const { driverId, hotspotName, lat, lng } = req.body;
+  if (!driverId || !hotspotName) {
+    return res.status(400).json({ error: 'driverId and hotspotName are required.' });
+  }
+
+  // 1. Send WebSocket notification to the driver if online
+  const driverWs = findWsClient('driver', driverId);
+  if (driverWs && driverWs.readyState === WebSocket.OPEN) {
+    driverWs.send(JSON.stringify({
+      type: 'predictive_dispatch',
+      hotspotName,
+      lat: parseFloat(lat),
+      lng: parseFloat(lng)
+    }));
+  }
+
+  // 2. Broadcast to admins to draw the line on their maps
+  broadcastToRole('admin', {
+    type: 'predictive_guide_line',
+    driverId,
+    hotspotName,
+    lat: parseFloat(lat),
+    lng: parseFloat(lng)
+  });
+
+  res.json({ success: true });
+});
+
 // Add a custom passenger demand hotspot
 app.post('/api/admin/demand/hotspots', (req, res) => {
   const { hotspot } = req.body;

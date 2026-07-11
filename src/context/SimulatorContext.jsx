@@ -142,6 +142,7 @@ export const SimulatorProvider = ({ children }) => {
   const [surgeSchedules, setSurgeSchedules] = useState([]);
   const [activeScheduledSurge, setActiveScheduledSurge] = useState(null);
   const [demandHotspots, setDemandHotspots] = useState([]);
+  const [predictiveGuides, setPredictiveGuides] = useState([]);
   const [passengersList, setPassengersList] = useState([]);
 
   // Server state parameters
@@ -564,6 +565,10 @@ export const SimulatorProvider = ({ children }) => {
           setChatMessages(prev => prev.some(m => m.id === data.message.id) ? prev : [...prev, data.message]);
           playSound('chat');
           break;
+        case 'predictive_dispatch':
+          triggerSmsToast(`AI ROUTING PRE-ALLOCATION: Demand is spiking at ${data.hotspotName}. Navigate there to unlock 1.5x surge multipliers!`, '🤖 JoldiGo AI Dispatch');
+          addLog(`AI pre-allocation recommendation received: Proceed to ${data.hotspotName} hotspot.`, 'info');
+          break;
         case 'system_broadcast':
           triggerSmsToast(data.message, '⚠️ JoldiGo Control Room');
           break;
@@ -618,6 +623,15 @@ export const SimulatorProvider = ({ children }) => {
         case 'fraud_alerts_updated':
           setFraudAlerts(data.alerts);
           playSound('sos');
+          break;
+        case 'predictive_guide_line':
+          setPredictiveGuides(prev => [...prev, {
+            driverId: data.driverId,
+            hotspotName: data.hotspotName,
+            lat: data.lat,
+            lng: data.lng,
+            timestamp: Date.now()
+          }]);
           break;
         case 'demand_updated':
           fetchInitialData();
@@ -1703,6 +1717,8 @@ export const SimulatorProvider = ({ children }) => {
         activeScheduledSurge,
         updateSurgeSchedules,
         demandHotspots,
+        predictiveGuides,
+        setPredictiveGuides,
         getFuelSurchargePercentage,
         activeRide,
         sosAlerts,

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useSimulator, getServerEndpoints } from '../context/SimulatorContext';
+import { useSimulator, getServerEndpoints, calculateDistance } from '../context/SimulatorContext';
 import { 
   Activity, 
   Users, 
@@ -71,7 +71,9 @@ export default function AdminPanel() {
     mapStyle,
     setMapStyle,
     passengersList,
-    refreshPassengersList
+    refreshPassengersList,
+    predictiveGuides,
+    setPredictiveGuides
   } = useSimulator();
 
   useEffect(() => {
@@ -100,6 +102,15 @@ export default function AdminPanel() {
   useEffect(() => {
     clickToAddSurgeZoneRef.current = clickToAddSurgeZone;
   }, [clickToAddSurgeZone]);
+
+  // Cleanup expired predictive guides periodically to auto-fade routes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = Date.now();
+      setPredictiveGuides(prev => prev.filter(g => now - g.timestamp < 15000));
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [setPredictiveGuides]);
   const [selectedDriverForDoc, setSelectedDriverForDoc] = useState(null);
   const [selectedDocTab, setSelectedDocTab] = useState('license');
   const [dlChecked, setDlChecked] = useState(false);
@@ -373,6 +384,12 @@ export default function AdminPanel() {
     }
     markersRef.current.demandCircles = [];
 
+    // Clear old predictive lines
+    if (markersRef.current.predictiveLines) {
+      markersRef.current.predictiveLines.forEach(l => map.removeLayer(l));
+    }
+    markersRef.current.predictiveLines = [];
+
     if (markersRef.current.traveledPolyline) {
       map.removeLayer(markersRef.current.traveledPolyline);
       markersRef.current.traveledPolyline = null;
@@ -543,7 +560,28 @@ export default function AdminPanel() {
       });
     }
 
-  }, [drivers, activeRide, sosAlerts, activeTab, congestionZones, showDemandHeatmap, demandHotspots]);
+    // Render active AI predictive guide lines
+    if (predictiveGuides && predictiveGuides.length > 0) {
+      const now = Date.now();
+      predictiveGuides.forEach(g => {
+        if (now - g.timestamp < 15000) {
+          const drv = drivers.find(d => d.id === g.driverId);
+          if (drv && drv.location) {
+            const line = L.polyline([[drv.location.lat, drv.location.lng], [g.lat, g.lng]], {
+              color: '#06b6d4', // Cyan
+              weight: 3,
+              dashArray: '5, 8',
+              opacity: 0.8,
+              className: 'animated-cyan-line'
+            }).addTo(map);
+            line.bindPopup(`<b>AI Pre-allocation Route</b><br/>Directing Captain ${drv.name} to ${g.hotspotName}`);
+            markersRef.current.predictiveLines.push(line);
+          }
+        }
+      });
+    }
+
+  }, [drivers, activeRide, sosAlerts, activeTab, congestionZones, showDemandHeatmap, demandHotspots, predictiveGuides]);
 
   const exportSmsJson = () => {
     if (smsLogs.length === 0) return alert("No logs to export.");
@@ -1056,6 +1094,118 @@ export default function AdminPanel() {
                   </div>
                 </div>
               )}
+
+              {/* AI-POWERED PREDICTIVE DRIVER DISPATCHER CONTROL BOARD */}
+              <div className="predictive-dispatcher-section card-glow mt-4 p-4 bg-slate-900/50 border border-cyan-500/10 rounded-xl text-left">
+                <div className="flex justify-between items-center pb-2.5 border-b border-white/5 mb-3">
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-lg">🗺️</span>
+                    <div>
+                      <h4 className="text-xs font-bold text-cyan-400 uppercase tracking-wider font-mono">AI-Powered Predictive Driver Dispatcher</h4>
+                      <span className="text-[9px] text-gray-500 font-bold block uppercase tracking-tight">Active Heat-Circle Routing & Pre-allocation Queue</span>
+                    </div>
+                  </div>
+                  <span className="px-2.5 py-0.5 bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 text-[9px] font-black uppercase rounded-full animate-pulse">
+                    Pre-Allocating
+                  </span>
+                </div>
+
+                <p className="text-[11px] text-gray-400 mb-3">
+                  Match online captains with demand hotspots before bookings occur. Directing captains to high-yield areas minimizes passenger wait times and secures surge payouts.
+                </p>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Active Hotspots Sub-Card */}
+                  <div className="bg-black/35 p-3 rounded-lg border border-white/5">
+                    <span className="text-[10px] text-cyan-400 font-black uppercase tracking-wider block mb-2">🔥 Active Hotspot Multipliers</span>
+                    <div className="space-y-2 max-h-[140px] overflow-y-auto pr-1">
+                      {demandHotspots.length === 0 ? (
+                        <div className="text-[10px] text-gray-500 italic">No hotspots defined. Try drawing geofences or clicking on the map.</div>
+                      ) : (
+                        demandHotspots.map((pt, idx) => (
+                          <div key={idx} className="flex justify-between items-center bg-white/5 p-2 rounded border border-white/5">
+                            <div>
+                              <span className="text-xs text-white font-bold block">Hotspot #{idx + 1}</span>
+                              <span className="text-[9px] text-gray-500 block">Coordinates: {pt.lat.toFixed(4)}, {pt.lng.toFixed(4)}</span>
+                            </div>
+                            <span className="px-2 py-0.5 bg-red-500/10 text-red-400 border border-red-500/20 text-[9px] font-bold rounded">
+                              {(1.0 + pt.weight * 0.5).toFixed(1)}x Surge
+                            </span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Dispatch Recommendations Sub-Card */}
+                  <div className="bg-black/35 p-3 rounded-lg border border-white/5">
+                    <span className="text-[10px] text-cyan-400 font-black uppercase tracking-wider block mb-2">⚡ Smart Routing Recommendations</span>
+                    <div className="space-y-2 max-h-[140px] overflow-y-auto pr-1">
+                      {(() => {
+                        const recommendations = [];
+                        const onlineDrivers = drivers.filter(d => d.status === 'online' && d.verificationStatus === 'verified' && (!activeRide || activeRide.driverId !== d.id));
+
+                        onlineDrivers.forEach(drv => {
+                          if (drv.location) {
+                            demandHotspots.forEach((hotspot, idx) => {
+                              const dist = calculateDistance(drv.location.lat, drv.location.lng, hotspot.lat, hotspot.lng);
+                              if (dist < 4.0) {
+                                recommendations.push({
+                                  driver: drv,
+                                  hotspot: hotspot,
+                                  hotspotIndex: idx + 1,
+                                  distance: dist
+                                });
+                              }
+                            });
+                          }
+                        });
+
+                        recommendations.sort((a, b) => a.distance - b.distance);
+
+                        if (recommendations.length === 0) {
+                          return <div className="text-[10px] text-gray-500 italic py-2">No captains currently near active hotspots.</div>;
+                        }
+
+                        return recommendations.map((rec, i) => (
+                          <div key={i} className="flex justify-between items-center bg-white/5 p-2 rounded border border-white/5 text-[10px]">
+                            <div>
+                              <span className="font-bold text-white block">Captain {rec.driver.name}</span>
+                              <span className="text-gray-500 block text-[9px]">Distance: {rec.distance.toFixed(1)} km to Hotspot #{rec.hotspotIndex}</span>
+                            </div>
+                            <button
+                              onClick={async () => {
+                                try {
+                                  const { api } = getServerEndpoints();
+                                  const res = await fetch(`${api}/api/admin/predictive/dispatch`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                      driverId: rec.driver.id,
+                                      hotspotName: `Hotspot #${rec.hotspotIndex}`,
+                                      lat: rec.hotspot.lat,
+                                      lng: rec.hotspot.lng
+                                    })
+                                  });
+                                  const data = await res.json();
+                                  if (data.success) {
+                                    addLog(`[AI Dispatcher] Guided Captain ${rec.driver.name} to Hotspot #${rec.hotspotIndex}`, 'info');
+                                  }
+                                } catch (err) {
+                                  console.error("AI pre-allocation dispatch failed:", err);
+                                }
+                              }}
+                              className="px-2.5 py-1 bg-cyan-500 hover:bg-cyan-400 text-black font-black uppercase rounded text-[9px] transition cursor-pointer"
+                            >
+                              Dispatch
+                            </button>
+                          </div>
+                        ));
+                      })()}
+                    </div>
+                  </div>
+                </div>
+              </div>
 
               {/* Emergency Broadcast Control Widget */}
               <div className="card-glow mt-4 p-5 flex flex-col gap-4">
