@@ -100,8 +100,39 @@ export default function App() {
   const store = useKYCStore();
   const [otpCode, setOtpCode] = useState('');
   const [otpSent, setOtpSent] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // CAMERA & GALLERY PICKER LOGIC
+  // Live document statuses
+  const [dlStatus, setDlStatus] = useState('pending');
+  const [rcStatus, setRcStatus] = useState('pending');
+  const [insuranceStatus, setInsuranceStatus] = useState('pending');
+  const [pucStatus, setPucStatus] = useState('pending');
+  const [identityStatus, setIdentityStatus] = useState('pending');
+
+  const checkLiveStatus = async () => {
+    try {
+      const res = await fetch("https://joldigo-backend.onrender.com/api/drivers");
+      const json = await res.json();
+      if (json.success && json.drivers) {
+        const currentDrv = json.drivers.find((d: any) => d.phone === store.phone);
+        if (currentDrv) {
+          setDlStatus(currentDrv.documentStatuses?.dl || 'pending');
+          setRcStatus(currentDrv.documentStatuses?.rc || 'pending');
+          setInsuranceStatus(currentDrv.documentStatuses?.insurance || 'pending');
+          setPucStatus(currentDrv.documentStatuses?.puc || 'pending');
+          setIdentityStatus(currentDrv.documentStatuses?.identity || 'pending');
+          
+          if (currentDrv.verificationStatus === 'verified') {
+            Alert.alert("Verified!", "Your JoldiGo captain account is fully verified! You can now log into your console.");
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("Failed to check live status:", err);
+    }
+  };
+
+  // CAMERA & GALLERY PICKER LOGIC WITH BASE64 TRANSFORMATION
   const pickImage = async (fieldKey: string, useCamera: boolean) => {
     const permissionResult = useCamera 
       ? await ImagePicker.requestCameraPermissionsAsync()
@@ -113,16 +144,24 @@ export default function App() {
     }
 
     const result = useCamera
-      ? await ImagePicker.launchCameraAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.8 })
-      : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.8 });
+      ? await ImagePicker.launchCameraAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.5 })
+      : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.5 });
 
     if (!result.canceled && result.assets && result.assets.length > 0) {
-      const compressedUri = await compressImagePayload(result.assets[0].uri);
-      store.setField(fieldKey, compressedUri);
+      const localUri = result.assets[0].uri;
+      try {
+        const { readAsStringAsync, EncodingType } = await import('expo-file-system');
+        const base64 = await readAsStringAsync(localUri, { encoding: EncodingType.Base64 });
+        const dataUrl = `data:image/jpeg;base64,${base64}`;
+        store.setField(fieldKey, dataUrl);
+      } catch (err) {
+        console.warn("Base64 conversion failed, using local URI fallback:", err);
+        store.setField(fieldKey, localUri);
+      }
     }
   };
 
-  const handleNextStep = () => {
+  const handleNextStep = async () => {
     if (store.step === 1 && !store.isOtpVerified) {
       Alert.alert("OTP Required", "Please verify your mobile number first.");
       return;
@@ -145,8 +184,47 @@ export default function App() {
     }
 
     if (store.step === 5) {
-      // Submit registration to server
-      store.setField('step', 6);
+      setIsSubmitting(true);
+      try {
+        const payload = {
+          name: store.name,
+          phone: store.phone,
+          vehicleType: store.vehicleType,
+          vehicleName: store.vehicleModel,
+          vehicleNumber: store.vehiclePlate,
+          licenseNumber: store.licenseNumber,
+          aadharNumber: store.aadharNumber,
+          rcNumber: store.rcNumber,
+          driverPhoto: store.selfieUri,
+          vehiclePhoto: store.selfieUri,
+          age: store.age,
+          city: store.city,
+          vehicleInsurancePhoto: store.insurancePhoto,
+          vehiclePucPhoto: store.pucPhoto,
+          identityCardPhoto: store.aadharPhoto,
+          bankAccountNumber: store.bankAccount,
+          bankIfscCode: store.bankIfsc,
+          bankHolderName: store.bankHolder
+        };
+
+        const res = await fetch("https://joldigo-backend.onrender.com/api/driver/enroll", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        const json = await res.json();
+        if (json.success) {
+          store.setField('step', 6);
+          checkLiveStatus();
+        } else {
+          Alert.alert("Enrollment Failed", json.error || "Server registration error occurred.");
+        }
+      } catch (err: any) {
+        Alert.alert("Network Error", "Could not submit to JoldiGo server: " + err.message);
+      } finally {
+        setIsSubmitting(false);
+      }
     } else {
       store.setField('step', store.step + 1);
     }
@@ -419,8 +497,12 @@ export default function App() {
               onChangeText={(text) => store.setField('bankIfsc', text)}
             />
 
-            <TouchableOpacity style={styles.button} onPress={handleNextStep}>
-              <Text style={styles.buttonText}>Submit Profile for Review</Text>
+            <TouchableOpacity 
+              style={[styles.button, isSubmitting && { opacity: 0.6 }]} 
+              onPress={handleNextStep}
+              disabled={isSubmitting}
+            >
+              <Text style={styles.buttonText}>{isSubmitting ? "Submitting Snaps..." : "Submit Profile for Review"}</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -432,12 +514,35 @@ export default function App() {
             <Text style={[styles.title, { color: '#ffdd00' }]}>Verification Pending</Text>
             <Text style={styles.landingText}>Your driver partner credentials and snaps are under review by Jaldi Go Operations.</Text>
             
+            {/* Live refresh trigger */}
+            <TouchableOpacity 
+              style={[styles.button, { width: '100%', marginBottom: 16, backgroundColor: '#2d3748' }]} 
+              onPress={checkLiveStatus}
+            >
+              <Text style={[styles.buttonText, { color: '#fff' }]}>🔄 Refresh Verification Statuses</Text>
+            </TouchableOpacity>
+
             <View style={styles.statusPanel}>
-              <View style={styles.statusRow}><Text style={styles.statusItem}>Driving License</Text><Text style={styles.badgePending}>Pending</Text></View>
-              <View style={styles.statusRow}><Text style={styles.statusItem}>Vehicle RC</Text><Text style={styles.badgePending}>Pending</Text></View>
-              <View style={styles.statusRow}><Text style={styles.statusItem}>Insurance Document</Text><Text style={styles.badgePending}>Pending</Text></View>
-              <View style={styles.statusRow}><Text style={styles.statusItem}>PUC Certificate</Text><Text style={styles.badgePending}>Pending</Text></View>
-              <View style={styles.statusRow}><Text style={styles.statusItem}>Aadhaar/PAN Card</Text><Text style={styles.badgePending}>Pending</Text></View>
+              {[
+                { name: 'Driving License', val: dlStatus },
+                { name: 'Vehicle RC', val: rcStatus },
+                { name: 'Insurance Document', val: insuranceStatus },
+                { name: 'PUC Certificate', val: pucStatus },
+                { name: 'Aadhaar/PAN Card', val: identityStatus }
+              ].map((doc, idx) => {
+                let badgeStyle = { backgroundColor: 'rgba(214, 158, 46, 0.2)', color: '#ecc94b' };
+                if (doc.val === 'verified') {
+                  badgeStyle = { backgroundColor: 'rgba(72, 187, 120, 0.2)', color: '#48bb78' };
+                } else if (doc.val === 'rejected') {
+                  badgeStyle = { backgroundColor: 'rgba(229, 62, 98, 0.2)', color: '#e53e3e' };
+                }
+                return (
+                  <View key={idx} style={styles.statusRow}>
+                    <Text style={styles.statusItem}>{doc.name}</Text>
+                    <Text style={[styles.badgePending, badgeStyle]}>{doc.val.toUpperCase()}</Text>
+                  </View>
+                );
+              })}
             </View>
 
             <TouchableOpacity style={styles.resetButton} onPress={() => store.resetForm()}>
