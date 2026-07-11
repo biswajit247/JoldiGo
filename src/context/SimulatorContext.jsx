@@ -144,6 +144,9 @@ export const SimulatorProvider = ({ children }) => {
   const [demandHotspots, setDemandHotspots] = useState([]);
   const [predictiveGuides, setPredictiveGuides] = useState([]);
   const [passengersList, setPassengersList] = useState([]);
+  const [useAiSurgeEngine, setUseAiSurgeEngine] = useState(false);
+  const [dynamicSurgeMultiplier, setDynamicSurgeMultiplier] = useState(1.0);
+  const [dispatchQueueLog, setDispatchQueueLog] = useState([]);
 
   // Server state parameters
   const [fuelPrices, setFuelPrices] = useState({ cng: 95.50, petrol: 104.50, diesel: 92.75 });
@@ -356,6 +359,28 @@ export const SimulatorProvider = ({ children }) => {
     }, 10000);
     return () => clearInterval(interval);
   }, []);
+
+  // Dynamic pricing calculation hook (real-time supply/demand indexing)
+  useEffect(() => {
+    const onlineDrivers = drivers.filter(d => d.status === 'online' && d.verificationStatus === 'verified');
+    const idleDriversCount = onlineDrivers.filter(d => {
+      const isBusy = activeRide && activeRide.driverId === d.id && activeRide.status !== 'completed' && activeRide.status !== 'cancelled';
+      return !isBusy;
+    }).length;
+
+    let activeBookingsCount = (activeRide && (activeRide.status === 'searching' || activeRide.status === 'requested')) ? 1.5 : 0;
+    let hotspotWeights = demandHotspots.length > 0 ? demandHotspots.reduce((acc, h) => acc + (h.weight || 1), 0) * 0.35 : 0.6;
+    
+    const calculatedDemand = activeBookingsCount + hotspotWeights;
+    const supply = Math.max(1, onlineDrivers.length === 0 ? 3 : idleDriversCount); // fallback default to prevent division by zero or idle mismatch
+    const ratio = calculatedDemand / supply;
+
+    let targetSurge = 1.0;
+    if (ratio > 1.0) {
+      targetSurge = parseFloat(Math.min(1.5, 1.0 + (ratio - 1.0) * 0.35).toFixed(2));
+    }
+    setDynamicSurgeMultiplier(targetSurge);
+  }, [drivers, activeRide, demandHotspots]);
 
   // Web Audio Synth Cue
   const playSound = (type) => {
@@ -1048,7 +1073,8 @@ export const SimulatorProvider = ({ children }) => {
       });
     }
 
-    const finalSurgeMultiplier = parseFloat(Math.min(2.50, Math.max(baseSurge, settings.surgeMultiplier) * trafficMultiplier * weatherMultiplier * geofenceSurgeMultiplier).toFixed(2));
+    const activeAdminSurge = useAiSurgeEngine ? dynamicSurgeMultiplier : settings.surgeMultiplier;
+    const finalSurgeMultiplier = parseFloat(Math.min(2.50, Math.max(baseSurge, activeAdminSurge) * trafficMultiplier * weatherMultiplier * geofenceSurgeMultiplier).toFixed(2));
     const grossBaseRideFare = parseFloat((finalFareBeforeSurge * finalSurgeMultiplier).toFixed(2));
     
     const gstAmount = parseFloat((grossBaseRideFare * 0.05).toFixed(2));
@@ -1139,12 +1165,28 @@ export const SimulatorProvider = ({ children }) => {
       availableDrivers = [virtualDriver];
     }
 
-    let closestDriver = availableDrivers[0];
-    let minD = calculateDistance(pickup.lat, pickup.lng, closestDriver.location.lat, closestDriver.location.lng);
-    for (let i = 1; i < availableDrivers.length; i++) {
-      const d = calculateDistance(pickup.lat, pickup.lng, availableDrivers[i].location.lat, availableDrivers[i].location.lng);
-      if (d < minD) { minD = d; closestDriver = availableDrivers[i]; }
-    }
+    // Calculate match scores for all available drivers (Proximity: 40%, Acceptance: 40%, Cancellation: 20%)
+    const scoredQueue = availableDrivers.map(drv => {
+      const d = calculateDistance(pickup.lat, pickup.lng, drv.location.lat, drv.location.lng);
+      const distScore = Math.max(0, 10 - d) / 10;
+      const acceptance = drv.acceptanceRate || (drv.id === 'drv_1' ? 98 : (drv.id === 'drv_2' ? 88 : 78));
+      const cancellations = drv.cancellationRate || (drv.id === 'drv_1' ? 2 : (drv.id === 'drv_2' ? 5 : 12));
+      const accScore = acceptance / 100;
+      const cancScore = (100 - cancellations) / 100;
+      const matchScore = Math.round((distScore * 0.4 + accScore * 0.4 + cancScore * 0.2) * 100);
+      return {
+        ...drv,
+        distanceToPickup: d,
+        matchScore,
+        acceptanceRate: acceptance,
+        cancellationRate: cancellations
+      };
+    }).sort((a, b) => b.matchScore - a.matchScore);
+
+    setDispatchQueueLog(scoredQueue);
+
+    let closestDriver = scoredQueue[0];
+    let minD = closestDriver.distanceToPickup;
 
     setChatMessages([]);
     playSound('match');
@@ -1867,7 +1909,12 @@ export const SimulatorProvider = ({ children }) => {
         addCustomHotspot,
         resetSimulator,
         passengersList,
-        refreshPassengersList
+        refreshPassengersList,
+        useAiSurgeEngine,
+        setUseAiSurgeEngine,
+        dynamicSurgeMultiplier,
+        dispatchQueueLog,
+        setDispatchQueueLog
       }}
     >
       {children}

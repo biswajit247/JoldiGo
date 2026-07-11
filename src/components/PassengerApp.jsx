@@ -1014,6 +1014,13 @@ export default function PassengerApp({ isStandalone }) {
               <span className="font-semibold text-white">₹{metrics.grossBaseRideFare.toFixed(2)}</span>
             </div>
             
+            {metrics.fuelSurcharge > 0 && (
+              <div className="flex justify-between text-gray-400 mt-1">
+                <span>⛽ Fuel Index Surcharge ({metrics.fuelType}):</span>
+                <span className="text-gray-300 font-semibold">+₹{metrics.fuelSurcharge.toFixed(2)}</span>
+              </div>
+            )}
+            
             {/* TRAFFIC SURCHARGE LINE */}
             {metrics.trafficMultiplier > 1.0 && (
               <div className="flex justify-between text-orange-400 mt-1">

@@ -73,7 +73,12 @@ export default function AdminPanel() {
     passengersList,
     refreshPassengersList,
     predictiveGuides,
-    setPredictiveGuides
+    setPredictiveGuides,
+    useAiSurgeEngine,
+    setUseAiSurgeEngine,
+    dynamicSurgeMultiplier,
+    dispatchQueueLog,
+    setDispatchQueueLog
   } = useSimulator();
 
   useEffect(() => {
@@ -1025,24 +1030,74 @@ export default function AdminPanel() {
                   </div>
                 </div>
 
-                <div className="ops-terminal-card card-glow" style={{ height: '320px' }}>
-                  <div className="card-header-flex">
-                    <h4><Terminal size={16} /> Server Log Console</h4>
-                    <span className="status-badge-terminal font-mono">ON_SOCKET</span>
-                  </div>
-                  <div className="terminal-log-output">
-                    {logs.length === 0 ? (
-                      <div className="log-line text-gray-500 font-mono">System initialized. Awaiting API endpoints transactions...</div>
-                    ) : (
-                      logs.map(log => (
-                        <div key={log.id} className={`log-line font-mono type-${log.type}`}>
-                          <span className="log-time">[{log.time}]</span>
-                          <span className="log-msg"> {log.message}</span>
+                {activeRide && (activeRide.status === 'searching' || activeRide.status === 'requested') && dispatchQueueLog.length > 0 ? (
+                  <div className="ops-terminal-card card-glow flex flex-col" style={{ height: '320px', padding: '16px' }}>
+                    <div className="card-header-flex">
+                      <h4 className="text-amber-400 flex items-center gap-1.5 font-mono uppercase tracking-wider text-xs">
+                        🧠 Intelligent Dispatch Matchmaker
+                      </h4>
+                      <span className="animate-pulse bg-amber-950/45 text-amber-400 text-[9px] uppercase font-bold tracking-wider px-2 py-0.5 rounded border border-amber-500/25">
+                        MATCHING IN PROGRESS...
+                      </span>
+                    </div>
+                    <div className="p-2.5 my-2 rounded border border-gray-800 bg-gray-950/30 text-xs">
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Rider: <strong className="text-gray-200">Biswajit Passenger</strong></span>
+                        <span className="text-gray-400">Vehicle: <strong className="text-amber-400 uppercase font-mono">{activeRide.vehicleType.replace('_', ' ')}</strong></span>
+                      </div>
+                      <div className="text-[10px] text-gray-500 mt-1 truncate">
+                        Route: {activeRide.pickupName} ➔ {activeRide.dropoffName}
+                      </div>
+                    </div>
+                    <div style={{ flex: 1, overflowY: 'auto' }} className="space-y-1.5 pr-1">
+                      {dispatchQueueLog.map((candidate, idx) => (
+                        <div 
+                          key={candidate.id} 
+                          className="bg-black/30 border border-gray-800/80 rounded p-2 flex justify-between items-center hover:border-gray-700 transition-all"
+                          style={{ opacity: idx === 0 ? 1.0 : 0.6 }}
+                        >
+                          <div className="flex flex-col gap-0.5">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs font-semibold text-gray-200">
+                                {idx === 0 ? '👑 ' : ''}{candidate.name}
+                              </span>
+                              <span className="text-[8px] bg-gray-800 text-gray-400 px-1 rounded">
+                                {candidate.distanceToPickup.toFixed(2)} km away
+                              </span>
+                            </div>
+                            <div className="text-[9px] text-gray-500 flex gap-2">
+                              <span>Acceptance: <strong className="text-emerald-500">{candidate.acceptanceRate}%</strong></span>
+                              <span>Cancellations: <strong className="text-red-500">{candidate.cancellationRate}%</strong></span>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-xs font-bold text-amber-500 font-mono">{candidate.matchScore}%</div>
+                            <div className="text-[8px] text-gray-500 uppercase tracking-wider">Match Score</div>
+                          </div>
                         </div>
-                      ))
-                    )}
+                      ))}
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="ops-terminal-card card-glow" style={{ height: '320px' }}>
+                    <div className="card-header-flex">
+                      <h4><Terminal size={16} /> Server Log Console</h4>
+                      <span className="status-badge-terminal font-mono">ON_SOCKET</span>
+                    </div>
+                    <div className="terminal-log-output">
+                      {logs.length === 0 ? (
+                        <div className="log-line text-gray-500 font-mono">System initialized. Awaiting API endpoints transactions...</div>
+                      ) : (
+                        logs.map(log => (
+                          <div key={log.id} className={`log-line font-mono type-${log.type}`}>
+                            <span className="log-time">[{log.time}]</span>
+                            <span className="log-msg"> {log.message}</span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
 
               </div>
 
@@ -2296,6 +2351,56 @@ export default function AdminPanel() {
                         min={2} 
                         required 
                       />
+                    </div>
+                  </div>
+                </div>
+
+                {/* AI DYNAMIC SURGE OPERATIONS DESK */}
+                <div className="settings-card-group ai-surge-card mt-3" style={{ border: useAiSurgeEngine ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(255, 255, 255, 0.1)', transition: 'all 0.3s ease' }}>
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl">🤖</span>
+                      <h4 className="font-semibold text-white">AI Dynamic Surge Engine</h4>
+                    </div>
+                    <div className="relative inline-flex items-center cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        checked={useAiSurgeEngine}
+                        onChange={(e) => setUseAiSurgeEngine(e.target.checked)}
+                        className="sr-only peer"
+                        id="ai-surge-toggle"
+                      />
+                      <div className="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
+                      <label htmlFor="ai-surge-toggle" className="ml-2 text-[10px] uppercase font-bold tracking-wider" style={{ color: useAiSurgeEngine ? '#10b981' : '#718096' }}>
+                        {useAiSurgeEngine ? 'Active' : 'Offline'}
+                      </label>
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-gray-400 mt-1">
+                    Continuously balances rider demand against available idle captains. Replaces manual peak demand inputs with dynamic regulation-compliant calculations.
+                  </p>
+
+                  <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-gray-800">
+                    <div className="bg-gray-900/60 p-2 rounded border border-gray-800">
+                      <div className="text-[9px] text-gray-500 uppercase tracking-wider">Simulated Demand</div>
+                      <div className="text-sm font-semibold text-gray-200 mt-0.5">
+                        {((activeRide && (activeRide.status === 'searching' || activeRide.status === 'requested') ? 1.5 : 0) + (demandHotspots.length > 0 ? demandHotspots.reduce((acc, h) => acc + (h.weight || 1), 0) * 0.35 : 0.6)).toFixed(2)} pts
+                      </div>
+                    </div>
+                    <div className="bg-gray-900/60 p-2 rounded border border-gray-800">
+                      <div className="text-[9px] text-gray-500 uppercase tracking-wider">Idle Captains (Supply)</div>
+                      <div className="text-sm font-semibold text-gray-200 mt-0.5">
+                        {drivers.filter(d => d.status === 'online' && d.verificationStatus === 'verified' && !(activeRide && activeRide.driverId === d.id && activeRide.status !== 'completed' && activeRide.status !== 'cancelled')).length} Online
+                      </div>
+                    </div>
+                    <div className="bg-gray-900/60 p-2 rounded col-span-2 border border-gray-800 flex justify-between items-center">
+                      <div>
+                        <div className="text-[9px] text-gray-500 uppercase tracking-wider">Dynamic Multiplier</div>
+                        <div className="text-xs text-gray-400">West Bengal cap: 1.50x</div>
+                      </div>
+                      <div className="text-xl font-bold font-monospace" style={{ color: useAiSurgeEngine ? '#f59e0b' : '#a0aec0' }}>
+                        {dynamicSurgeMultiplier.toFixed(2)}x
+                      </div>
                     </div>
                   </div>
                 </div>
