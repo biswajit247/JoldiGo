@@ -80,6 +80,7 @@ export default function PassengerApp({ isStandalone }) {
     triggerPassengerSOS,
     mapStyle,
     setMapStyle,
+    simulationSpeed,
     callState,
     callFrom,
     callPartner,
@@ -486,7 +487,12 @@ export default function PassengerApp({ isStandalone }) {
     // Clear old layers
     if (markersRef.current.pickup) map.removeLayer(markersRef.current.pickup);
     if (markersRef.current.dropoff) map.removeLayer(markersRef.current.dropoff);
-    if (markersRef.current.driver) map.removeLayer(markersRef.current.driver);
+    
+    const hasActiveDriver = activeRide && activeRide.status !== 'searching' && drivers.some(d => d.id === activeRide.driverId);
+    if (!hasActiveDriver && markersRef.current.driver) {
+      map.removeLayer(markersRef.current.driver);
+      markersRef.current.driver = null;
+    }
     if (markersRef.current.geofencePolygons) {
       markersRef.current.geofencePolygons.forEach(p => map.removeLayer(p));
     }
@@ -610,8 +616,39 @@ export default function PassengerApp({ isStandalone }) {
       if (activeRide.status !== 'searching') {
         const assignedDriver = drivers.find(d => d.id === activeRide.driverId);
         if (assignedDriver) {
-          markersRef.current.driver = L.marker([assignedDriver.location.lat, assignedDriver.location.lng], { icon: activeDriverIcon }).addTo(map);
-          map.panTo([assignedDriver.location.lat, assignedDriver.location.lng]);
+          const targetLatLng = L.latLng(assignedDriver.location.lat, assignedDriver.location.lng);
+          
+          if (!markersRef.current.driver) {
+            markersRef.current.driver = L.marker(targetLatLng, { icon: activeDriverIcon }).addTo(map);
+            map.panTo(targetLatLng);
+          } else {
+            const startLatLng = markersRef.current.driver.getLatLng();
+            if (startLatLng.lat !== targetLatLng.lat || startLatLng.lng !== targetLatLng.lng) {
+              const animStart = performance.now();
+              const animDuration = Math.max(200, simulationSpeed - 20);
+              
+              const step = (timestamp) => {
+                const elapsed = timestamp - animStart;
+                const progress = Math.min(elapsed / animDuration, 1);
+                
+                const currLat = startLatLng.lat + (targetLatLng.lat - startLatLng.lat) * progress;
+                const currLng = startLatLng.lng + (targetLatLng.lng - startLatLng.lng) * progress;
+                
+                if (markersRef.current.driver) {
+                  markersRef.current.driver.setLatLng([currLat, currLng]);
+                  if (activeRide.status === 'in_progress' || activeRide.status === 'arrived') {
+                    map.panTo([currLat, currLng]);
+                  }
+                }
+                
+                if (progress < 1) {
+                  requestAnimationFrame(step);
+                }
+              };
+              
+              requestAnimationFrame(step);
+            }
+          }
         }
       } else {
         map.fitBounds([

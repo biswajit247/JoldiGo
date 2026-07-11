@@ -114,7 +114,8 @@ export default function DriverApp({ isStandalone }) {
     endCall,
     enrollDriver,
     isNightMode,
-    setIsNightMode
+    setIsNightMode,
+    simulationSpeed
   } = useSimulator();
 
   const speakText = (text, langCode) => {
@@ -562,7 +563,6 @@ export default function DriverApp({ isStandalone }) {
     const map = mapRef.current;
     if (!map || !currentDriver) return;
 
-    if (markersRef.current.driver) map.removeLayer(markersRef.current.driver);
     if (markersRef.current.pickup) map.removeLayer(markersRef.current.pickup);
     if (markersRef.current.dropoff) map.removeLayer(markersRef.current.dropoff);
     if (markersRef.current.traveledPolyline) {
@@ -665,8 +665,37 @@ export default function DriverApp({ isStandalone }) {
       iconAnchor: [25, 25]
     });
 
-    markersRef.current.driver = L.marker([currentDriver.location.lat, currentDriver.location.lng], { icon: driverIcon }).addTo(map);
-    map.panTo([currentDriver.location.lat, currentDriver.location.lng]);
+    const targetLatLng = L.latLng(currentDriver.location.lat, currentDriver.location.lng);
+    if (!markersRef.current.driver) {
+      markersRef.current.driver = L.marker(targetLatLng, { icon: driverIcon }).addTo(map);
+      map.panTo(targetLatLng);
+    } else {
+      markersRef.current.driver.setIcon(driverIcon);
+      const startLatLng = markersRef.current.driver.getLatLng();
+      if (startLatLng.lat !== targetLatLng.lat || startLatLng.lng !== targetLatLng.lng) {
+        const animStart = performance.now();
+        const animDuration = Math.max(200, simulationSpeed - 20);
+        
+        const step = (timestamp) => {
+          const elapsed = timestamp - animStart;
+          const progress = Math.min(elapsed / animDuration, 1);
+          
+          const currLat = startLatLng.lat + (targetLatLng.lat - startLatLng.lat) * progress;
+          const currLng = startLatLng.lng + (targetLatLng.lng - startLatLng.lng) * progress;
+          
+          if (markersRef.current.driver) {
+            markersRef.current.driver.setLatLng([currLat, currLng]);
+            map.panTo([currLat, currLng]);
+          }
+          
+          if (progress < 1) {
+            requestAnimationFrame(step);
+          }
+        };
+        
+        requestAnimationFrame(step);
+      }
+    }
 
     const isThisDriverAssigned = activeRide && activeRide.driverId === currentDriver.id;
     if (isThisDriverAssigned && activeRide.status !== 'searching') {
