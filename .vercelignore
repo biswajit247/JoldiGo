@@ -1,0 +1,13 @@
+# Ignore native folders
+ios/
+android/
+
+# Ignore backend server
+server/
+
+# Ignore package files
+node_modules/
+.git/
+.agents/
+.vercel/
+dist/

@@ -189,6 +189,35 @@ export default function DriverApp({ isStandalone }) {
   const streamRef = useRef(null);
 
   const startCamera = async (target) => {
+    // Check if running on a native platform (iOS/Android)
+    const isNative = typeof window !== 'undefined' && window.Capacitor && window.Capacitor.isNativePlatform();
+
+    if (isNative) {
+      try {
+        const { Camera, CameraResultType, CameraSource } = await import('@capacitor/camera');
+        const photo = await Camera.getPhoto({
+          quality: 50,
+          allowEditing: false,
+          resultType: CameraResultType.DataUrl,
+          source: CameraSource.Camera
+        });
+
+        if (photo && photo.dataUrl) {
+          const imageBase64 = photo.dataUrl;
+          if (target === 'driver') setDriverPhoto(imageBase64);
+          else if (target === 'vehicle') setVehiclePhoto(imageBase64);
+          else if (target === 'insurance') setInsurancePhoto(imageBase64);
+          else if (target === 'puc') setPucPhoto(imageBase64);
+          else if (target === 'identity') setIdentityPhoto(imageBase64);
+          else if (target === 'license') setLicensePhoto(imageBase64);
+          else if (target === 'rc') setRcPhoto(imageBase64);
+          return;
+        }
+      } catch (err) {
+        console.warn("Capacitor camera failed, trying browser media fallback:", err);
+      }
+    }
+
     setActiveCamera(target);
     try {
       if (streamRef.current) {

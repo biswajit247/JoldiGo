@@ -57,5 +57,11 @@
 	<array>
 		<string>location</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>Jaldi Go requires camera access to allow Driver partners to capture and upload verification documents like Driver's License and RC Books.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Jaldi Go requires photo library access to allow uploading verification documents from your gallery.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Jaldi Go requires permissions to save captured verification images to your photos gallery.</string>
 </dict>
 </plist>

@@ -226,6 +226,7 @@ export default function PassengerApp({ isStandalone }) {
   // Location inputs
   const [pickupKey, setPickupKey] = useState('PARK_STREET');
   const [dropoffKey, setDropoffKey] = useState('AIRPORT');
+  const [waypointKey, setWaypointKey] = useState('');
   const [vehicleType, setVehicleType] = useState('car_ac'); 
   const [paymentMethod, setPaymentMethod] = useState('wallet'); 
 
@@ -620,19 +621,31 @@ export default function PassengerApp({ isStandalone }) {
     } else {
       const pickupLoc = KOLKATA_LOCATIONS[pickupKey];
       const dropoffLoc = KOLKATA_LOCATIONS[dropoffKey];
+      const waypointLoc = waypointKey ? KOLKATA_LOCATIONS[waypointKey] : null;
 
       if (pickupLoc) {
         markersRef.current.pickup = L.marker([pickupLoc.lat, pickupLoc.lng], { icon: pickupIcon }).addTo(map);
+      }
+      if (waypointLoc) {
+        const stopIcon = L.divIcon({
+          className: 'custom-map-marker stopover-marker',
+          html: `<div class="marker-pin stopover" style="background-color: #ecc94b; border: 2px solid #fff; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #000; box-shadow: 0 0 10px rgba(236,201,75,0.6)">📍</div>`,
+          iconSize: [24, 24],
+          iconAnchor: [12, 12]
+        });
+        markersRef.current.waypoint = L.marker([waypointLoc.lat, waypointLoc.lng], { icon: stopIcon }).addTo(map);
       }
       if (dropoffLoc) {
         markersRef.current.dropoff = L.marker([dropoffLoc.lat, dropoffLoc.lng], { icon: dropoffIcon }).addTo(map);
       }
 
       if (pickupLoc && dropoffLoc) {
-        map.fitBounds([
+        const bounds = [
           [pickupLoc.lat, pickupLoc.lng],
-          [dropoffLoc.lat, dropoffLoc.lng],
-        ], { padding: [40, 40] });
+          [dropoffLoc.lat, dropoffLoc.lng]
+        ];
+        if (waypointLoc) bounds.push([waypointLoc.lat, waypointLoc.lng]);
+        map.fitBounds(bounds, { padding: [40, 40] });
       }
 
       drivers.forEach(d => {
@@ -648,7 +661,7 @@ export default function PassengerApp({ isStandalone }) {
         }
       });
     }
-  }, [activeRide, drivers, pickupKey, dropoffKey, tab, congestionZones, geofencingZones]);
+  }, [activeRide, drivers, pickupKey, dropoffKey, waypointKey, tab, congestionZones, geofencingZones]);
 
   // Login handlers
   const handleSendOtp = async (e) => {
@@ -776,7 +789,14 @@ export default function PassengerApp({ isStandalone }) {
     const drop = KOLKATA_LOCATIONS[dropoffKey];
     if (!pick || !drop) return { distance: 0, totalFare: 0, contractHash: '', baseFare: 0, fuelSurcharge: 0, grossBaseRideFare: 0, gstAmount: 0, tollEstimate: 0, commission: 0, takeHome: 0, insurancePremium: 0, surgeMultiplier: 1.0, trafficMultiplier: 1.0, trafficZoneName: null };
     
-    const dist = calculateDistance(pick.lat, pick.lng, drop.lat, drop.lng);
+    let dist = 0;
+    if (waypointKey && KOLKATA_LOCATIONS[waypointKey]) {
+      const stop = KOLKATA_LOCATIONS[waypointKey];
+      dist = calculateDistance(pick.lat, pick.lng, stop.lat, stop.lng) + calculateDistance(stop.lat, stop.lng, drop.lat, drop.lng);
+    } else {
+      dist = calculateDistance(pick.lat, pick.lng, drop.lat, drop.lng);
+    }
+    
     const calculated = calculateDetailedFare(dist, vType === 'auto' ? 'bike' : vType, pick, drop);
     if (vType === 'auto') {
       calculated.totalFare = Math.round(calculated.totalFare * 1.35);
@@ -827,6 +847,33 @@ export default function PassengerApp({ isStandalone }) {
                 <select value={pickupKey} onChange={(e) => setPickupKey(e.target.value)}>
                   {Object.entries(KOLKATA_LOCATIONS).map(([key, loc]) => (
                     <option key={key} value={key}>{loc.name} ({loc.zone})</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="picker-line"></div>
+
+            {/* OPTIONAL INTERMEDIATE STOPOVER WAYPOINT */}
+            <div className="picker-row" style={{ opacity: waypointKey ? 1.0 : 0.65 }}>
+              <div className="picker-dot yellow animate-pulse" style={{ backgroundColor: '#ecc94b' }}></div>
+              <div className="picker-field">
+                <div className="flex justify-between items-center pr-2">
+                  <label className="text-yellow-400">Add Stopover (Optional)</label>
+                  {waypointKey && (
+                    <button 
+                      type="button" 
+                      onClick={() => setWaypointKey('')} 
+                      className="text-[9px] text-red-400 hover:text-red-300 font-bold border border-red-500/20 px-1 py-0.5 rounded bg-red-950/20"
+                    >
+                      Clear Stop
+                    </button>
+                  )}
+                </div>
+                <select value={waypointKey} onChange={(e) => setWaypointKey(e.target.value)}>
+                  <option value="">-- No Stopover --</option>
+                  {Object.entries(KOLKATA_LOCATIONS).map(([key, loc]) => (
+                    <option key={key} value={key} disabled={key === pickupKey || key === dropoffKey}>{loc.name} ({loc.zone})</option>
                   ))}
                 </select>
               </div>

@@ -4,7 +4,9 @@ import dotenv from 'dotenv';
 // Automatically parse DECIMAL/NUMERIC (type OID 1700) as JavaScript numbers
 pg.types.setTypeParser(1700, (val) => parseFloat(val));
 
-dotenv.config();
+import { fileURLToPath } from 'url';
+
+dotenv.config({ path: fileURLToPath(new URL('./.env', import.meta.url)) });
 
 const { Pool } = pg;
 

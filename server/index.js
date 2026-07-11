@@ -1766,6 +1766,21 @@ wss.on('connection', (ws) => {
           });
           break;
 
+        case 'send_chat_message':
+          // Route chat message packet to target matching client
+          socketClients.forEach((meta, clientWs) => {
+            if (meta.role === data.payload.targetRole && meta.id === data.payload.targetId && clientWs.readyState === WebSocket.OPEN) {
+              clientWs.send(JSON.stringify({
+                type: 'receive_chat_message',
+                fromRole: clientMeta.role,
+                fromId: clientMeta.id,
+                message: data.payload.message,
+                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+              }));
+            }
+          });
+          break;
+
         case 'driver_location_update':
           // Update database driver coordinates
           await query(
@@ -1971,22 +1986,19 @@ wss.on('connection', (ws) => {
           break;
 
         case 'send_chat':
-          // Broadcast chat to receiver
-          const chatReceiverWs = findWsClient(data.receiverRole, data.receiverId);
-          if (chatReceiverWs) {
-            chatReceiverWs.send(JSON.stringify({ 
-              type: 'chat_receive', 
-              message: {
-                id: data.msgId,
-                sender: clientMeta.role,
-                text: data.text,
-                translation: data.translation,
-                originalLang: data.originalLang || 'en-US',
-                translationLang: data.translationLang || 'bn-IN',
-                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-              }
-            }));
-          }
+          // Broadcast chat to receiver (routes to all active connections, e.g., phone + cockpit)
+          broadcastToId(data.receiverRole, data.receiverId, { 
+            type: 'chat_receive', 
+            message: {
+              id: data.msgId,
+              sender: clientMeta.role,
+              text: data.text,
+              translation: data.translation,
+              originalLang: data.originalLang || 'en-US',
+              translationLang: data.translationLang || 'bn-IN',
+              time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            }
+          });
           break;
 
         case 'sos_alert':

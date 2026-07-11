@@ -1,6 +1,5 @@
 import UIKit
 import Capacitor
-import GoogleMaps
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -8,18 +7,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Secure API Key injection
-        var apiKey: String = ""
-        if let path = Bundle.main.path(forResource: "JaldiGoSecrets", ofType: "plist"),
-           let dict = NSDictionary(contentsOfFile: path) as? [String: AnyObject] {
-            apiKey = dict["GOOGLE_MAPS_API_KEY"] as? String ?? ""
-        }
-        
-        if apiKey.isEmpty {
-            apiKey = ProcessInfo.processInfo.environment["GOOGLE_MAPS_API_KEY"] ?? "placeholder_key"
-        }
-        
-        GMSServices.provideAPIKey(apiKey)
         return true
     }
 
