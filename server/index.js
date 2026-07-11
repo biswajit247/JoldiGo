@@ -1239,15 +1239,12 @@ app.post('/api/admin/predictive/dispatch', (req, res) => {
   }
 
   // 1. Send WebSocket notification to the driver if online
-  const driverWs = findWsClient('driver', driverId);
-  if (driverWs && driverWs.readyState === WebSocket.OPEN) {
-    driverWs.send(JSON.stringify({
-      type: 'predictive_dispatch',
-      hotspotName,
-      lat: parseFloat(lat),
-      lng: parseFloat(lng)
-    }));
-  }
+  broadcastToId('driver', driverId, {
+    type: 'predictive_dispatch',
+    hotspotName,
+    lat: parseFloat(lat),
+    lng: parseFloat(lng)
+  });
 
   // 2. Broadcast to admins to draw the line on their maps
   broadcastToRole('admin', {
@@ -1873,10 +1870,9 @@ wss.on('connection', (ws) => {
           // Broadcast demand update to admins
           broadcastToRole('admin', { type: 'demand_updated' });
 
-          // Find targeted driver client
-          const targetDriverWs = findWsClient('driver', data.ride.driverId);
-          if (targetDriverWs && targetDriverWs.readyState === WebSocket.OPEN) {
-            targetDriverWs.send(JSON.stringify({ type: 'ride_offer', ride: data.ride }));
+          // Find targeted driver client and broadcast offer to all registered sockets (browser + mobile)
+          const sentOffer = broadcastToId('driver', data.ride.driverId, { type: 'ride_offer', ride: data.ride });
+          if (sentOffer) {
             console.log(`Dispatched ride contract ${data.ride.id} to Driver ID ${data.ride.driverId}`);
           } else {
             console.log(`Target driver ID ${data.ride.driverId} is offline. Simulating Auto-Accept & trip progression for device testing...`);
@@ -1915,7 +1911,7 @@ wss.on('connection', (ws) => {
                     [takeHome, commission, data.ride.driverId]
                   );
                   
-                  ws.send(JSON.stringify({ type: 'ride_status_broadcast', rideId: data.ride.id, status: 'completed' }));
+                  broadcastToId('passenger', data.ride.passengerPhone, { type: 'ride_status_broadcast', rideId: data.ride.id, status: 'completed' });
                   broadcastToRole('admin', { type: 'ledger_update' });
                 }, 5000); // 5s trip duration
               }, 4000); // 4s wait at pickup
@@ -1927,10 +1923,7 @@ wss.on('connection', (ws) => {
           await query("UPDATE rides SET status = 'accepted' WHERE id = $1", [data.rideId]);
           
           // Notify passenger that the driver accepted
-          const passengerWsAccept = findWsClient('passenger', data.passengerPhone);
-          if (passengerWsAccept) {
-            passengerWsAccept.send(JSON.stringify({ type: 'ride_accepted', rideId: data.rideId, driverId: clientMeta.id }));
-          }
+          broadcastToId('passenger', data.passengerPhone, { type: 'ride_accepted', rideId: data.rideId, driverId: clientMeta.id });
           // Notify admin console
           broadcastToRole('admin', { type: 'ledger_update' });
           break;
@@ -1938,10 +1931,8 @@ wss.on('connection', (ws) => {
         case 'driver_reject':
           await query("UPDATE rides SET status = 'cancelled' WHERE id = $1", [data.rideId]);
           
-          const passengerWsReject = findWsClient('passenger', data.passengerPhone);
-          if (passengerWsReject) {
-            passengerWsReject.send(JSON.stringify({ type: 'ride_rejected', rideId: data.rideId }));
-          }
+          // Notify passenger that the driver rejected
+          broadcastToId('passenger', data.passengerPhone, { type: 'ride_rejected', rideId: data.rideId });
           break;
 
         case 'update_ride_status':
@@ -1970,10 +1961,8 @@ wss.on('connection', (ws) => {
           }
 
           // Broadcast status change to the passenger
-          const passengerWsStatus = findWsClient('passenger', data.passengerPhone);
-          if (passengerWsStatus) {
-            passengerWsStatus.send(JSON.stringify({ type: 'ride_status_broadcast', rideId: data.rideId, status: data.status }));
-          }
+          // Broadcast status change to the passenger
+          broadcastToId('passenger', data.passengerPhone, { type: 'ride_status_broadcast', rideId: data.rideId, status: data.status });
           
           broadcastToRole('admin', { type: 'ledger_update' });
           break;
@@ -2066,6 +2055,19 @@ const broadcastToRole = (role, payload) => {
       ws.send(json);
     }
   });
+};
+
+// Helper: Send message to all matching clients by role and ID (e.g. multiple devices)
+const broadcastToId = (role, id, payload) => {
+  const json = JSON.stringify(payload);
+  let sentCount = 0;
+  socketClients.forEach((meta, ws) => {
+    if (meta.role === role && String(meta.id) === String(id) && ws.readyState === WebSocket.OPEN) {
+      ws.send(json);
+      sentCount++;
+    }
+  });
+  return sentCount > 0;
 };
 
 // Helper: Find WebSocket of specific client
