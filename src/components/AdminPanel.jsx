@@ -2862,12 +2862,13 @@ export default function AdminPanel() {
                           style={{ minWidth: '24px' }}
                         >
                           <div 
-                            className="w-[18px] rounded-t-sm transition-all duration-300"
+                            className="rounded-t-sm transition-all duration-300"
                             style={{ 
+                              width: '18px',
                               height: `${percentageHeight.toFixed(0)}px`,
                               background: isHovered 
                                 ? 'linear-gradient(to top, #ff9c00, #ffdd00)' 
-                                : 'linear-gradient(to top, rgba(255,221,0,0.3), rgba(255,221,0,0.85))',
+                                : 'linear-gradient(to top, rgba(255,221,0,0.4), rgba(255,221,0,0.95))',
                               boxShadow: isHovered ? '0 0 15px rgba(255,221,0,0.6)' : 'none',
                             }}
                           ></div>
