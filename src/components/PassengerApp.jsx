@@ -81,6 +81,8 @@ export default function PassengerApp({ isStandalone }) {
     mapStyle,
     setMapStyle,
     simulationSpeed,
+    addLog,
+    playSound,
     callState,
     callFrom,
     callPartner,
@@ -244,6 +246,8 @@ export default function PassengerApp({ isStandalone }) {
   const [topUpCardCvv, setTopUpCardCvv] = useState('');
   const [topUpCardName, setTopUpCardName] = useState('');
   const [isCardFlipped, setIsCardFlipped] = useState(false);
+  const [referralInput, setReferralInput] = useState('');
+  const [isReferralClaimed, setIsReferralClaimed] = useState(false);
 
   // Chat Drawer state
   const [showChat, setShowChat] = useState(false);
@@ -846,6 +850,53 @@ export default function PassengerApp({ isStandalone }) {
     if (!chatInputText.trim()) return;
     sendChatMessage('passenger', chatInputText.trim());
     setChatInputText('');
+  };
+
+  const handleClaimReferral = async (e) => {
+    if (e) e.preventDefault();
+    const code = referralInput.trim().toUpperCase();
+    if (!code) return;
+    
+    if (isReferralClaimed) {
+      alert("❌ You have already claimed a referral bonus in this session!");
+      return;
+    }
+    
+    if (code === `JOLDIPASS${passenger.phone.slice(-5)}`) {
+      alert("❌ You cannot claim your own referral code!");
+      return;
+    }
+    
+    if (code.startsWith('JOLDI') || code.startsWith('FRIEND') || code.length >= 6) {
+      setIsReferralClaimed(true);
+      setReferralInput('');
+      
+      try {
+        const { api } = getServerEndpoints();
+        const res = await fetch(`${api}/api/passenger/wallet/topup`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone: passenger.phone, amount: 50 })
+        });
+        const data = await res.json();
+        if (data.success) {
+          setPassengerWalletBalance(parseFloat(data.wallet_balance || 0));
+        } else {
+          setPassengerWalletBalance(prev => prev + 50);
+        }
+      } catch (err) {
+        setPassengerWalletBalance(prev => prev + 50);
+      }
+      
+      if (playSound) playSound();
+      if (addLog) {
+        addLog(`🎁 Referral Bonus Claimed: Passenger ${passenger.name} applied code ${code}. ₹50 credited!`, 'success');
+      }
+      
+      alert(`🎉 Success! Applied code ${code}. ₹50 Referral Bonus has been credited to your wallet!`);
+    } else {
+      alert("❌ Invalid referral invite code format! Use FRIEND50 or JOLDIxxx.");
+    }
   };
 
   const PASSENGER_QUICK_REPLIES = [
@@ -2282,6 +2333,47 @@ export default function PassengerApp({ isStandalone }) {
               </button>
 
             </div>
+
+            {/* Promo & Referral Hub */}
+            <div className="border-t border-white/5 pt-3 mt-1 flex flex-col gap-2">
+              <span className="text-[10px] font-black uppercase text-amber-500 tracking-wider">🎁 Promo & Referral Hub</span>
+              
+              <div className="flex gap-2 items-center">
+                <input 
+                  type="text" 
+                  placeholder="Enter Invite Code (e.g. FRIEND50)"
+                  value={referralInput}
+                  onChange={(e) => setReferralInput(e.target.value)}
+                  className="flex-1 bg-black/40 border border-white/10 rounded px-2.5 py-1 text-xs text-white font-mono uppercase outline-none focus:border-amber-400"
+                />
+                <button
+                  type="button"
+                  onClick={handleClaimReferral}
+                  className="bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-[10px] px-3 py-1 rounded cursor-pointer border-none uppercase transition-colors"
+                >
+                  Claim ₹50
+                </button>
+              </div>
+
+              <div className="bg-black/30 border border-white/5 rounded-lg p-2.5 flex justify-between items-center mt-1">
+                <div className="flex flex-col text-left">
+                  <span className="text-[8px] text-gray-500 uppercase font-bold">Your Share Code:</span>
+                  <span className="text-xs font-mono font-bold text-white tracking-wider">JOLDIPASS{passenger?.phone ? passenger.phone.slice(-5) : 'XXXXX'}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const code = `JOLDIPASS${passenger?.phone ? passenger.phone.slice(-5) : 'XXXXX'}`;
+                    navigator.clipboard.writeText(code);
+                    alert(`📋 Share code ${code} copied to clipboard! Share it with friends to earn ₹50 wallet cash.`);
+                  }}
+                  className="bg-white/5 hover:bg-white/10 text-white font-semibold text-[9px] px-2.5 py-1 rounded cursor-pointer border border-white/10"
+                >
+                  🔗 Share Invite
+                </button>
+              </div>
+            </div>
+
           </div>
         )}
         
