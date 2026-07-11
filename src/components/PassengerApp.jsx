@@ -239,6 +239,11 @@ export default function PassengerApp({ isStandalone }) {
   const [showTopUpModal, setShowTopUpModal] = useState(false);
   const [topUpAmount, setTopUpAmount] = useState(500);
   const [topUpStep, setTopUpStep] = useState('select'); 
+  const [topUpCardNumber, setTopUpCardNumber] = useState('');
+  const [topUpCardExpiry, setTopUpCardExpiry] = useState('');
+  const [topUpCardCvv, setTopUpCardCvv] = useState('');
+  const [topUpCardName, setTopUpCardName] = useState('');
+  const [isCardFlipped, setIsCardFlipped] = useState(false);
 
   // Chat Drawer state
   const [showChat, setShowChat] = useState(false);
@@ -766,6 +771,17 @@ export default function PassengerApp({ isStandalone }) {
     }
   };
 
+  const openTopUpModal = (amount = 500) => {
+    setTopUpAmount(amount);
+    setTopUpCardNumber('');
+    setTopUpCardExpiry('');
+    setTopUpCardCvv('');
+    setTopUpCardName('');
+    setIsCardFlipped(false);
+    setTopUpStep('select');
+    setShowTopUpModal(true);
+  };
+
   const executeWalletTopUp = () => {
     if (rzpOtpInput !== '123456') {
       alert("Invalid OTP code! Please use 123456.");
@@ -807,6 +823,24 @@ export default function PassengerApp({ isStandalone }) {
     }, 1200);
   };
 
+  const handleCardNumberChange = (e) => {
+    let value = e.target.value.replace(/\D/g, '').slice(0, 16);
+    let formatted = value.match(/.{1,4}/g)?.join(' ') || '';
+    setTopUpCardNumber(formatted);
+  };
+
+  const handleCardExpiryChange = (e) => {
+    let value = e.target.value.replace(/\D/g, '').slice(0, 4);
+    if (value.length > 2) {
+      value = value.slice(0, 2) + '/' + value.slice(2);
+    }
+    setTopUpCardExpiry(value);
+  };
+
+  const handleCardCvvChange = (e) => {
+    let value = e.target.value.replace(/\D/g, '').slice(0, 3);
+    setTopUpCardCvv(value);
+  };
   const handleSendChat = (e) => {
     e.preventDefault();
     if (!chatInputText.trim()) return;
@@ -1180,8 +1214,8 @@ export default function PassengerApp({ isStandalone }) {
               <button 
                 className="bg-red-900/60 border border-red-500/30 text-red-200 px-2 py-0.5 rounded text-[10px] font-bold"
                 onClick={() => {
-                  setTopUpAmount(Math.ceil((Math.max(20, metrics.totalFare - discount) - passengerWalletBalance) / 100) * 100);
-                  setShowTopUpModal(true);
+                  const amt = Math.ceil((Math.max(20, metrics.totalFare - discount) - passengerWalletBalance) / 100) * 100;
+                  openTopUpModal(amt);
                 }}
               >
                 Top Up Wallet
@@ -1457,8 +1491,8 @@ export default function PassengerApp({ isStandalone }) {
                   <button 
                     className="bg-red-900/60 border border-red-500/30 text-red-200 px-3 py-1 rounded text-[10px] font-bold"
                     onClick={() => {
-                      setTopUpAmount(Math.ceil((activeRide.totalFare - passengerWalletBalance) / 100) * 100);
-                      setShowTopUpModal(true);
+                      const amt = Math.ceil((activeRide.totalFare - passengerWalletBalance) / 100) * 100;
+                      openTopUpModal(amt);
                     }}
                   >
                     Top Up ₹{Math.ceil((activeRide.totalFare - passengerWalletBalance) / 100) * 100}
@@ -2363,8 +2397,7 @@ export default function PassengerApp({ isStandalone }) {
                 <button 
                   className="header-icon-btn wallet-badge-btn flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-full"
                   onClick={() => {
-                    setTopUpAmount(500);
-                    setShowTopUpModal(true);
+                    openTopUpModal(500);
                   }}
                   title="Top Up Wallet"
                 >
@@ -2437,10 +2470,145 @@ export default function PassengerApp({ isStandalone }) {
                       </div>
 
                       <button 
-                        className="btn-pay-rzp mt-4 w-full py-2 bg-amber-500 text-black hover:bg-amber-600 font-bold rounded-lg text-xs"
-                        onClick={() => setTopUpStep('verify')}
+                        className="btn-pay-rzp mt-4 w-full py-2 bg-amber-500 text-black hover:bg-amber-600 font-bold rounded-lg text-xs cursor-pointer"
+                        onClick={() => setTopUpStep('card')}
                       >
                         Authorize Top Up ₹{topUpAmount}
+                      </button>
+                    </div>
+                  )}
+
+                  {topUpStep === 'card' && (
+                    <div className="payment-body mt-3 flex flex-col gap-3 text-left">
+                      {/* Credit Card Graphic Preview */}
+                      <div 
+                        className="w-full h-[115px] rounded-xl p-3 relative overflow-hidden transition-all duration-500 select-none flex flex-col justify-between"
+                        style={{
+                          background: isCardFlipped 
+                            ? 'linear-gradient(135deg, #1e293b, #0f172a)' 
+                            : 'linear-gradient(135deg, #ffdd00, #d97706)',
+                          color: isCardFlipped ? '#94a3b8' : '#fff',
+                          border: '1px solid rgba(255,255,255,0.1)'
+                        }}
+                      >
+                        {!isCardFlipped ? (
+                          <>
+                            {/* Card Front */}
+                            <div className="flex justify-between items-start">
+                              <div className="flex flex-col">
+                                <span className="text-[8px] opacity-75 uppercase font-bold tracking-wider">JoldiGo Pay</span>
+                                <div className="w-5 h-3.5 bg-white/20 rounded-sm mt-1"></div> {/* Chip */}
+                              </div>
+                              <span className="text-[10px] font-black italic text-black font-mono">VISA</span>
+                            </div>
+
+                            <div className="text-center font-mono text-sm font-bold tracking-widest text-black/85 mt-2">
+                              {topUpCardNumber || '•••• •••• •••• ••••'}
+                            </div>
+
+                            <div className="flex justify-between items-end mt-1 text-black/75">
+                              <div className="flex flex-col max-w-[130px] truncate">
+                                <span className="text-[7px] uppercase opacity-75 font-semibold">Cardholder</span>
+                                <span className="text-[9px] font-bold font-mono tracking-wide truncate">{topUpCardName.toUpperCase() || 'NAME SURNAME'}</span>
+                              </div>
+                              <div className="flex flex-col text-right">
+                                <span className="text-[7px] uppercase opacity-75 font-semibold">Expires</span>
+                                <span className="text-[9px] font-bold font-mono">{topUpCardExpiry || 'MM/YY'}</span>
+                              </div>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            {/* Card Back */}
+                            <div className="w-full h-3.5 bg-black absolute left-0 top-3"></div>
+                            <div className="mt-8 flex justify-between items-center px-1">
+                              <div className="h-6 w-32 bg-slate-700/80 rounded flex items-center justify-end px-2">
+                                <span className="text-[8px] font-mono tracking-widest text-slate-400 font-bold">XXX XXX</span>
+                              </div>
+                              <div className="bg-white text-black font-mono font-bold text-[9px] px-2 py-0.5 rounded border border-red-500 shadow-md">
+                                CVV: {topUpCardCvv || '•••'}
+                              </div>
+                            </div>
+                            <span className="text-[6px] opacity-50 block mt-2 font-mono">AUTHORIZED SIGNATURE ONLY</span>
+                          </>
+                        )}
+                      </div>
+
+                      {/* Card input form fields */}
+                      <div className="flex flex-col gap-2">
+                        <div>
+                          <label className="text-[9px] text-gray-500 font-bold uppercase block mb-0.5">Card Number</label>
+                          <input 
+                            type="text"
+                            placeholder="4111 1111 1111 1111"
+                            value={topUpCardNumber}
+                            onChange={handleCardNumberChange}
+                            className="w-full bg-black/40 border border-white/10 rounded px-2.5 py-1 text-xs text-white font-mono outline-none focus:border-amber-400"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-[9px] text-gray-500 font-bold uppercase block mb-0.5">Cardholder Name</label>
+                          <input 
+                            type="text"
+                            placeholder="John Doe"
+                            value={topUpCardName}
+                            onChange={(e) => setTopUpCardName(e.target.value)}
+                            className="w-full bg-black/40 border border-white/10 rounded px-2.5 py-1 text-xs text-white outline-none focus:border-amber-400 font-mono"
+                          />
+                        </div>
+
+                        <div className="flex gap-2">
+                          <div className="flex-1">
+                            <label className="text-[9px] text-gray-500 font-bold uppercase block mb-0.5">Expiration</label>
+                            <input 
+                              type="text"
+                              placeholder="MM/YY"
+                              value={topUpCardExpiry}
+                              onChange={handleCardExpiryChange}
+                              className="w-full bg-black/40 border border-white/10 rounded px-2.5 py-1 text-xs text-white font-mono outline-none focus:border-amber-400"
+                            />
+                          </div>
+
+                          <div className="w-[80px]">
+                            <label className="text-[9px] text-gray-500 font-bold uppercase block mb-0.5">CVV</label>
+                            <input 
+                              type="password"
+                              placeholder="***"
+                              value={topUpCardCvv}
+                              onChange={handleCardCvvChange}
+                              onFocus={() => setIsCardFlipped(true)}
+                              onBlur={() => setIsCardFlipped(false)}
+                              className="w-full bg-black/40 border border-white/10 rounded px-2.5 py-1 text-xs text-white font-mono outline-none focus:border-amber-400 text-center"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (topUpCardNumber.replace(/\s/g, '').length < 15) {
+                            alert("Please enter a valid card number.");
+                            return;
+                          }
+                          if (!topUpCardName.trim()) {
+                            alert("Please enter cardholder name.");
+                            return;
+                          }
+                          if (topUpCardExpiry.length < 5) {
+                            alert("Please enter expiry MM/YY.");
+                            return;
+                          }
+                          if (topUpCardCvv.length < 3) {
+                            alert("Please enter CVV.");
+                            return;
+                          }
+                          setTopUpStep('verify');
+                        }}
+                        className="w-full py-2 bg-amber-500 hover:bg-amber-400 text-black font-bold rounded-lg text-xs cursor-pointer transition-colors mt-1"
+                      >
+                        🔒 Securely Pay ₹{topUpAmount}
                       </button>
                     </div>
                   )}
