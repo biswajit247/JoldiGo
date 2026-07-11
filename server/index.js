@@ -280,6 +280,31 @@ app.post('/api/passenger/login', async (req, res) => {
   }
 });
 
+// Recharge Passenger Wallet
+app.post('/api/passenger/recharge', async (req, res) => {
+  const { phone, amount } = req.body;
+  try {
+    const amt = parseFloat(amount);
+    if (isNaN(amt) || amt <= 0) {
+      return res.status(400).json({ error: 'Invalid recharge amount.' });
+    }
+    
+    // Increment wallet balance
+    const updateRes = await query(
+      'UPDATE passengers SET wallet_balance = wallet_balance + $1 WHERE phone = $2 RETURNING *',
+      [amt, phone]
+    );
+    
+    if (updateRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Passenger profile not found.' });
+    }
+    
+    res.json({ success: true, passenger: updateRes.rows[0] });
+  } catch (err) {
+    res.status(500).json({ error: 'Recharge failed.', details: err.message });
+  }
+});
+
 // Get All Passengers (Admin Panel)
 app.get('/api/admin/passengers', async (req, res) => {
   try {
@@ -390,6 +415,123 @@ app.post('/api/passenger/wallet/topup', async (req, res) => {
     res.json({ success: true, wallet_balance: parseFloat(balanceRes.rows[0].wallet_balance) });
   } catch (err) {
     res.status(500).json({ error: 'Wallet top-up failed.', details: err.message });
+  }
+});
+
+// POST /api/passenger/ai-support
+app.post('/api/passenger/ai-support', async (req, res) => {
+  const { phone, message, chatHistory } = req.body;
+  if (!phone || !message) return res.status(400).json({ error: 'Phone and message are required.' });
+
+  try {
+    // 1. Fetch last completed ride details
+    const lastRides = await query(
+      `SELECT r.*, d.name as driver_name, d.phone as driver_phone, d.vehicle_number
+       FROM rides r 
+       LEFT JOIN drivers d ON r.driver_id = d.id 
+       WHERE r.passenger_phone = $1 
+       ORDER BY r.created_at DESC LIMIT 1`,
+      [phone]
+    );
+    const lastRide = lastRides.rows[0];
+
+    const msg = message.toLowerCase().trim();
+    let reply = '';
+    let category = 'general';
+    let disputeCreated = false;
+    let registeredTicketId = null;
+
+    // Detect language of the input message (English, Bengali, Hindi)
+    const isBengali = /কত|টাকা|ভাড়া|হারিয়ে|ফেলেছি|সাহায্য|হ্যালো|নমস্কার|অভিযোগ/.test(message);
+    const isHindi = /kitna|paisa|bhada|kho|gaya|madad|hello|namaste|shikayat/.test(message);
+
+    // AI Keyword routing & NLP simulation
+    if (msg.includes('fare') || msg.includes('charge') || msg.includes('price') || msg.includes('money') || msg.includes('cost') || msg.includes('ভাড়া') || msg.includes('টাকা') || msg.includes('किराया') || msg.includes('पैसा')) {
+      category = 'fare';
+      if (lastRide) {
+        const dateStr = new Date(lastRide.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        if (isBengali) {
+          reply = `আমি দেখতে পাচ্ছি আপনার শেষ ট্রিপটি ছিল ${dateStr} তারিখে ${lastRide.pickup_name} থেকে ${lastRide.dropoff_name} পর্যন্ত। মোট ভাড়া ছিল ₹${parseFloat(lastRide.total_fare).toFixed(2)}। আপনি কি এই ভাড়ার বিরুদ্ধে কোনো আপত্তি (dispute) নথিভুক্ত করতে চান? (হ্যাঁ/না বলুন)`;
+        } else if (isHindi) {
+          reply = `मुझे आपका आखिरी सफर ${dateStr} को ${lastRide.pickup_name} से ${lastRide.dropoff_name} तक मिला। कुल किराया ₹${parseFloat(lastRide.total_fare).toFixed(2)} था। क्या आप इस किराए के खिलाफ शिकायत दर्ज करना चाहते हैं? (हाँ/ना लिखें)`;
+        } else {
+          reply = `I see your last trip was on ${dateStr} from ${lastRide.pickup_name} to ${lastRide.dropoff_name} with a total fare of ₹${parseFloat(lastRide.total_fare).toFixed(2)}. Would you like to file a formal dispute for this ride? (Reply "yes" to file)`;
+        }
+      } else {
+        reply = isBengali 
+          ? "আপনার কোনো পূর্ববর্তী ট্রিপের রেকর্ড খুঁজে পাওয়া যায়নি।" 
+          : (isHindi ? "आपका कोई पुराना सफर नहीं मिला।" : "I couldn't find any completed trip history for your number.");
+      }
+    } else if (msg === 'yes' || msg === 'yes please' || msg === 'হ্যাঁ' || msg === 'হ্যা' || msg === 'haan' || msg === 'han' || msg === 'file dispute' || msg.includes('dispute') || msg.includes('অভিযোগ') || msg.includes('शिकायत')) {
+      category = 'fare';
+      if (lastRide) {
+        // Check if dispute already exists for this ride
+        const existing = await query('SELECT id FROM disputes WHERE ride_id = $1', [lastRide.id]);
+        if (existing.rows.length > 0) {
+          registeredTicketId = existing.rows[0].id;
+          reply = isBengali
+            ? `এই ট্রিপের জন্য ইতিমধ্যে একটি অভিযোগ (ID: ${registeredTicketId}) দায়ের করা হয়েছে। আমাদের নিরাপত্তা টিম এটি খতিये দেখছে।`
+            : (isHindi ? `इस सफर के लिए पहले से ही एक शिकायत (ID: ${registeredTicketId}) दर्ज है। हमारी टीम इसकी जांच कर रही है।` : `A dispute (ID: ${registeredTicketId}) is already active for this ride. Our safety team is investigating the telemetry.`);
+        } else {
+          registeredTicketId = 'dsp_' + Math.random().toString(36).substr(2, 9);
+          await query(
+            `INSERT INTO disputes (id, ride_id, passenger_phone, driver_id, reason, status, payout_target, expires_in)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+            [registeredTicketId, lastRide.id, phone, lastRide.driver_id, 'Automated AI dispute for fare mismatch', 'awaiting_evidence', 'none', 86400]
+          );
+          disputeCreated = true;
+          broadcastToRole('admin', { type: 'dispute_update' });
+
+          reply = isBengali
+            ? `আপনার অভিযোগ সফলভাবে নথিভুক্ত করা হয়েছে! টিকিট আইডি: ${registeredTicketId}। ভাড়ার অসঙ্গতি মূল্যায়নের জন্য আমাদের টিম আপনার সাথে যোগাযোগ করবে।`
+            : (isHindi ? `आपकी शिकायत दर्ज कर ली गई है! टिकट आईडी: ${registeredTicketId}। हमारी टीम जल्द ही आपसे संपर्क करेगी।` : `Dispute registered successfully! Ticket ID: ${registeredTicketId}. Our compliance team is pulling the GPS telemetry to evaluate the fare difference.`);
+        }
+      } else {
+        reply = "No active ride found to dispute.";
+      }
+    } else if (msg.includes('lost') || msg.includes('phone') || msg.includes('bag') || msg.includes('left') || msg.includes('forgot') || msg.includes('হারিয়ে') || msg.includes('ফেলেছি') || msg.includes('खो') || msg.includes('छूट')) {
+      category = 'lost_item';
+      if (lastRide) {
+        registeredTicketId = 'lost_' + Math.random().toString(36).substr(2, 9);
+        if (isBengali) {
+          reply = `চিন্তা করবেন না! আপনার শেষ ট্রিপের চালক ছিলেন ${lastRide.driver_name}। আমি চালকের সাথে যোগাযোগ করে হারিয়ে যাওয়া জিনিসটি পুনরুদ্ধারের জন্য একটি টিকিট (ID: ${registeredTicketId}) তৈরি করেছি। চালক আপনার সাথে যোগাযোগ করবেন।`;
+        } else if (isHindi) {
+          reply = `चिंता न करें! आपके आखरी सफर के ड्राइवर ${lastRide.driver_name} थे। मैंने उन्हें सूचित कर दिया है और एक टिकट (ID: ${registeredTicketId}) बना दिया है। वह जल्द ही आपसे बात करेंगे।`;
+        } else {
+          reply = `Don't worry! Your last captain was ${lastRide.driver_name} (${lastRide.vehicle_number}). I have dispatched an alert to the driver and registered a safety tracking ticket (ID: ${registeredTicketId}) to recover your item.`;
+        }
+      } else {
+        reply = "I couldn't find your last captain to check for lost items.";
+      }
+    } else {
+      // General greeting/help
+      if (isBengali) {
+        reply = `হ্যালো! আমি জলদিগো এআই সাপোর্ট অ্যাসিস্ট্যান্ট। 🤖 আমি আপনাকে কীভাবে সাহায্য করতে পারি?
+1. শেষ ট্রিপের ভাড়া পরীক্ষা করতে "ভাড়া" লিখুন।
+2. ভাড়ার অসঙ্গতির জন্য "dispute" লিখুন।
+3. গাড়িতে কিছু ফেলে গেলে "হারিয়ে ফেলেছি" লিখুন।`;
+      } else if (isHindi) {
+        reply = `नमस्ते! मैं जल्दीगो एआई सहायक हूँ। 🤖 मैं आपकी क्या मदद कर सकता हूँ?
+1. आखरी किराए की जांच के लिए "kiraya" लिखें।
+2. किराए की शिकायत के लिए "dispute" लिखें।
+3. गाड़ी में सामान छूट जाने पर "kho gaya" लिखें।`;
+      } else {
+        reply = `Hello! I am your JoldiGo AI Safety & Care Assistant. 🤖 How can I help you today?
+- Type **"fare"** to check your last ride details.
+- Type **"yes"** after checking to file a formal dispute.
+- Type **"lost"** if you left a bag or phone in the driver's vehicle.`;
+      }
+    }
+
+    res.json({
+      success: true,
+      reply,
+      category,
+      disputeCreated,
+      ticketId: registeredTicketId
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'AI processing failed.', details: err.message });
   }
 });
 

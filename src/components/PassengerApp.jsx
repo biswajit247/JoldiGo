@@ -240,8 +240,16 @@ export default function PassengerApp({ isStandalone }) {
 
   // Chat Drawer state
   const [showChat, setShowChat] = useState(false);
-  const [chatInputText, setChatInputText] = useState('');
   const chatEndRef = useRef(null);
+  
+  // AI Support chatbot states
+  const [showAiSupport, setShowAiSupport] = useState(false);
+  const [aiChatMessages, setAiChatMessages] = useState([
+    { id: '1', sender: 'ai', text: 'Hello! I am your JoldiGo AI Safety & Care Assistant. 🤖 How can I help you today?\n\n- Type "fare" to query your last ride details.\n- Type "yes" after querying to file a formal dispute.\n- Type "lost" if you left an item in your captain\'s vehicle.\n\n(Ami Bangla, Hindi o English e sohaayota korte pari!)' }
+  ]);
+  const [aiInputText, setAiInputText] = useState('');
+  const [isAiTyping, setIsAiTyping] = useState(false);
+  const aiChatEndRef = useRef(null);
 
   // Razorpay payment sheet state
   const [selectedPayment, setSelectedPayment] = useState('upi');
@@ -334,6 +342,64 @@ export default function PassengerApp({ isStandalone }) {
       chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [chatMessages, showChat]);
+
+  // Scroll AI chat drawer to bottom on new messages
+  useEffect(() => {
+    if (showAiSupport && aiChatEndRef.current) {
+      aiChatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [aiChatMessages, showAiSupport]);
+
+  const handleSendAiMessage = async (e) => {
+    if (e) e.preventDefault();
+    if (!aiInputText.trim()) return;
+
+    const userMessage = {
+      id: Math.random().toString(),
+      sender: 'user',
+      text: aiInputText
+    };
+
+    setAiChatMessages(prev => [...prev, userMessage]);
+    const messageToSend = aiInputText;
+    setAiInputText('');
+    setIsAiTyping(true);
+
+    try {
+      const { api } = getServerEndpoints();
+      const res = await fetch(`${api}/api/passenger/ai-support`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phone: passenger.phone,
+          message: messageToSend
+        })
+      });
+      const data = await res.json();
+      
+      setIsAiTyping(false);
+      if (data.success) {
+        setAiChatMessages(prev => [...prev, {
+          id: Math.random().toString(),
+          sender: 'ai',
+          text: data.reply
+        }]);
+      } else {
+        setAiChatMessages(prev => [...prev, {
+          id: Math.random().toString(),
+          sender: 'ai',
+          text: 'Sorry, I encountered an issue processing your request. Please try again.'
+        }]);
+      }
+    } catch (err) {
+      setIsAiTyping(false);
+      setAiChatMessages(prev => [...prev, {
+        id: Math.random().toString(),
+        sender: 'ai',
+        text: 'Connection error. Please check your internet connection.'
+      }]);
+    }
+  };
 
   // Close chat when ride resets
   useEffect(() => {
@@ -1748,6 +1814,89 @@ export default function PassengerApp({ isStandalone }) {
       <div className="phone-screen-content">
         <RainOverlay weather={settings.weather} />
 
+        {/* AI SAFETY & CARE CHATBOT DRAWER */}
+        {showAiSupport && (
+          <div 
+            style={{
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              right: 0,
+              backgroundColor: 'rgba(10, 14, 22, 0.98)',
+              borderTop: '2px solid rgba(245, 158, 11, 0.3)',
+              borderTopLeftRadius: '20px',
+              borderTopRightRadius: '20px',
+              zIndex: 9999,
+              padding: '16px',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 -10px 30px rgba(0, 0, 0, 0.9)',
+              height: '420px',
+            }}
+            className="animate-slide-up text-left"
+          >
+            <div className="flex justify-between items-center pb-3 border-b border-white/10 mb-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">🤖</span>
+                <div>
+                  <h4 className="text-xs font-black uppercase text-amber-400 tracking-wider">JoldiGo AI Assistant</h4>
+                  <span className="text-[9px] text-gray-500 font-bold block">Safety & Care Agent</span>
+                </div>
+              </div>
+              <button 
+                className="w-6 h-6 flex items-center justify-center bg-white/5 hover:bg-white/10 rounded-full border border-white/10 text-gray-400 hover:text-white"
+                onClick={() => setShowAiSupport(false)}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Message Body */}
+            <div className="flex-1 overflow-y-auto pr-1 space-y-3 scrollbar-thin scrollbar-thumb-white/10 mb-3 text-xs">
+              {aiChatMessages.map(msg => (
+                <div key={msg.id} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  <div 
+                    className={`max-w-[85%] rounded-lg px-3 py-2 leading-relaxed whitespace-pre-line ${
+                      msg.sender === 'user' 
+                        ? 'bg-amber-500 text-black font-medium rounded-tr-none' 
+                        : 'bg-white/5 border border-white/10 text-white rounded-tl-none'
+                    }`}
+                  >
+                    {msg.text}
+                  </div>
+                </div>
+              ))}
+              {isAiTyping && (
+                <div className="flex justify-start">
+                  <div className="bg-white/5 border border-white/10 text-gray-400 rounded-lg rounded-tl-none px-3 py-2 italic flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce"></span>
+                    <span className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce [animation-delay:0.2s]"></span>
+                    <span className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce [animation-delay:0.4s]"></span>
+                  </div>
+                </div>
+              )}
+              <div ref={aiChatEndRef} />
+            </div>
+
+            {/* Input Footer */}
+            <form onSubmit={handleSendAiMessage} className="flex gap-2 border-t border-white/5 pt-3">
+              <input 
+                type="text" 
+                placeholder="Ask about last fare, lost item..." 
+                value={aiInputText}
+                onChange={(e) => setAiInputText(e.target.value)}
+                className="bg-black/60 border border-white/15 rounded-lg px-3 py-2 text-xs text-white flex-1 outline-none focus:border-amber-400 transition"
+              />
+              <button 
+                type="submit" 
+                className="w-9 h-9 flex items-center justify-center bg-amber-500 hover:bg-amber-400 text-black rounded-lg transition"
+              >
+                <Send size={14} />
+              </button>
+            </form>
+          </div>
+        )}
+
         {/* PROMO CODES SLIDING DRAWER */}
         {showPromoDrawer && (
           <div 
@@ -1964,6 +2113,14 @@ export default function PassengerApp({ isStandalone }) {
                 </button>
 
                 <div className="flex gap-1">
+                  <button 
+                    className="header-icon-btn" 
+                    onClick={() => setShowAiSupport(true)} 
+                    title="AI Support Assistant"
+                    style={{ backgroundColor: 'rgba(245,158,11,0.15)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.2)' }}
+                  >
+                    <MessageSquare size={14} />
+                  </button>
                   <button className="header-icon-btn" onClick={() => setTab('history')} title="Ride History">
                     <History size={14} />
                   </button>
