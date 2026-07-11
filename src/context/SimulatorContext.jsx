@@ -42,22 +42,11 @@ const CHAT_TRANSLATIONS = {
 export const getServerEndpoints = () => {
   let api = 'https://joldigo-backend.onrender.com';
   if (typeof window !== 'undefined') {
-    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    let saved = localStorage.getItem('joldigo_server_url');
+    if (saved) {
+      api = saved;
+    } else if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
       api = 'http://localhost:5001';
-    } else {
-      let saved = localStorage.getItem('joldigo_server_url');
-      if (saved) {
-        const normalized = saved.trim().replace(/\/$/, '');
-        if (normalized === 'http://localhost:5000' || normalized === 'http://localhost:5001' || normalized.includes('loca.lt') || normalized.includes('localhost')) {
-          localStorage.setItem('joldigo_server_url', 'https://joldigo-backend.onrender.com');
-          saved = 'https://joldigo-backend.onrender.com';
-        }
-      }
-      if (saved) {
-        api = saved;
-      } else if (window.location.hostname !== 'localhost' && window.location.protocol !== 'file:') {
-        api = 'https://joldigo-backend.onrender.com';
-      }
     }
   }
   
