@@ -394,11 +394,13 @@ export default function PassengerApp({ isStandalone }) {
         }]);
       }
     } catch (err) {
+      const { api } = getServerEndpoints();
+      console.error("AI Support fetch error details:", err);
       setIsAiTyping(false);
       setAiChatMessages(prev => [...prev, {
         id: Math.random().toString(),
         sender: 'ai',
-        text: 'Connection error. Please check your internet connection.'
+        text: `Connection error. Please check your internet connection.\n\n[Requested URL]: ${api}/api/passenger/ai-support\n[Error Details]: ${err.message}`
       }]);
     }
   };
