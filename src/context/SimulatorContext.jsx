@@ -693,8 +693,57 @@ export const SimulatorProvider = ({ children }) => {
   const watchIdRef = useRef(null);
   const [isGpsActive, setIsGpsActive] = useState(false);
 
-  const startGpsTracking = (driverId) => {
+  const startGpsTracking = async (driverId) => {
     if (watchIdRef.current) return;
+    
+    const isCapacitor = typeof window !== 'undefined' && !!window.Capacitor;
+    
+    if (isCapacitor) {
+      try {
+        const { Geolocation } = await import('@capacitor/geolocation');
+        const perm = await Geolocation.requestPermissions();
+        if (perm.location !== 'granted') {
+          alert("Location permission denied. Please allow location access in your device Settings.");
+          return;
+        }
+        
+        setIsGpsActive(true);
+        const watchId = await Geolocation.watchPosition(
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
+          (position, err) => {
+            if (err) {
+              console.error("Capacitor GPS Error:", err);
+              return;
+            }
+            if (!position) return;
+            const { latitude: lat, longitude: lng } = position.coords;
+            const nextLoc = { lat, lng };
+            
+            setDrivers(prev => prev.map(d => d.id === driverId ? { ...d, location: nextLoc } : d));
+            
+            const ws = driverSocketsRef.current[driverId];
+            if (ws && ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({ type: 'driver_location_update', location: nextLoc }));
+            }
+
+            setActiveRide(prev => {
+              if (prev && prev.driverId === driverId) {
+                return { ...prev, location: nextLoc };
+              }
+              return prev;
+            });
+          }
+        );
+        
+        watchIdRef.current = watchId;
+        addLog(`🛰️ Capacitor GPS watch active for Captain ${driverId}`, 'success');
+        return;
+      } catch (err) {
+        console.error("Capacitor Geolocation error, falling back to browser API...", err);
+      }
+    }
+    
+    // Browser Geolocation fallback
     if (!navigator.geolocation) {
       alert("Geolocation is not supported by this device.");
       return;
@@ -721,18 +770,28 @@ export const SimulatorProvider = ({ children }) => {
         });
       },
       (err) => {
-        console.error("GPS Tracking Error:", err);
+        console.error("Browser GPS Tracking Error:", err);
       },
       { enableHighAccuracy: true, maximumAge: 0 }
     );
     
     watchIdRef.current = watchId;
-    addLog(`🛰️ GPS Tracking enabled for Driver Partner ${driverId}`, 'success');
+    addLog(`🛰️ Browser Geolocation enabled for Captain ${driverId}`, 'success');
   };
-
-  const stopGpsTracking = () => {
+ 
+  const stopGpsTracking = async () => {
     if (watchIdRef.current !== null) {
-      navigator.geolocation.clearWatch(watchIdRef.current);
+      const isCapacitor = typeof window !== 'undefined' && !!window.Capacitor;
+      if (isCapacitor) {
+        try {
+          const { Geolocation } = await import('@capacitor/geolocation');
+          await Geolocation.clearWatch({ id: watchIdRef.current });
+        } catch (err) {
+          console.error("Failed to clear Capacitor GPS watch:", err);
+        }
+      } else {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+      }
       watchIdRef.current = null;
     }
     setIsGpsActive(false);
