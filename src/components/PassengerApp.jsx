@@ -248,6 +248,9 @@ export default function PassengerApp({ isStandalone }) {
   const [isCardFlipped, setIsCardFlipped] = useState(false);
   const [referralInput, setReferralInput] = useState('');
   const [isReferralClaimed, setIsReferralClaimed] = useState(false);
+  const [isListeningSpeech, setIsListeningSpeech] = useState(false);
+  const [speechListeningTarget, setSpeechListeningTarget] = useState(null);
+  const [speechListeningPrompt, setSpeechListeningPrompt] = useState('');
 
   // Chat Drawer state
   const [showChat, setShowChat] = useState(false);
@@ -899,6 +902,81 @@ export default function PassengerApp({ isStandalone }) {
     }
   };
 
+  const startVoiceListening = (target) => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Speech Recognition not supported in this browser. Please use Chrome or Safari.");
+      return;
+    }
+    
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'en-IN';
+    recognition.interimResults = false;
+    
+    recognition.onstart = () => {
+      setIsListeningSpeech(true);
+      setSpeechListeningTarget(target);
+      setSpeechListeningPrompt(`Listening for ${target} location in Kolkata...`);
+    };
+    
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript.toLowerCase();
+      console.log("Voice transcript received:", transcript);
+      
+      // Check emergency SOS commands
+      if (transcript.includes('emergency') || transcript.includes('help') || transcript.includes('sos') || transcript.includes('police')) {
+        alert(`🚨 Voice Command Activated: Triggering Passenger SOS!`);
+        triggerPassengerSOS(passenger.phone);
+        setIsListeningSpeech(false);
+        return;
+      }
+      
+      // Match against Kolkata locations
+      let matchedKey = null;
+      
+      Object.entries(KOLKATA_LOCATIONS).forEach(([key, loc]) => {
+        const nameLower = loc.name.toLowerCase();
+        
+        if (transcript.includes(nameLower) || nameLower.includes(transcript)) {
+          matchedKey = key;
+        } else {
+          const keywords = nameLower.split(' ');
+          keywords.forEach(word => {
+            if (word.length > 3 && transcript.includes(word)) {
+              matchedKey = key;
+            }
+          });
+        }
+      });
+      
+      if (matchedKey) {
+        if (target === 'pickup') {
+          setPickupKey(matchedKey);
+        } else if (target === 'dropoff') {
+          setDropoffKey(matchedKey);
+        } else if (target === 'waypoint') {
+          setWaypointKey(matchedKey);
+        }
+        
+        if (playSound) playSound();
+        alert(`🎙️ Spoken: "${event.results[0][0].transcript}"\nMatched location: ${KOLKATA_LOCATIONS[matchedKey].name}`);
+      } else {
+        alert(`🎙️ Spoken: "${event.results[0][0].transcript}"\nCould not match to any Kolkata operational locations. Please speak clearly.`);
+      }
+    };
+    
+    recognition.onerror = (event) => {
+      console.error("Speech recognition error:", event.error);
+      setIsListeningSpeech(false);
+    };
+    
+    recognition.onend = () => {
+      setIsListeningSpeech(false);
+    };
+    
+    recognition.start();
+  };
+
   const PASSENGER_QUICK_REPLIES = [
     "Where are you?",
     "Please wait, I'm coming.",
@@ -967,11 +1045,22 @@ export default function PassengerApp({ isStandalone }) {
               <div className="picker-dot green"></div>
               <div className="picker-field">
                 <label>Pickup Location</label>
-                <select value={pickupKey} onChange={(e) => setPickupKey(e.target.value)}>
-                  {Object.entries(KOLKATA_LOCATIONS).map(([key, loc]) => (
-                    <option key={key} value={key}>{loc.name} ({loc.zone})</option>
-                  ))}
-                </select>
+                <div className="flex gap-1.5 items-center w-full">
+                  <select value={pickupKey} onChange={(e) => setPickupKey(e.target.value)} className="flex-1 min-w-0">
+                    {Object.entries(KOLKATA_LOCATIONS).map(([key, loc]) => (
+                      <option key={key} value={key}>{loc.name} ({loc.zone})</option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => startVoiceListening('pickup')}
+                    className="p-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 flex items-center justify-center cursor-pointer transition-all duration-200"
+                    title="Speak Pickup Location"
+                    style={{ flexShrink: 0, width: '24px', height: '24px', fontSize: '10px' }}
+                  >
+                    🎙️
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -993,12 +1082,23 @@ export default function PassengerApp({ isStandalone }) {
                     </button>
                   )}
                 </div>
-                <select value={waypointKey} onChange={(e) => setWaypointKey(e.target.value)}>
-                  <option value="">-- No Stopover --</option>
-                  {Object.entries(KOLKATA_LOCATIONS).map(([key, loc]) => (
-                    <option key={key} value={key} disabled={key === pickupKey || key === dropoffKey}>{loc.name} ({loc.zone})</option>
-                  ))}
-                </select>
+                <div className="flex gap-1.5 items-center w-full">
+                  <select value={waypointKey} onChange={(e) => setWaypointKey(e.target.value)} className="flex-1 min-w-0">
+                    <option value="">-- No Stopover --</option>
+                    {Object.entries(KOLKATA_LOCATIONS).map(([key, loc]) => (
+                      <option key={key} value={key} disabled={key === pickupKey || key === dropoffKey}>{loc.name} ({loc.zone})</option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => startVoiceListening('waypoint')}
+                    className="p-1 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 flex items-center justify-center cursor-pointer transition-all duration-200"
+                    title="Speak Stopover"
+                    style={{ flexShrink: 0, width: '24px', height: '24px', fontSize: '10px' }}
+                  >
+                    🎙️
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -1008,11 +1108,22 @@ export default function PassengerApp({ isStandalone }) {
               <div className="picker-dot red"></div>
               <div className="picker-field">
                 <label>Dropoff Location</label>
-                <select value={dropoffKey} onChange={(e) => setDropoffKey(e.target.value)}>
-                  {Object.entries(KOLKATA_LOCATIONS).map(([key, loc]) => (
-                    <option key={key} value={key}>{loc.name} ({loc.zone})</option>
-                  ))}
-                </select>
+                <div className="flex gap-1.5 items-center w-full">
+                  <select value={dropoffKey} onChange={(e) => setDropoffKey(e.target.value)} className="flex-1 min-w-0">
+                    {Object.entries(KOLKATA_LOCATIONS).map(([key, loc]) => (
+                      <option key={key} value={key}>{loc.name} ({loc.zone})</option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => startVoiceListening('dropoff')}
+                    className="p-1 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 flex items-center justify-center cursor-pointer transition-all duration-200"
+                    title="Speak Dropoff Location"
+                    style={{ flexShrink: 0, width: '24px', height: '24px', fontSize: '10px' }}
+                  >
+                    🎙️
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -2374,6 +2485,20 @@ export default function PassengerApp({ isStandalone }) {
               </div>
             </div>
 
+          </div>
+        )}
+        
+        {/* SPEECH RECOGNITION LISTENING OVERLAY */}
+        {isListeningSpeech && (
+          <div className="admin-modal-overlay flex items-center justify-center p-4" style={{ zIndex: 11000 }}>
+            <div className="card-glow animate-bounce-in w-full max-w-[260px] rounded-2xl bg-[#0c0e12] border border-white/10 p-5 text-center flex flex-col items-center gap-3">
+              <div className="w-12 h-12 bg-amber-500/20 text-amber-400 rounded-full flex items-center justify-center text-lg animate-pulse border border-amber-500/30">
+                🎙️
+              </div>
+              <h4 className="text-xs font-bold text-white uppercase tracking-wider">Listening...</h4>
+              <p className="text-[10px] text-gray-400 leading-snug">{speechListeningPrompt}</p>
+              <span className="text-[8px] text-gray-600 font-mono italic">Tip: Speak the location name or say "emergency"</span>
+            </div>
           </div>
         )}
         
