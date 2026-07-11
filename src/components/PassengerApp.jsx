@@ -240,6 +240,7 @@ export default function PassengerApp({ isStandalone }) {
 
   // Chat Drawer state
   const [showChat, setShowChat] = useState(false);
+  const [chatInputText, setChatInputText] = useState('');
   const chatEndRef = useRef(null);
   
   // AI Support chatbot states
