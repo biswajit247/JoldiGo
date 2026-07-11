@@ -78,6 +78,7 @@ export default function PassengerApp({ isStandalone }) {
     connectPassengerSocket,
     sendOtpRequest,
     triggerPassengerSOS,
+    sosAlerts,
     mapStyle,
     setMapStyle,
     simulationSpeed,
@@ -505,6 +506,14 @@ export default function PassengerApp({ isStandalone }) {
       map.removeLayer(markersRef.current.driver);
       markersRef.current.driver = null;
     }
+    if (markersRef.current.police) {
+      map.removeLayer(markersRef.current.police);
+      markersRef.current.police = null;
+    }
+    if (markersRef.current.policePolyline) {
+      map.removeLayer(markersRef.current.policePolyline);
+      markersRef.current.policePolyline = null;
+    }
     if (markersRef.current.geofencePolygons) {
       markersRef.current.geofencePolygons.forEach(p => map.removeLayer(p));
     }
@@ -698,6 +707,30 @@ export default function PassengerApp({ isStandalone }) {
         map.fitBounds(bounds, { padding: [40, 40] });
       }
 
+      // Draw active SOS dispatch on map
+      const activeSos = activeRide ? sosAlerts.find(alert => alert.driverId === activeRide.driverId) : null;
+      if (activeSos) {
+        const policeIcon = L.divIcon({
+          className: 'custom-map-marker police-marker',
+          html: `<div class="marker-pin pin-police animate-pulse" style="font-size: 16px; background-color: #ef4444; border: 2px solid #fff; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 12px rgba(239,68,68,0.9)">🚓</div>`,
+          iconSize: [28, 28],
+          iconAnchor: [14, 14]
+        });
+        markersRef.current.police = L.marker([activeSos.policeLocation.lat, activeSos.policeLocation.lng], { icon: policeIcon }).addTo(map);
+        
+        if (activeSos.policeRoute) {
+          const remainingPoliceCoords = activeSos.policeRoute.slice(activeSos.policeRouteIndex).map(p => [p.lat, p.lng]);
+          if (remainingPoliceCoords.length > 0) {
+            markersRef.current.policePolyline = L.polyline(remainingPoliceCoords, {
+              color: '#ef4444',
+              weight: 3,
+              opacity: 0.8,
+              dashArray: '4, 6'
+            }).addTo(map);
+          }
+        }
+      }
+
       drivers.forEach(d => {
         if (d.status === 'online' && d.verificationStatus === 'verified') {
           const otherDrvIcon = L.divIcon({
@@ -711,7 +744,7 @@ export default function PassengerApp({ isStandalone }) {
         }
       });
     }
-  }, [activeRide, drivers, pickupKey, dropoffKey, waypointKey, tab, congestionZones, geofencingZones]);
+  }, [activeRide, drivers, pickupKey, dropoffKey, waypointKey, tab, congestionZones, geofencingZones, sosAlerts]);
 
   // Login handlers
   const handleSendOtp = async (e) => {
@@ -1445,6 +1478,40 @@ export default function PassengerApp({ isStandalone }) {
           </div>
 
           <div className="divider-h mt-2 mb-3"></div>
+
+          {/* Active Police Dispatch Banner */}
+          {(() => {
+            const activeSos = sosAlerts.find(alert => alert.driverId === activeRide.driverId);
+            if (!activeSos) return null;
+            return (
+              <div 
+                className="p-3 rounded-lg text-white mb-3 text-left border flex flex-col gap-1 transition-all duration-300"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.95), rgba(30, 64, 175, 0.95))',
+                  border: '1px solid rgba(255, 255, 255, 0.25)',
+                  boxShadow: '0 0 15px rgba(239, 68, 68, 0.5)',
+                  animation: 'pulse 1.5s infinite alternate'
+                }}
+              >
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] font-black tracking-wider uppercase flex items-center gap-1">
+                    🚨🚔 Police Dispatch Active
+                  </span>
+                  <span className="text-[8px] bg-white/20 px-1.5 py-0.5 rounded font-mono uppercase font-black">
+                    {activeSos.status}
+                  </span>
+                </div>
+                <p className="text-[10px] font-bold mt-1 text-white">
+                  {activeSos.status === 'dispatch' 
+                    ? `Patrol interceptor is en-route to intercept vehicle. ETA: ${activeSos.eta} seconds.`
+                    : `Patrol interceptor secured. Officers have arrived at vehicle location.`}
+                </p>
+                <span className="text-[8px] text-white/70 italic mt-0.5">
+                  Secure satellite connection established with control room. Stay calm.
+                </span>
+              </div>
+            );
+          })()}
 
           {/* Driver Card Info */}
           <div className="driver-card-compact">
