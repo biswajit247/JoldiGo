@@ -351,18 +351,19 @@ export default function PassengerApp({ isStandalone }) {
     }
   }, [aiChatMessages, showAiSupport]);
 
-  const handleSendAiMessage = async (e) => {
+  const handleSendAiMessage = async (e, textOverride) => {
     if (e) e.preventDefault();
-    if (!aiInputText.trim()) return;
+    const queryText = textOverride || aiInputText;
+    if (!queryText.trim()) return;
 
     const userMessage = {
       id: Math.random().toString(),
       sender: 'user',
-      text: aiInputText
+      text: queryText
     };
 
     setAiChatMessages(prev => [...prev, userMessage]);
-    const messageToSend = aiInputText;
+    const messageToSend = queryText;
     setAiInputText('');
     setIsAiTyping(true);
 
@@ -400,6 +401,10 @@ export default function PassengerApp({ isStandalone }) {
         text: 'Connection error. Please check your internet connection.'
       }]);
     }
+  };
+
+  const handleQuickAction = (text) => {
+    handleSendAiMessage({ preventDefault: () => {} }, text);
   };
 
   // Close chat when ride resets
@@ -1823,29 +1828,33 @@ export default function PassengerApp({ isStandalone }) {
               bottom: 0,
               left: 0,
               right: 0,
-              backgroundColor: 'rgba(10, 14, 22, 0.98)',
-              borderTop: '2px solid rgba(245, 158, 11, 0.3)',
-              borderTopLeftRadius: '20px',
-              borderTopRightRadius: '20px',
+              backgroundColor: 'rgba(15, 23, 42, 0.98)',
+              backdropFilter: 'blur(16px)',
+              borderTop: '2px solid rgba(245, 158, 11, 0.4)',
+              borderTopLeftRadius: '24px',
+              borderTopRightRadius: '24px',
               zIndex: 9999,
-              padding: '16px',
+              padding: '18px 16px 16px 16px',
               display: 'flex',
               flexDirection: 'column',
-              boxShadow: '0 -10px 30px rgba(0, 0, 0, 0.9)',
-              height: '420px',
+              boxShadow: '0 -12px 40px rgba(0, 0, 0, 0.95)',
+              height: '430px',
             }}
             className="animate-slide-up text-left"
           >
-            <div className="flex justify-between items-center pb-3 border-b border-white/10 mb-2">
-              <div className="flex items-center gap-2">
-                <span className="text-xl">🤖</span>
+            <div className="flex justify-between items-center pb-3 border-b border-white/10 mb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="relative w-8 h-8 flex items-center justify-center bg-amber-500/10 border border-amber-500/30 rounded-full">
+                  <span className="text-base">🤖</span>
+                  <span className="absolute bottom-0 right-0 w-2 h-2 bg-emerald-500 border border-slate-900 rounded-full animate-pulse"></span>
+                </div>
                 <div>
-                  <h4 className="text-xs font-black uppercase text-amber-400 tracking-wider">JoldiGo AI Assistant</h4>
-                  <span className="text-[9px] text-gray-500 font-bold block">Safety & Care Agent</span>
+                  <h4 className="text-[11px] font-black uppercase text-amber-400 tracking-wider">JoldiGo Support Bot</h4>
+                  <span className="text-[9px] text-gray-500 font-black block uppercase tracking-tight">Active Online • Safety & Care Agent</span>
                 </div>
               </div>
               <button 
-                className="w-6 h-6 flex items-center justify-center bg-white/5 hover:bg-white/10 rounded-full border border-white/10 text-gray-400 hover:text-white"
+                className="w-6 h-6 flex items-center justify-center bg-white/5 hover:bg-white/10 rounded-full border border-white/10 text-gray-400 hover:text-white transition"
                 onClick={() => setShowAiSupport(false)}
               >
                 ✕
@@ -1853,34 +1862,72 @@ export default function PassengerApp({ isStandalone }) {
             </div>
 
             {/* Message Body */}
-            <div className="flex-1 overflow-y-auto pr-1 space-y-3 scrollbar-thin scrollbar-thumb-white/10 mb-3 text-xs">
+            <div className="flex-1 overflow-y-auto pr-1 space-y-3 scrollbar-thin scrollbar-thumb-white/10 mb-2.5 text-[11px]">
               {aiChatMessages.map(msg => (
-                <div key={msg.id} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div key={msg.id} className={`flex gap-2 ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  {msg.sender !== 'user' && (
+                    <div className="w-5 h-5 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-[10px] shrink-0">
+                      🤖
+                    </div>
+                  )}
                   <div 
-                    className={`max-w-[85%] rounded-lg px-3 py-2 leading-relaxed whitespace-pre-line ${
+                    className={`max-w-[78%] rounded-xl px-3 py-2 leading-relaxed whitespace-pre-line shadow-md border ${
                       msg.sender === 'user' 
-                        ? 'bg-amber-500 text-black font-medium rounded-tr-none' 
-                        : 'bg-white/5 border border-white/10 text-white rounded-tl-none'
+                        ? 'bg-gradient-to-r from-amber-400 to-amber-500 text-black border-amber-500/30 font-bold rounded-tr-none' 
+                        : 'bg-white/5 border-white/10 text-slate-100 rounded-tl-none'
                     }`}
                   >
                     {msg.text}
                   </div>
+                  {msg.sender === 'user' && (
+                    <div className="w-5 h-5 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-[10px] shrink-0">
+                      👤
+                    </div>
+                  )}
                 </div>
               ))}
               {isAiTyping && (
-                <div className="flex justify-start">
-                  <div className="bg-white/5 border border-white/10 text-gray-400 rounded-lg rounded-tl-none px-3 py-2 italic flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce"></span>
-                    <span className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce [animation-delay:0.2s]"></span>
-                    <span className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce [animation-delay:0.4s]"></span>
+                <div className="flex gap-2 justify-start">
+                  <div className="w-5 h-5 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-[10px] shrink-0">
+                    🤖
+                  </div>
+                  <div className="bg-white/5 border border-white/10 text-gray-400 rounded-xl rounded-tl-none px-3 py-2 italic flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-bounce [animation-duration:0.8s]"></span>
+                    <span className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-bounce [animation-duration:0.8s] [animation-delay:0.2s]"></span>
+                    <span className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-bounce [animation-duration:0.8s] [animation-delay:0.4s]"></span>
                   </div>
                 </div>
               )}
               <div ref={aiChatEndRef} />
             </div>
 
+            {/* Quick Action Suggestion Row */}
+            <div className="flex gap-1.5 overflow-x-auto pb-2 mb-2 scrollbar-none shrink-0">
+              <button 
+                type="button"
+                onClick={() => handleQuickAction('check last fare')}
+                className="px-2.5 py-1 bg-white/5 hover:bg-amber-500/10 border border-white/10 hover:border-amber-500/30 rounded-full text-[9px] text-gray-400 hover:text-amber-400 font-bold tracking-wide transition shrink-0 uppercase cursor-pointer"
+              >
+                📄 Check Last Fare
+              </button>
+              <button 
+                type="button"
+                onClick={() => handleQuickAction('yes')}
+                className="px-2.5 py-1 bg-white/5 hover:bg-amber-500/10 border border-white/10 hover:border-amber-500/30 rounded-full text-[9px] text-gray-400 hover:text-amber-400 font-bold tracking-wide transition shrink-0 uppercase cursor-pointer"
+              >
+                ⚖️ File Dispute
+              </button>
+              <button 
+                type="button"
+                onClick={() => handleQuickAction('lost item')}
+                className="px-2.5 py-1 bg-white/5 hover:bg-amber-500/10 border border-white/10 hover:border-amber-500/30 rounded-full text-[9px] text-gray-400 hover:text-amber-400 font-bold tracking-wide transition shrink-0 uppercase cursor-pointer"
+              >
+                🎒 Lost Item
+              </button>
+            </div>
+
             {/* Input Footer */}
-            <form onSubmit={handleSendAiMessage} className="flex gap-2 border-t border-white/5 pt-3">
+            <form onSubmit={handleSendAiMessage} className="flex gap-2 border-t border-white/5 pt-3 shrink-0">
               <input 
                 type="text" 
                 placeholder="Ask about last fare, lost item..." 
