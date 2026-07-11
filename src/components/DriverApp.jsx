@@ -115,7 +115,8 @@ export default function DriverApp({ isStandalone }) {
     enrollDriver,
     isNightMode,
     setIsNightMode,
-    simulationSpeed
+    simulationSpeed,
+    addLog
   } = useSimulator();
 
   const speakText = (text, langCode) => {
@@ -386,17 +387,40 @@ export default function DriverApp({ isStandalone }) {
 
   const isNavActive = activeRide && activeRide.driverId === currentDriver.id && (activeRide.status === 'accepted' || activeRide.status === 'arrived' || activeRide.status === 'in_progress');
 
+  const lastSpokenSpeedingRef = useRef(false);
+
   useEffect(() => {
     if (!isNavActive || activeRide?.status === 'arrived') {
       setSimulatedSpeed(0);
+      lastSpokenSpeedingRef.current = false;
       return;
     }
     setSimulatedSpeed(Math.floor(35 + Math.random() * 10));
     const interval = setInterval(() => {
-      setSimulatedSpeed(Math.floor(38 + Math.random() * 12));
-    }, 1500);
+      // 85% chance of normal speed, 15% chance of speeding spike
+      const isSpeedingSpike = Math.random() < 0.15;
+      const nextSpeed = isSpeedingSpike 
+        ? Math.floor(54 + Math.random() * 8) 
+        : Math.floor(32 + Math.random() * 14);
+      setSimulatedSpeed(nextSpeed);
+    }, 2000);
     return () => clearInterval(interval);
   }, [isNavActive, activeRide?.status]);
+
+  useEffect(() => {
+    if (simulatedSpeed > 50) {
+      if (!lastSpokenSpeedingRef.current) {
+        speakText(`Warning: Speed limit exceeded! Your current speed is ${simulatedSpeed} kilometers per hour. Please slow down immediately for rider safety.`, 'en-US');
+        lastSpokenSpeedingRef.current = true;
+        if (addLog) {
+          addLog(`⚠️ Telemetry Alert: Captain ${currentDriver?.name} (${currentDriver?.vehicleType}) exceeded speed limit! Speed: ${simulatedSpeed} km/h (Limit: 50 km/h)`, 'warning');
+        }
+      }
+    } else if (simulatedSpeed > 0 && simulatedSpeed <= 48) {
+      lastSpokenSpeedingRef.current = false;
+    }
+  }, [simulatedSpeed, currentDriver, addLog]);
+
   const chatEndRef = useRef(null);
 
   // Safety Pool Claim forms UI
@@ -2085,23 +2109,26 @@ export default function DriverApp({ isStandalone }) {
                       bottom: '144px',
                       left: '12px',
                       zIndex: 999,
-                      width: '46px',
-                      height: '46px',
+                      width: '50px',
+                      height: '50px',
                       borderRadius: '50%',
-                      backgroundColor: '#ffffff',
-                      color: '#000000',
-                      border: '2px solid rgba(0,0,0,0.1)',
+                      backgroundColor: simulatedSpeed > 50 ? '#ef4444' : '#ffffff',
+                      color: simulatedSpeed > 50 ? '#ffffff' : '#000000',
+                      border: simulatedSpeed > 50 ? '2px solid #ef4444' : '2px solid rgba(0,0,0,0.1)',
                       display: 'flex',
                       flexDirection: 'column',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                      boxShadow: simulatedSpeed > 50 ? '0 0 15px rgba(239,68,68,0.8)' : '0 4px 12px rgba(0,0,0,0.3)',
                       fontFamily: 'Outfit, sans-serif'
                     }}
                     className="animate-scale-in"
                   >
-                    <span style={{ fontSize: '14px', fontWeight: '800', lineHeight: '1' }}>{simulatedSpeed}</span>
-                    <span style={{ fontSize: '7px', fontWeight: 'bold', color: '#666', transform: 'scale(0.85)' }}>km/h</span>
+                    <span style={{ fontSize: '15px', fontWeight: '800', lineHeight: '1' }}>{simulatedSpeed}</span>
+                    <span style={{ fontSize: '7px', fontWeight: 'bold', color: simulatedSpeed > 50 ? '#ffdddd' : '#666' }}>km/h</span>
+                    {simulatedSpeed > 50 && (
+                      <span style={{ position: 'absolute', top: '-10px', backgroundColor: '#000000', color: '#ffdd00', fontSize: '6px', fontWeight: '900', padding: '1px 3px', borderRadius: '3px', border: '1px solid #ffdd00', whiteSpace: 'nowrap', textTransform: 'uppercase' }}>LIMIT 50</span>
+                    )}
                   </div>
                 )}
 

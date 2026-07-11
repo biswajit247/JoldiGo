@@ -1880,6 +1880,7 @@ export const SimulatorProvider = ({ children }) => {
         triggerSOS,
         triggerPassengerSOS,
         resolveSOS,
+        addLog,
         fileDispute,
         uploadDisputeEvidence,
         resolveDispute,
