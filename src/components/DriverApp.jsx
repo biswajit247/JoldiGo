@@ -147,6 +147,8 @@ export default function DriverApp({ isStandalone }) {
     setCustomAlert({ message: msg });
   };
   const [showStayInPopover, setShowStayInPopover] = useState(false);
+  const [earningsSubTab, setEarningsSubTab] = useState('all');
+  const [helpSubView, setHelpSubView] = useState('main');
   const [isGoltalaActive, setIsGoltalaActive] = useState(false);
 
   useEffect(() => {
@@ -563,8 +565,8 @@ export default function DriverApp({ isStandalone }) {
     const MAP_TILE_URLS = {
       google_roadmap: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
       google_satellite: 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
-      voyager: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-      dark_navigation: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+      voyager: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+      dark_navigation: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
     };
 
     const tileLayer = L.tileLayer(MAP_TILE_URLS[mapStyle] || MAP_TILE_URLS.dark_navigation, {
@@ -588,8 +590,8 @@ export default function DriverApp({ isStandalone }) {
       const MAP_TILE_URLS = {
         google_roadmap: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
         google_satellite: 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
-        voyager: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-        dark_navigation: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+        voyager: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+        dark_navigation: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
       };
       tileLayerRef.current.setUrl(MAP_TILE_URLS[mapStyle]);
     }
@@ -2029,19 +2031,31 @@ export default function DriverApp({ isStandalone }) {
           <div className="app-screen-layout relative flex flex-col justify-between">
             
             {!isNavActive && (
-              <div className="driver-app-header card-glow">
-                <div className="driver-identity" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div 
+                style={{
+                  height: '56px',
+                  backgroundColor: '#ffffff',
+                  borderBottom: '1px solid #e5e7eb',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '0 16px',
+                  zIndex: 990,
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  {/* Hamburger menu trigger */}
                   <button
                     type="button"
                     onClick={() => setShowSidebar(true)}
                     style={{
                       background: 'none',
                       border: 'none',
-                      color: 'var(--color-primary)',
-                      fontSize: '16px',
+                      color: '#000000',
+                      fontSize: '20px',
                       cursor: 'pointer',
                       padding: '4px',
-                      marginRight: '2px',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center'
@@ -2050,34 +2064,186 @@ export default function DriverApp({ isStandalone }) {
                   >
                     ☰
                   </button>
-                  <span className="drv-avatar-mini" onClick={() => setShowSidebar(true)} style={{ cursor: 'pointer' }}>{currentDriver.avatar}</span>
-                  <div className="drv-text-block">
-                    <span className="drv-name-mini">{currentDriver.name}</span>
-                    <span className="drv-vehicle-mini">{currentDriver.vehicleNumber}</span>
-                  </div>
+                  <span style={{ fontSize: '18px', fontWeight: '800', color: '#000000' }}>0 Orders</span>
                 </div>
 
-                <div className="online-switch-row" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  {/* Theme Toggle Button */}
-                  <button
-                    type="button"
-                    className="btn-status-toggle"
-                    onClick={() => setShowSettingsDrawer(true)}
-                    title="Settings"
-                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '28px', height: '28px', backgroundColor: 'rgba(255,255,255,0.05)', border: 'none', borderRadius: '50%', cursor: 'pointer' }}
+                {/* Top Go To / Stay In selector pills */}
+                <div style={{ position: 'relative' }}>
+                  <div 
+                    style={{
+                      display: 'flex',
+                      gap: '4px',
+                      backgroundColor: '#f3f4f6',
+                      padding: '2px',
+                      borderRadius: '9999px',
+                      border: '1px solid #e5e7eb'
+                    }}
                   >
-                    <span style={{ fontSize: '11px' }}>⚙️</span>
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setGoMode('go_to');
+                        setShowStayInPopover(false);
+                      }}
+                      style={{
+                        padding: '4px 12px',
+                        borderRadius: '9999px',
+                        fontSize: '11px',
+                        fontWeight: '800',
+                        cursor: 'pointer',
+                        border: 'none',
+                        transition: 'all 0.2s',
+                        backgroundColor: goMode === 'go_to' ? '#ffffff' : 'transparent',
+                        color: goMode === 'go_to' ? '#000000' : '#4b5563',
+                        boxShadow: goMode === 'go_to' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+                      }}
+                    >
+                      📍 Go To
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setGoMode('stay_in');
+                        setShowStayInPopover(!showStayInPopover);
+                      }}
+                      style={{
+                        padding: '4px 12px',
+                        borderRadius: '9999px',
+                        fontSize: '11px',
+                        fontWeight: '800',
+                        cursor: 'pointer',
+                        border: 'none',
+                        transition: 'all 0.2s',
+                        backgroundColor: goMode === 'stay_in' ? '#ffffff' : 'transparent',
+                        color: goMode === 'stay_in' ? '#000000' : '#4b5563',
+                        boxShadow: goMode === 'stay_in' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+                      }}
+                    >
+                      📌 Stay In
+                    </button>
+                  </div>
 
-                  <span className={`status-pill ${currentDriver.status === 'online' ? 'online' : 'offline'}`}>
+                  {/* Stay In Area Popover Bubble */}
+                  {showStayInPopover && (
+                    <div 
+                      style={{
+                        position: 'absolute',
+                        top: '42px',
+                        right: '0',
+                        zIndex: 1000,
+                        width: '240px',
+                        backgroundColor: '#ffffff',
+                        color: '#000000',
+                        borderRadius: '16px',
+                        padding: '16px',
+                        boxShadow: '0 10px 25px rgba(0,0,0,0.15)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '12px',
+                        border: '1px solid #f3f4f6'
+                      }}
+                      className="animate-bounce-in text-center"
+                    >
+                      {/* Arrow pointed up to Stay In button */}
+                      <div 
+                        style={{
+                          position: 'absolute',
+                          top: '-6px',
+                          right: '35px',
+                          width: '0',
+                          height: '0',
+                          borderLeft: '6px solid transparent',
+                          borderRight: '6px solid transparent',
+                          borderBottom: '6px solid #ffffff'
+                        }}
+                      ></div>
+
+                      {/* Blue banner card inside speech bubble */}
+                      <div 
+                        style={{
+                          backgroundColor: '#e0f2fe',
+                          borderRadius: '12px',
+                          padding: '12px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}
+                      >
+                        {/* Map Graphic with Yellow Pin */}
+                        <div style={{ position: 'relative', width: '48px', height: '48px' }}>
+                          <span style={{ fontSize: '32px' }}>🗺️</span>
+                          <span style={{ position: 'absolute', top: '2px', left: '16px', fontSize: '18px' }}>📍</span>
+                        </div>
+                        <h5 style={{ fontSize: '12px', margin: 0, fontWeight: '800', color: '#0369a1' }}>Stay In Area</h5>
+                        <p style={{ fontSize: '10px', margin: 0, color: '#0284c7', lineHeight: '1.4' }}>
+                          Get orders within 3km from your current location
+                        </p>
+                      </div>
+
+                      {/* Zone filter switch block */}
+                      <div 
+                        style={{
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '12px',
+                          padding: '10px 14px',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          backgroundColor: '#ffffff'
+                        }}
+                      >
+                        <span style={{ fontSize: '12px', fontWeight: '800', color: '#1f2937' }}>Goltala</span>
+                        <label className="switch-toggle-label relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={isGoltalaActive}
+                            onChange={() => setIsGoltalaActive(!isGoltalaActive)}
+                            className="sr-only peer"
+                          />
+                          <div className="w-7 h-4 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-blue-600"></div>
+                        </label>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Quick toggle settings button */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span className={`status-pill ${currentDriver.status === 'online' ? 'online' : 'offline'}`} style={{ fontSize: '9px', padding: '3px 8px', borderRadius: '12px', color: '#fff', backgroundColor: currentDriver.status === 'online' ? '#10b981' : '#6b7280' }}>
                     {currentDriver.status.toUpperCase()}
                   </span>
                   <button 
+                    type="button"
                     className="btn-status-toggle"
                     onClick={() => toggleDriverStatus(currentDriver.id)}
                     title="Toggle Status"
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
                   >
-                    <Power size={18} color={currentDriver.status === 'online' ? '#00ff66' : '#999'} />
+                    <Power size={18} color={currentDriver.status === 'online' ? '#10b981' : '#9ca3af'} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowSettingsDrawer(true)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      fontSize: '18px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                    title="Theme Settings"
+                  >
+                    ⚙️
                   </button>
                 </div>
               </div>
@@ -2210,91 +2376,36 @@ export default function DriverApp({ isStandalone }) {
               </button>
             )}
 
-            {/* Disputes Tab */}
-            {tab === 'disputes' && (
-              <div className="history-screen" style={{ padding: '90px 20px 20px 20px' }}>
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-sm font-bold uppercase tracking-wider text-red-400">🛡️ Dispute Gateway</h3>
-                  <span className="text-xs text-gray-500">24h Evidence Window</span>
-                </div>
-
-                {driverDisputes.length === 0 ? (
-                  <div className="empty-state">
-                    <UserCheck size={36} className="text-gray-600 mb-2 mx-auto" />
-                    <p className="text-xs">Perfect Rating! No active disputes filed against your account.</p>
-                  </div>
-                ) : (
-                  <div className="flex flex-col gap-3">
-                    {driverDisputes.map(disp => (
-                      <div key={disp.id} className="history-item-card card-glow p-3" style={{ flexDirection: 'column' }}>
-                        <div className="flex justify-between items-center text-xs">
-                          <span className="font-semibold text-red-400 uppercase text-[9px] tracking-wide bg-red-950/40 p-1 rounded">Payout Suspended</span>
-                          <span className="font-mono text-[9px] text-gray-500">SLA: {disp.expiresIn}s</span>
-                        </div>
-                        <div className="mt-2 text-xs text-gray-300">
-                          <b>Issue:</b> {disp.riderComplaint}
-                        </div>
-                        <div className="text-[10px] text-gray-500 mt-1 font-mono">
-                          Suspended Amount: ₹{disp.suspendedPayout} • Ride ID: {disp.rideId.substr(0,12)}
-                        </div>
-
-                        <div className="dispute-evidence-uploader-widget mt-3 pt-2 border-t border-white/5">
-                          {disp.status === 'awaiting_evidence' ? (
-                            <div>
-                              <span className="text-[9px] text-gray-500 font-bold block uppercase mb-1">Submit Proof:</span>
-                              <div className="flex gap-2">
-                                <button 
-                                  className="btn-secondary py-1 text-[10px] flex-1 justify-center bg-indigo-500/10 border-indigo-500/20"
-                                  onClick={() => uploadDisputeEvidence(disp.id, 'video', 'dashcam_rear_1922.mp4')}
-                                >
-                                  <Camera size={10} /> Dashcam Clip
-                                </button>
-                                <button 
-                                  className="btn-secondary py-1 text-[10px] flex-1 justify-center bg-indigo-500/10 border-indigo-500/20"
-                                  onClick={() => uploadDisputeEvidence(disp.id, 'audio', 'cabin_voice_recording.wav')}
-                                >
-                                  <Volume2 size={10} /> Cabin Audio
-                                </button>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 p-2 rounded text-[10px] flex justify-between items-center">
-                              <span>✓ Proof Uploaded: <i>{disp.evidenceMedia}</i></span>
-                              <span className="text-[8px] uppercase tracking-wider bg-indigo-950 px-2 py-0.5 rounded font-mono">under review</span>
-                            </div>
-                          )}
-                        </div>
-
-                        {disp.status.startsWith('resolved') && (
-                          <div className="mt-2 pt-2 border-t border-white/5 text-[10px] text-right font-bold">
-                            {disp.status === 'resolved_driver' ? (
-                              <span className="text-green-400">✓ Resolved in Driver Favor (Payout Restored)</span>
-                            ) : (
-                              <span className="text-red-500">✗ Resolved in Rider Favor (Refund Processed)</span>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
+                        {/* Disputes Tab moved inside standby preview container */}
             {/* Bottom Overlay: Dashboard / Earnings tabs */}
             <div 
               className="driver-bottom-overlay card-glow"
-              style={isNavActive ? {
-                backgroundColor: '#ffffff',
-                color: '#000000',
-                borderRadius: '16px',
-                border: '1px solid rgba(0,0,0,0.12)',
-                padding: '16px',
-                boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
-                bottom: '12px',
-                left: '12px',
-                right: '12px'
-              } : {}}
+              style={activeRide && activeRide.driverId === currentDriver.id ? (
+                isNavActive ? {
+                  backgroundColor: '#ffffff',
+                  color: '#000000',
+                  borderRadius: '16px',
+                  border: '1px solid rgba(0,0,0,0.12)',
+                  padding: '16px',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+                  bottom: '12px',
+                  left: '12px',
+                  right: '12px'
+                } : {}
+              ) : {
+                position: 'absolute',
+                top: 0,
+                bottom: 0,
+                left: 0,
+                right: 0,
+                backgroundColor: 'transparent',
+                border: 'none',
+                borderRadius: 0,
+                padding: 0,
+                boxShadow: 'none',
+                pointerEvents: 'none',
+                zIndex: 900
+              }}
             >
               {activeRide && activeRide.driverId === currentDriver.id ? (
                 // Active Job Flow UI
@@ -2570,169 +2681,59 @@ export default function DriverApp({ isStandalone }) {
 
                 </div>
               ) : (
-                <div className="standby-earnings-preview">
-                  <div className="tab-buttons">
-                    <button 
-                      className={`tab-btn-compact ${tab === 'dashboard' ? 'active' : ''}`}
-                      onClick={() => setTab('dashboard')}
-                    >
-                      Navigation
-                    </button>
-                    <button 
-                      className={`tab-btn-compact ${tab === 'earnings' ? 'active' : ''}`}
-                      onClick={() => setTab('earnings')}
-                    >
-                      Earnings
-                    </button>
-                    <button 
-                      className={`tab-btn-compact ${tab === 'disputes' ? 'active' : ''}`}
-                      onClick={() => setTab('disputes')}
-                    >
-                      Disputes {driverDisputes.filter(d => !d.status.startsWith('resolved')).length > 0 && (
-                        <span className="bg-red-500 text-white rounded-full px-1 text-[8px] font-bold">
-                          {driverDisputes.filter(d => !d.status.startsWith('resolved')).length}
-                        </span>
-                      )}
-                    </button>
-                    <button 
-                      className={`tab-btn-compact ${tab === 'garage' ? 'active' : ''}`}
-                      onClick={() => setTab('garage')}
-                    >
-                      Garage
-                    </button>
-                    <button 
-                      className={`tab-btn-compact ${tab === 'history' ? 'active' : ''}`}
-                      onClick={() => setTab('history')}
-                    >
-                      History
-                    </button>
-                    <button 
-                      className={`tab-btn-compact ${tab === 'subscription' ? 'active' : ''}`}
-                      onClick={() => setTab('subscription')}
-                    >
-                      Premium
-                    </button>
-                  </div>
-
-                  {tab === 'dashboard' && (
-                    <div className="standby-dashboard-text py-2 flex flex-col items-center justify-center gap-3">
-                      {currentDriver.status === 'online' ? (
-                        <div className="w-full flex flex-col items-center gap-3">
-                          
-                          {/* Go To / Stay In Selector Pills */}
-                          <div className="flex gap-2 bg-black/40 p-1 rounded-full border border-white/5 w-fit relative">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setGoMode('go_to');
-                                setShowStayInPopover(false);
-                              }}
-                              className={`px-3 py-1 rounded-full text-[10px] font-black uppercase cursor-pointer transition-all border-none ${
-                                goMode === 'go_to' 
-                                  ? 'bg-white text-black' 
-                                  : 'text-gray-400 bg-transparent'
-                              }`}
-                            >
-                              📍 Go To
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setGoMode('stay_in');
-                                setShowStayInPopover(!showStayInPopover);
-                              }}
-                              className={`px-3 py-1 rounded-full text-[10px] font-black uppercase cursor-pointer transition-all border-none ${
-                                goMode === 'stay_in' 
-                                  ? 'bg-white text-black' 
-                                  : 'text-gray-400 bg-transparent'
-                              }`}
-                            >
-                              📌 Stay In
-                            </button>
-                          </div>
-
-                          {/* Stay In Area Popover Dialog */}
-                          {showStayInPopover && (
-                            <div 
-                              style={{
-                                position: 'absolute',
-                                bottom: '135px',
-                                zIndex: 1000,
-                                width: '220px',
-                                backgroundColor: '#fff',
-                                color: '#000',
-                                borderRadius: '16px',
-                                padding: '12px',
-                                boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                gap: '8px',
-                                border: '1px solid rgba(0,0,0,0.05)'
-                              }}
-                              className="animate-bounce-in text-center"
-                            >
-                              {/* Popover Arrow pointing down */}
-                              <div 
-                                style={{
-                                  position: 'absolute',
-                                  bottom: '-8px',
-                                  right: '35px',
-                                  width: '0',
-                                  height: '0',
-                                  borderLeft: '8px solid transparent',
-                                  borderRight: '8px solid transparent',
-                                  borderTop: '8px solid #fff'
-                                }}
-                              ></div>
-
-                              {/* Light blue header card */}
-                              <div 
-                                style={{
-                                  backgroundColor: '#e0f2fe',
-                                  borderRadius: '10px',
-                                  padding: '10px',
-                                  display: 'flex',
-                                  flexDirection: 'column',
-                                  alignItems: 'center',
-                                  gap: '4px'
-                                }}
-                              >
-                                <span style={{ fontSize: '20px' }}>🗺️</span>
-                                <h5 style={{ fontSize: '11px', margin: 0, fontWeight: '800', color: '#0369a1' }}>Stay In Area</h5>
-                                <p style={{ fontSize: '9px', margin: 0, color: '#0284c7', lineHeight: '1.2' }}>
-                                  Get orders within 3km from your current location
-                                </p>
-                              </div>
-
-                              {/* Goltala Switch Row */}
-                              <div 
-                                style={{
-                                  border: '1px solid rgba(0,0,0,0.1)',
-                                  borderRadius: '10px',
-                                  padding: '8px 10px',
-                                  display: 'flex',
-                                  justifyContent: 'space-between',
-                                  alignItems: 'center'
-                                }}
-                              >
-                                <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#333' }}>Goltala</span>
-                                <label className="switch-toggle-label relative inline-flex items-center cursor-pointer">
-                                  <input
-                                    type="checkbox"
-                                    checked={isGoltalaActive}
-                                    onChange={() => setIsGoltalaActive(!isGoltalaActive)}
-                                    className="sr-only peer"
-                                  />
-                                  <div className="w-7 h-4 bg-gray-300 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-blue-500"></div>
-                                </label>
-                              </div>
-                            </div>
-                          )}
-
-                          <div className="flex flex-col items-center gap-1 my-1">
-                            <span className="text-[13px] font-black text-white">Searching for orders...</span>
-                            <span className="text-[9px] text-gray-500">Current status: {goMode === 'stay_in' ? 'Local Standby' : 'Route Dispatcher'}</span>
-                          </div>
+                <div 
+                  className="standby-earnings-preview"
+                  style={{
+                    position: 'absolute',
+                    top: tab === 'dashboard' ? 'auto' : '56px',
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    backgroundColor: tab === 'dashboard' ? 'transparent' : '#0c0e12',
+                    border: 'none',
+                    borderRadius: 0,
+                    padding: tab === 'dashboard' ? 0 : '16px',
+                    overflowY: tab === 'dashboard' ? 'visible' : 'auto',
+                    pointerEvents: tab === 'dashboard' ? 'none' : 'auto'
+                  }}
+                >
+                  {/* Standby Dashboard View */}
+                  {tab === 'dashboard' && !isNavActive && (
+                    <div style={{ pointerEvents: 'auto' }}>
+                      {/* Floating Searching HUD over map */}
+                      {currentDriver.status === 'online' && (
+                        <div 
+                          style={{
+                            position: 'absolute',
+                            bottom: '86px', // Floating above the bottom navigation dock (62px)
+                            left: '50%',
+                            transform: 'translateX(-50%)',
+                            zIndex: 900,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '8px',
+                            width: '260px',
+                            pointerEvents: 'none'
+                          }}
+                        >
+                          <span 
+                            style={{
+                              backgroundColor: 'rgba(255,255,255,0.95)',
+                              color: '#000000',
+                              fontSize: '13px',
+                              fontWeight: '800',
+                              padding: '8px 16px',
+                              borderRadius: '9999px',
+                              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                              border: '1px solid rgba(0,0,0,0.05)',
+                              backdropFilter: 'blur(4px)',
+                              textAlign: 'center',
+                              whiteSpace: 'nowrap'
+                            }}
+                          >
+                            Searching for orders...
+                          </span>
 
                           <button
                             type="button"
@@ -2740,362 +2741,700 @@ export default function DriverApp({ isStandalone }) {
                               if (playSound) playSound();
                               alert("↻ Checking GPS network satellite channels... No new bookings in immediate proximity.");
                             }}
-                            className="flex items-center gap-1.5 px-4 py-1.5 rounded-full border border-blue-500/30 bg-blue-500/10 text-blue-400 font-extrabold text-[11px] hover:bg-blue-500/20 cursor-pointer transition-colors"
+                            style={{
+                              backgroundColor: '#ffffff',
+                              border: '1px solid #1d4ed8',
+                              borderRadius: '9999px',
+                              padding: '8px 24px',
+                              color: '#1d4ed8',
+                              fontWeight: '800',
+                              fontSize: '12px',
+                              cursor: 'pointer',
+                              pointerEvents: 'auto',
+                              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '6px'
+                            }}
                           >
                             Refresh ↻
                           </button>
-
-                          <button
-                            type="button"
-                            onClick={() => isGpsActive ? stopGpsTracking() : startGpsTracking(currentDriver.id)}
-                            className={`px-3 py-1 rounded-full text-[9px] font-bold tracking-wide uppercase transition-all duration-300 flex items-center gap-1.5 ${isGpsActive ? 'bg-[#00ff66] text-black shadow-[0_0_10px_rgba(0,255,102,0.4)]' : 'bg-white/5 text-gray-300 border border-white/10 hover:bg-white/10'}`}
-                          >
-                            <span>🛰️</span>
-                            {isGpsActive ? 'Active GPS Tracking' : 'Use Real Device GPS'}
-                          </button>
                         </div>
-                      ) : (
-                        <p className="status-tip text-gray-400">💤 Go Online to start receiving ride alerts.</p>
                       )}
+
+                      {/* Bottom Navigation Dock Bar */}
+                      <div 
+                        style={{
+                          position: 'absolute',
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          height: '62px',
+                          backgroundColor: '#ffffff',
+                          borderTop: '1px solid #e5e7eb',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '0 32px',
+                          zIndex: 990,
+                          boxShadow: '0 -2px 10px rgba(0,0,0,0.05)'
+                        }}
+                      >
+                        {/* Home tab button */}
+                        <button
+                          type="button"
+                          onClick={() => setTab('dashboard')}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '2px',
+                            cursor: 'pointer',
+                            color: '#000000'
+                          }}
+                        >
+                          <span style={{ fontSize: '18px' }}>🏠</span>
+                          <span style={{ fontSize: '10px', fontWeight: 'bold' }}>Home</span>
+                        </button>
+
+                        {/* Orders button */}
+                        <button
+                          type="button"
+                          onClick={() => setTab('earnings')}
+                          style={{
+                            backgroundColor: '#000000',
+                            border: 'none',
+                            borderRadius: '9999px',
+                            padding: '8px 20px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            cursor: 'pointer',
+                            color: '#ffffff',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                          }}
+                        >
+                          <span style={{ fontSize: '12px', fontWeight: 'bold' }}>↓</span>
+                          <span style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase' }}>Orders</span>
+                        </button>
+                      </div>
                     </div>
                   )}
 
+                  {/* All sub-pages (earnings, disputes, garage, history, subscription) render with premium light layouts */}
+                  
+                  {/* Earnings Tab (All Earnings & Wallet view) */}
                   {tab === 'earnings' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <div className="earnings-quick-stats">
-                        <div className="stat-box">
-                          <span className="stat-label">Daily Net</span>
-                          <span className="stat-value">₹{currentDriver.earnings.daily.toFixed(2)}</span>
+                    <div style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, backgroundColor: '#f3f4f6', color: '#000000', display: 'flex', flexDirection: 'column', zIndex: 1000, fontFamily: 'sans-serif' }}>
+                      {/* Earnings Header */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '56px', backgroundColor: '#ffffff', padding: '0 16px', borderBottom: '1px solid #e5e7eb', flexShrink: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <button
+                            type="button"
+                            onClick={() => setTab('dashboard')}
+                            style={{ background: 'none', border: 'none', fontSize: '18px', color: '#000', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                          >
+                            ←
+                          </button>
+                          <span style={{ fontSize: '16px', fontWeight: '800', color: '#000000' }}>Earnings</span>
                         </div>
-                        <div className="stat-box">
-                          <span className="stat-label">Weekly Net</span>
-                          <span className="stat-value font-bold text-yellow-400">₹{currentDriver.earnings.weekly.toFixed(2)}</span>
-                        </div>
-                        <div className="stat-box">
-                          <span className="stat-label">Comm (5%)</span>
-                          <span className="stat-value text-red-400">₹{currentDriver.earnings.commission.toFixed(2)}</span>
-                        </div>
-                      </div>
-
-                      {/* Cash Out / Payout Request Card */}
-                      <div className="p-3 bg-black/40 border border-white/5 rounded-lg flex flex-col gap-2 text-left">
-                        <div className="flex justify-between items-center">
-                          <span className="text-[10px] text-gray-400 font-extrabold uppercase tracking-wider">🏦 Instant Wallet Payout</span>
-                          <span className="text-[9px] bg-green-500/20 text-green-400 border border-green-500/30 px-1 py-0.5 rounded font-extrabold">Instant Transfer</span>
-                        </div>
-                        <p className="text-[10px] text-gray-500">Transfer your weekly net earnings directly to your registered bank account ({currentDriver.bankAccountNumber ? `Account Ending ${currentDriver.bankAccountNumber.slice(-4)}` : 'Bank Pending'}).</p>
                         <button
                           type="button"
-                          onClick={async () => {
-                            if (currentDriver.earnings.weekly <= 0) {
-                              alert("No weekly earnings available to withdraw.");
-                              return;
-                            }
-                            const amount = currentDriver.earnings.weekly;
-                            await payoutDriver(currentDriver.id);
-                            alert(`💸 Instant transfer completed! ₹${amount.toFixed(2)} successfully sent to your bank account.`);
+                          onClick={() => setTab('disputes')}
+                          style={{
+                            backgroundColor: '#ffffff',
+                            border: '1px solid #e5e7eb',
+                            borderRadius: '9999px',
+                            padding: '4px 12px',
+                            fontSize: '11px',
+                            fontWeight: '800',
+                            color: '#000000',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px'
                           }}
-                          disabled={currentDriver.earnings.weekly <= 0}
-                          className="w-full py-2 bg-yellow-400 text-black font-bold rounded text-xs cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:bg-yellow-300 transition-colors"
                         >
-                          🏦 Withdraw to Bank Account
+                          👤 Help
                         </button>
                       </div>
 
-                      {/* Interactive Weekly Bar Chart */}
-                      <div className="bg-black/30 border border-white/5 rounded-lg p-2.5 text-xs text-left">
-                        <span className="text-[10px] text-gray-500 font-extrabold uppercase block tracking-wider mb-2">📊 Weekly Earnings Trend (₹)</span>
-                        
-                        <div className="flex justify-between items-end h-[80px] px-2 pt-4 bg-black/40 border border-white/5 rounded-lg">
-                          {[
-                            { day: 'Mon', amt: 850 },
-                            { day: 'Tue', amt: 1200 },
-                            { day: 'Wed', amt: 950 },
-                            { day: 'Thu', amt: 1500 },
-                            { day: 'Fri', amt: 1850 },
-                            { day: 'Sat', amt: 2200 },
-                            { day: 'Sun', amt: Math.max(1600, Math.round(currentDriver.earnings.daily)) }
-                          ].map((d, idx) => {
-                            const maxAmt = 2200;
-                            const pctHeight = (d.amt / maxAmt) * 100;
-                            return (
-                              <div key={idx} className="flex flex-col items-center flex-1 group">
-                                <span className="text-[7px] text-yellow-400 opacity-0 group-hover:opacity-100 transition-all font-mono font-bold">₹{d.amt}</span>
-                                <div 
-                                  style={{ height: `${Math.max(4, pctHeight * 0.55)}px` }} 
-                                  className="w-3 bg-yellow-400/35 group-hover:bg-yellow-400 border-t-2 border-yellow-400 rounded-t-sm transition-all"
-                                ></div>
-                                <span className="text-[8px] text-gray-500 font-bold mt-1">{d.day}</span>
-                              </div>
-                            );
-                          })}
-                        </div>
+                      {/* Sub-header tabs switcher */}
+                      <div style={{ display: 'flex', backgroundColor: '#ffffff', borderBottom: '1px solid #e5e7eb', flexShrink: 0 }}>
+                        <button
+                          type="button"
+                          onClick={() => setEarningsSubTab('all')}
+                          style={{
+                            flex: 1,
+                            padding: '14px 0',
+                            fontSize: '13px',
+                            fontWeight: '800',
+                            border: 'none',
+                            background: 'none',
+                            color: earningsSubTab === 'all' ? '#1d4ed8' : '#4b5563',
+                            borderBottom: earningsSubTab === 'all' ? '3px solid #1d4ed8' : '3px solid transparent',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          All Earnings
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEarningsSubTab('wallet')}
+                          style={{
+                            flex: 1,
+                            padding: '14px 0',
+                            fontSize: '13px',
+                            fontWeight: '800',
+                            border: 'none',
+                            background: 'none',
+                            color: earningsSubTab === 'wallet' ? '#1d4ed8' : '#4b5563',
+                            borderBottom: earningsSubTab === 'wallet' ? '3px solid #1d4ed8' : '3px solid transparent',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Wallet
+                        </button>
                       </div>
 
-                      {/* Driver Performance Analytics */}
-                      <div className="bg-black/30 border border-white/5 rounded-lg p-2.5 text-xs text-left flex flex-col gap-2">
-                        <span className="text-[10px] text-gray-500 font-extrabold uppercase block tracking-wider">📊 Weekly Performance Metrics</span>
-                        
-                        <div className="grid grid-cols-2 gap-2 mt-1">
-                          <div className="p-2 bg-black/40 border border-white/5 rounded flex flex-col justify-between">
-                            <span className="text-[9px] text-gray-500 block">Weekly Online Hours:</span>
-                            <span className="font-semibold text-white font-mono mt-0.5">
-                              {currentDriver.status === 'online' ? '42.5 hrs' : '40.0 hrs'}
-                            </span>
-                          </div>
-                          <div className="p-2 bg-black/40 border border-white/5 rounded flex flex-col justify-between">
-                            <span className="text-[9px] text-gray-500 block">Ride Acceptance Rate:</span>
-                            <span className="font-semibold text-emerald-400 font-mono mt-0.5">97.8%</span>
-                          </div>
-                        </div>
+                      {/* Subviews Container */}
+                      <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        {earningsSubTab === 'all' ? (
+                          <>
+                            {/* Today's Earnings card */}
+                            <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e5e7eb', padding: '20px', textAlign: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+                              <span style={{ fontSize: '11px', color: '#6b7280', fontWeight: 'bold', textTransform: 'uppercase', tracking: '0.5px' }}>Today's Earnings</span>
+                              <h2 style={{ fontSize: '32px', fontWeight: '900', color: '#111827', margin: '8px 0 0 0' }}>
+                                ₹{currentDriver.earnings.daily.toFixed(0)}
+                              </h2>
+                            </div>
 
-                        <div className="mt-1 flex flex-col gap-1">
-                          <span className="text-[9px] text-gray-500 font-bold block">Top Commendation Tags:</span>
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            <span className="bg-blue-500/10 text-blue-400 border border-blue-500/20 px-1.5 py-0.5 rounded text-[8px] font-bold">🛡️ Safe Driving (24)</span>
-                            <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded text-[8px] font-bold">🧼 Clean Car (18)</span>
-                            <span className="bg-amber-500/10 text-amber-400 border border-amber-500/20 px-1.5 py-0.5 rounded text-[8px] font-bold">⏱️ Punctual (15)</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Gig Worker Safety Claims Panel */}
-                      <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }} className="border-t border-white/5 pt-3 text-left">
-                        <span className="text-[10px] text-gray-500 font-extrabold uppercase block tracking-wider">🛡️ Gig Worker Safety Pool Claims</span>
-                        
-                        <div className="flex justify-between items-center bg-emerald-950/20 border border-emerald-500/20 p-2 rounded-lg text-[11px] text-emerald-400">
-                          <span>Total Safety Pool Balance:</span>
-                          <span className="font-bold">₹{insuranceReservePool.toFixed(2)}</span>
-                        </div>
-
-                        {/* Claim Form */}
-                        <div className="p-2.5 bg-black/40 rounded-lg border border-white/5 flex flex-col gap-2 mt-1">
-                          <span className="text-[10px] font-bold text-gray-300">File Outpatient/Medical Cover Claim</span>
-                          
-                          <div className="flex gap-2">
-                            <div className="flex-1">
-                              <label className="text-[9px] text-gray-500 block mb-0.5">Claim Cover Type</label>
-                              <select 
-                                style={{ width: '100%', fontSize: '10px', padding: '4px', background: '#111', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '4px', outline: 'none' }}
-                                value={claimType}
-                                onChange={(e) => setClaimType(e.target.value)}
+                            {/* List options */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                              <button
+                                type="button"
+                                onClick={() => setTab('history')}
+                                style={{
+                                  backgroundColor: '#ffffff',
+                                  border: '1px solid #e5e7eb',
+                                  borderRadius: '12px',
+                                  padding: '14px 16px',
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center',
+                                  cursor: 'pointer',
+                                  width: '100%',
+                                  boxSizing: 'border-box'
+                                }}
                               >
-                                <option value="health">Outpatient Health</option>
-                                <option value="term">Term Cover Claim</option>
-                              </select>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                  <span style={{ fontSize: '18px' }}>📝</span>
+                                  <span style={{ fontSize: '12.5px', fontWeight: '800', color: '#1f2937' }}>All Orders - Order History</span>
+                                </div>
+                                <span style={{ color: '#9ca3af', fontSize: '14px', fontWeight: 'bold' }}>&gt;</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => alert("📋 Rate Card: Base Fare ₹35, Distance Fare ₹10/km, Ride Share commission flat 5%.")}
+                                style={{
+                                  backgroundColor: '#ffffff',
+                                  border: '1px solid #e5e7eb',
+                                  borderRadius: '12px',
+                                  padding: '14px 16px',
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center',
+                                  cursor: 'pointer',
+                                  width: '100%',
+                                  boxSizing: 'border-box'
+                                }}
+                              >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                  <span style={{ fontSize: '18px' }}>💳</span>
+                                  <span style={{ fontSize: '12.5px', fontWeight: '800', color: '#1f2937' }}>View Rate Card</span>
+                                </div>
+                                <span style={{ color: '#9ca3af', fontSize: '14px', fontWeight: 'bold' }}>&gt;</span>
+                              </button>
                             </div>
 
-                            <div className="w-[80px]">
-                              <label className="text-[9px] text-gray-500 block mb-0.5">Amount (₹)</label>
-                              <input 
-                                type="number" 
-                                style={{ width: '100%', fontSize: '10px', padding: '4px', background: '#111', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '4px', outline: 'none' }}
-                                value={claimAmount}
-                                onChange={(e) => setClaimAmount(parseInt(e.target.value) || 0)}
-                              />
+                            {/* Black Choose Plan banner */}
+                            <div 
+                              onClick={() => setTab('subscription')}
+                              style={{
+                                backgroundColor: '#000000',
+                                borderRadius: '16px',
+                                padding: '20px 16px',
+                                color: '#ffffff',
+                                textAlign: 'left',
+                                display: 'flex',
+                                justifyStyle: 'space-between',
+                                alignItems: 'center',
+                                cursor: 'pointer',
+                                position: 'relative',
+                                overflow: 'hidden',
+                                boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                              }}
+                            >
+                              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px', zIndex: 2 }}>
+                                <span style={{ fontSize: '15px', fontWeight: '900', letterSpacing: '0.5px' }}>Choose your</span>
+                                <span style={{ fontSize: '15px', fontWeight: '900', color: '#facc15' }}>earning plan</span>
+                                <span style={{ fontSize: '10px', color: '#ffffff', border: '1px solid #facc15', backgroundColor: 'rgba(250,204,21,0.2)', borderRadius: '4px', padding: '2px 8px', width: 'fit-content', marginTop: '8px', fontWeight: '800' }}>
+                                  View All Plans →
+                                </span>
+                              </div>
+                              <div style={{
+                                backgroundColor: '#1d4ed8',
+                                color: '#ffffff',
+                                padding: '8px 16px',
+                                borderRadius: '8px',
+                                fontWeight: '900',
+                                fontSize: '16px',
+                                textTransform: 'uppercase',
+                                transform: 'rotate(-5deg)',
+                                border: '2px solid #facc15',
+                                boxShadow: '0 4px 10px rgba(0,0,0,0.3)',
+                                zIndex: 2
+                              }}>
+                                My Plan
+                              </div>
                             </div>
-                          </div>
 
-                          <div>
-                            <label className="text-[9px] text-gray-500 block mb-0.5">Claim Details / Clinic bill reason</label>
-                            <input 
-                              type="text" 
-                              placeholder="e.g. fever clinic checkup, medicine bills..."
-                              style={{ width: '100%', fontSize: '10px', padding: '4px 8px', background: '#111', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '4px', outline: 'none' }}
-                              value={claimDesc}
-                              onChange={(e) => setClaimDesc(e.target.value)}
+                            {/* Interactive weekly bar chart */}
+                            <div style={{ backgroundColor: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '16px', padding: '16px', textAlign: 'left', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+                              <span style={{ fontSize: '11px', color: '#4b5563', fontWeight: '800', display: 'block', marginBottom: '12px' }}>📊 Weekly Earnings Trend (₹)</span>
+                              
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'end', height: '90px', padding: '16px 8px 8px 8px', backgroundColor: '#f9fafb', border: '1px solid #f3f4f6', borderRadius: '12px' }}>
+                                {[
+                                  { day: 'Mon', amt: 850 },
+                                  { day: 'Tue', amt: 1200 },
+                                  { day: 'Wed', amt: 950 },
+                                  { day: 'Thu', amt: 1500 },
+                                  { day: 'Fri', amt: 1850 },
+                                  { day: 'Sat', amt: 2200 },
+                                  { day: 'Sun', amt: Math.max(1600, Math.round(currentDriver.earnings.daily)) }
+                                ].map((d, idx) => {
+                                  const maxAmt = 2200;
+                                  const pctHeight = (d.amt / maxAmt) * 100;
+                                  return (
+                                    <div key={idx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
+                                      <span style={{ fontSize: '8px', color: '#1d4ed8', fontWeight: 'bold', fontFamily: 'monospace' }}>₹{d.amt}</span>
+                                      <div 
+                                        style={{
+                                          height: `${Math.max(4, pctHeight * 0.5)}px`,
+                                          width: '12px',
+                                          backgroundColor: '#bfdbfe',
+                                          borderTop: '2px solid #2563eb',
+                                          borderRadius: '2px 2px 0 0',
+                                          marginTop: '2px'
+                                        }}
+                                      ></div>
+                                      <span style={{ fontSize: '9px', color: '#6b7280', fontWeight: '800', marginTop: '4px' }}>{d.day}</span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            {/* Low balance warning card */}
+                            <div style={{ backgroundColor: '#ffffff', border: '1px solid #fee2e2', borderRadius: '16px', padding: '20px', textAlign: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+                              <span style={{ fontSize: '11px', color: '#ef4444', fontWeight: '800', textTransform: 'uppercase', tracking: '0.5px' }}>Your balance is low, please recharge</span>
+                              <h2 style={{ fontSize: '32px', fontWeight: '900', color: '#dc2626', margin: '8px 0' }}>
+                                -₹25.38
+                              </h2>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  alert("💳 Opening secure wallet payment gateway to top up Captain balance...");
+                                }}
+                                style={{
+                                  backgroundColor: '#facc15',
+                                  border: 'none',
+                                  borderRadius: '9999px',
+                                  width: '100%',
+                                  padding: '12px 0',
+                                  fontSize: '13px',
+                                  fontWeight: '800',
+                                  color: '#000000',
+                                  cursor: 'pointer',
+                                  marginTop: '8px',
+                                  boxShadow: '0 4px 6px rgba(0,0,0,0.05)'
+                                }}
+                              >
+                                Recharge now
+                              </button>
+                            </div>
+                            <p style={{ fontSize: '10.5px', color: '#6b7280', margin: 0, textAlign: 'left', lineHeight: '1.4' }}>
+                              Money transfer renews every Monday! <span style={{ color: '#2563eb', cursor: 'pointer', fontWeight: 'bold' }}>Learn More</span>
+                            </p>
+
+                            {/* Refer and Earn card */}
+                            <div style={{
+                              backgroundColor: '#faf5ff',
+                              borderRadius: '16px',
+                              border: '1px solid #f3e8ff',
+                              padding: '16px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              textAlign: 'left',
+                              boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
+                            }}>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                <span style={{ fontSize: '11px', color: '#6b7280', fontWeight: 'bold' }}>Refer and Earn</span>
+                                <span style={{ fontSize: '16px', fontWeight: '900', color: '#6b21a8' }}>Up to ₹4500</span>
+                              </div>
+                              <span style={{ fontSize: '36px' }}>💵</span>
+                            </div>
+
+                            {/* Payout withdraw option (from existing code) */}
+                            <div style={{ backgroundColor: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '16px', padding: '16px', textAlign: 'left', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span style={{ fontSize: '11px', color: '#1f2937', fontWeight: '800' }}>🏦 Instant Wallet Payout</span>
+                                <span style={{ fontSize: '9px', color: '#10b981', fontWeight: '800', backgroundColor: '#d1fae5', padding: '2px 6px', borderRadius: '4px' }}>Instant</span>
+                              </div>
+                              <p style={{ fontSize: '10.5px', color: '#4b5563', margin: '8px 0', lineHeight: '1.4' }}>
+                                Withdraw your JoldiGo net earnings immediately to your bank account ({currentDriver.bankAccountNumber ? `Ending ${currentDriver.bankAccountNumber.slice(-4)}` : 'Pending'}).
+                              </p>
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  await payoutDriver(currentDriver.id);
+                                  alert(`💸 instant transfer completed! Payout successfully sent to your bank.`);
+                                }}
+                                style={{
+                                  backgroundColor: '#000000',
+                                  border: 'none',
+                                  borderRadius: '12px',
+                                  padding: '12px 0',
+                                  width: '100%',
+                                  color: '#ffffff',
+                                  fontWeight: '800',
+                                  fontSize: '11px',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                Payout to Bank Account
+                              </button>
+                            </div>
+
+                            {/* Transaction history */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span style={{ fontSize: '13px', fontWeight: '800', color: '#1f2937' }}>Transaction History</span>
+                                <span style={{ fontSize: '11px', color: '#2563eb', fontWeight: '800', cursor: 'pointer' }}>Filter</span>
+                              </div>
+
+                              <div style={{ display: 'flex', gap: '8px' }}>
+                                <span style={{ fontSize: '10px', fontWeight: '800', padding: '6px 16px', borderRadius: '9999px', backgroundColor: '#2563eb', color: '#fff', border: '1px solid #2563eb' }}>All transactions</span>
+                                <span style={{ fontSize: '10px', fontWeight: '800', padding: '6px 16px', borderRadius: '9999px', backgroundColor: '#ffffff', color: '#4b5563', border: '1px solid #e5e7eb' }}>Pending</span>
+                              </div>
+
+                              {/* Mock transactions matching the screenshot */}
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
+                                <span style={{ fontSize: '11px', fontWeight: '800', color: '#6b7280', textAlign: 'left' }}>27 Jun 2026</span>
+                                {[
+                                  { label: 'Order Deductions', amt: '- ₹7.01', time: '05:50 am' },
+                                  { label: 'Order Deductions', amt: '- ₹5.25', time: '04:44 am' },
+                                  { label: 'Order Deductions', amt: '- ₹4.72', time: '04:14 am' },
+                                  { label: 'Order Deductions', amt: '- ₹8.44', time: '03:59 am' }
+                                ].map((t, idx) => (
+                                  <div key={idx} style={{ backgroundColor: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.01)' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', textAlign: 'left' }}>
+                                      <span style={{ fontSize: '14px', width: '24px', height: '24px', borderRadius: '50%', backgroundColor: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>₹</span>
+                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                        <span style={{ fontSize: '11.5px', fontWeight: '800', color: '#1f2937' }}>{t.label}</span>
+                                        <span style={{ fontSize: '9px', color: '#9ca3af' }}>{t.time}</span>
+                                      </div>
+                                    </div>
+                                    <span style={{ fontSize: '11.5px', fontWeight: '800', color: '#ef4444' }}>{t.amt}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Disputes Tab (Help & Support + Explore All Issues view) */}
+                  {tab === 'disputes' && (
+                    <div style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, backgroundColor: '#f3f4f6', color: '#000000', display: 'flex', flexDirection: 'column', zIndex: 1000, fontFamily: 'sans-serif' }}>
+                      {/* Custom Help Header */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '56px', backgroundColor: '#ffffff', padding: '0 16px', borderBottom: '1px solid #e5e7eb', flexShrink: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (helpSubView === 'all_issues') {
+                                setHelpSubView('main');
+                              } else {
+                                setTab('dashboard');
+                              }
+                            }}
+                            style={{ background: 'none', border: 'none', fontSize: '18px', color: '#000', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                          >
+                            ←
+                          </button>
+                          <span style={{ fontSize: '16px', fontWeight: '800', color: '#000000' }}>
+                            {helpSubView === 'main' ? 'Help & Support' : 'Explore All Issues'}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => alert("📞 Connecting to emergency priority JoldiGo Captain helpline channel...")}
+                          style={{
+                            backgroundColor: '#ffffff',
+                            border: '1px solid #e5e7eb',
+                            borderRadius: '9999px',
+                            padding: '4px 12px',
+                            fontSize: '11px',
+                            fontWeight: '800',
+                            color: '#000000',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                        >
+                          👤 Help
+                        </button>
+                      </div>
+
+                      {/* Content Body based on helpSubView */}
+                      {helpSubView === 'main' ? (
+                        <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                          {/* Search box */}
+                          <div style={{ position: 'relative' }}>
+                            <span style={{ position: 'absolute', left: '12px', top: '10px', fontSize: '14px', color: '#9ca3af' }}>🔍</span>
+                            <input
+                              type="text"
+                              placeholder="Search your issue"
+                              style={{
+                                width: '100%',
+                                padding: '10px 12px 10px 36px',
+                                border: '1px solid #e5e7eb',
+                                borderRadius: '9999px',
+                                fontSize: '12px',
+                                backgroundColor: '#ffffff',
+                                color: '#000000',
+                                outline: 'none',
+                                boxSizing: 'border-box'
+                              }}
                             />
                           </div>
 
-                          <button 
-                            className="btn-primary py-1 text-[10px] font-bold mt-1"
-                            style={{ padding: '6px' }}
-                            onClick={() => {
-                              if (!claimDesc.trim()) return alert("Please specify claim details.");
-                              fileSafetyClaim(currentDriver.id, claimType, claimAmount, claimDesc.trim());
-                              setClaimDesc('');
-                            }}
-                          >
-                            Submit Claim Payout Request
-                          </button>
-                        </div>
+                          {/* Recent Orders section */}
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <span style={{ fontSize: '12px', fontWeight: '800', color: '#1f2937', textAlign: 'left' }}>Recent Orders</span>
+                            
+                            <div style={{ backgroundColor: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px', textAlign: 'left', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span style={{ fontSize: '13px', fontWeight: '800', color: '#1f2937' }}>Bike Boost</span>
+                                <span style={{ fontSize: '13px', fontWeight: '800', color: '#10b981' }}>₹0</span>
+                              </div>
+                              <span style={{ fontSize: '10px', color: '#6b7280', fontWeight: 'bold' }}>05 July 2026, 10:30 AM</span>
 
-                        {/* Claims History List */}
-                        <div className="mt-2" style={{ maxHeight: '120px', overflowY: 'auto' }}>
-                          <span className="text-[9px] text-gray-500 font-extrabold block mb-1">Your Safety Claims Log</span>
-                          {safetyClaims.filter(c => c.driverId === currentDriver.id).length === 0 ? (
-                            <div className="text-[9px] text-gray-500 italic mt-1 text-center">No safety claims logs found.</div>
-                          ) : (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                              {safetyClaims.filter(c => c.driverId === currentDriver.id).map(claim => (
-                                <div key={claim.id} className="p-2 bg-black/25 rounded border border-white/5 text-[10px] flex justify-between items-start">
-                                  <div className="text-left">
-                                    <div className="flex gap-1.5 items-center">
-                                      <span className="font-bold text-white uppercase text-[8px] tracking-wide bg-indigo-950/65 px-1.5 py-0.5 rounded">{claim.claimType}</span>
-                                      <span className="text-gray-300 font-semibold">₹{claim.amount}</span>
-                                    </div>
-                                    <p className="text-gray-400 mt-1 text-[9px] leading-tight">{claim.description}</p>
-                                    <span className="text-[8px] text-gray-600 block mt-0.5">{claim.createdAt}</span>
-                                  </div>
-                                  <span className={`text-[8px] font-extrabold uppercase px-1.5 py-0.5 rounded font-mono ${
-                                    claim.status === 'approved' ? 'bg-green-500/10 text-green-400' : (claim.status === 'rejected' ? 'bg-red-500/10 text-red-400' : 'bg-yellow-500/10 text-yellow-400')
-                                  }`}>
-                                    {claim.status}
-                                  </span>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', position: 'relative', paddingLeft: '16px', marginTop: '4px' }}>
+                                {/* Vertical connection line */}
+                                <div style={{ position: 'absolute', left: '4px', top: '6px', bottom: '6px', width: '2px', backgroundColor: '#e5e7eb' }}></div>
+                                
+                                <div style={{ position: 'relative' }}>
+                                  <div style={{ position: 'absolute', left: '-15px', top: '4px', width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10b981' }}></div>
+                                  <p style={{ margin: 0, fontSize: '11px', color: '#4b5563', lineHeight: '1.4' }}>
+                                    302, Jodhbhim, Hatgacha, Newtown, Kolkata, West Bengal 700107, India
+                                  </p>
+                                </div>
+                                <div style={{ position: 'relative' }}>
+                                  <div style={{ position: 'absolute', left: '-15px', top: '4px', width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#ef4444' }}></div>
+                                  <p style={{ margin: 0, fontSize: '11px', color: '#4b5563', lineHeight: '1.4' }}>
+                                    Axis Mall, Major Arterial Road(South-East), Newtown, West Bengal, India
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => setTab('history')}
+                              style={{
+                                backgroundColor: '#ffffff',
+                                border: '1px solid #e5e7eb',
+                                borderRadius: '12px',
+                                padding: '12px',
+                                fontSize: '12px',
+                                fontWeight: '800',
+                                color: '#2563eb',
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                cursor: 'pointer',
+                                width: '100%',
+                                marginTop: '4px',
+                                boxSizing: 'border-box'
+                              }}
+                            >
+                              <span>View All Orders</span>
+                              <span>&gt;</span>
+                            </button>
+                          </div>
+
+                          {/* Help support center primary issues banner */}
+                          <div style={{
+                            backgroundColor: '#ffffff',
+                            borderRadius: '16px',
+                            border: '1px solid #e5e7eb',
+                            padding: '16px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            textAlign: 'left',
+                            gap: '12px',
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
+                          }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
+                              <span style={{ fontSize: '14px', fontWeight: '800', color: '#1f2937' }}>Need help?</span>
+                              <span style={{ fontSize: '11px', color: '#4b5563', lineHeight: '1.4' }}>Find answers to primary issues</span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  alert("💬 Initiating chat with JoldiGo automated captain resolution bot...");
+                                }}
+                                style={{
+                                  backgroundColor: '#facc15',
+                                  border: 'none',
+                                  borderRadius: '9999px',
+                                  padding: '8px 20px',
+                                  fontSize: '11px',
+                                  fontWeight: '800',
+                                  color: '#000000',
+                                  cursor: 'pointer',
+                                  width: 'fit-content',
+                                  marginTop: '6px'
+                                }}
+                              >
+                                Get help
+                              </button>
+                            </div>
+                            
+                            {/* Smiling helper agent avatar */}
+                            <div style={{ fontSize: '48px' }}>👨‍💼</div>
+                          </div>
+
+                          {/* Two action cards */}
+                          <div style={{ display: 'flex', gap: '12px' }}>
+                            <div 
+                              onClick={() => setHelpSubView('all_issues')}
+                              style={{
+                                flex: 1,
+                                backgroundColor: '#dbeafe',
+                                borderRadius: '16px',
+                                padding: '16px',
+                                textAlign: 'left',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '8px',
+                                border: '1px solid #bfdbfe',
+                                boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
+                              }}
+                            >
+                              <span style={{ fontSize: '24px' }}>💬</span>
+                              <span style={{ fontSize: '12px', fontWeight: '800', color: '#1e3a8a' }}>Explore All Issues</span>
+                            </div>
+
+                            <div 
+                              onClick={() => alert("📺 Opening safety and operations captain training guides video library...")}
+                              style={{
+                                flex: 1,
+                                backgroundColor: '#dbeafe',
+                                borderRadius: '16px',
+                                padding: '16px',
+                                textAlign: 'left',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '8px',
+                                border: '1px solid #bfdbfe',
+                                boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
+                              }}
+                            >
+                              <span style={{ fontSize: '24px' }}>🎬</span>
+                              <span style={{ fontSize: '12px', fontWeight: '800', color: '#1e3a8a' }}>Training Videos</span>
+                            </div>
+                          </div>
+
+                          {/* Active disputes fallback list if any exist */}
+                          {driverDisputes.length > 0 && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px', borderTop: '1px solid #e5e7eb', paddingTop: '12px' }}>
+                              <span style={{ fontSize: '11px', fontWeight: '800', color: '#ef4444', textAlign: 'left' }}>⚠️ Active Ride Disputes Under Review</span>
+                              {driverDisputes.map(disp => (
+                                <div key={disp.id} style={{ backgroundColor: '#fff', border: '1px solid #fecaca', borderRadius: '12px', padding: '12px', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '4px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+                                  <span style={{ fontSize: '10px', color: '#b91c1c', fontWeight: '800' }}>Suspended Payout: ₹{disp.suspendedPayout}</span>
+                                  <p style={{ margin: 0, fontSize: '10px', color: '#4b5563' }}><b>Rider Complaint:</b> {disp.riderComplaint}</p>
+                                  {disp.status === 'awaiting_evidence' ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => uploadDisputeEvidence(disp.id, 'video', 'dashcam_evidence.mp4')}
+                                      style={{ alignSelf: 'flex-start', marginTop: '6px', fontSize: '9px', fontWeight: 'bold', padding: '4px 8px', backgroundColor: '#ef4444', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                                    >
+                                      Upload Evidence
+                                    </button>
+                                  ) : (
+                                    <span style={{ fontSize: '9px', color: '#2563eb', fontWeight: 'bold', marginTop: '4px' }}>✓ Evidence Uploaded (Under Review)</span>
+                                  )}
                                 </div>
                               ))}
                             </div>
                           )}
                         </div>
-                      </div>
-                    </div>
-                  )}
- 
-                  {tab === 'garage' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }} className="text-left mt-2">
-                      <span className="text-[10px] text-gray-500 font-extrabold uppercase block tracking-wider">🚗 Garage & Active Vehicle</span>
-                      
-                      <div className="flex flex-col gap-2">
-                        {currentDriver.vehicles && currentDriver.vehicles.map(veh => (
-                          <div 
-                            key={veh.id} 
-                            onClick={async () => {
-                              try {
-                                const { api } = getServerEndpoints();
-                                const res = await fetch(`${api}/api/driver/vehicles/select`, {
-                                  method: 'POST',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({ driverId: currentDriver.id, vehicleId: veh.id })
-                                });
-                                const data = await res.json();
-                                if (data.success) {
-                                  // Server broadcast will trigger websocket update
-                                }
-                              } catch (err) {
-                                console.error(err);
-                              }
-                            }}
-                            className={`p-2.5 rounded-lg border transition-all flex justify-between items-center cursor-pointer ${
-                              veh.active 
-                                ? 'bg-indigo-600/10 border-indigo-400 text-white shadow-[0_0_10px_rgba(99,102,241,0.15)]' 
-                                : 'bg-black/30 border-white/5 text-gray-400 hover:bg-white/5'
-                            }`}
-                          >
-                            <div className="flex flex-col gap-0.5">
-                              <span className="font-bold text-[11px]">{veh.name}</span>
-                              <span className="text-[9px] font-mono text-gray-500">{veh.number}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-[9px] uppercase font-bold px-1.5 py-0.5 rounded bg-black/40 text-gray-300">
-                                {getVehicleLabel(veh.type)}
-                              </span>
-                              {veh.active && <span className="text-[9px] text-green-400">● Active</span>}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
- 
-                      {/* Register New Vehicle Form */}
-                      <form 
-                        onSubmit={async (e) => {
-                          e.preventDefault();
-                          const name = e.target.vehName.value.trim();
-                          const number = e.target.vehNumber.value.trim();
-                          const type = e.target.vehType.value;
-                          if (!name || !number) return;
- 
-                          try {
-                            const { api } = getServerEndpoints();
-                            const res = await fetch(`${api}/api/driver/vehicles/add`, {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({ driverId: currentDriver.id, name, number, type })
-                            });
-                            const data = await res.json();
-                            if (data.success) {
-                              e.target.reset();
-                              // Reload initial data to fetch new vehicle lists
-                              const drvsRes = await fetch(`${api}/api/drivers`);
-                              const drvsData = await drvsRes.json();
-                              if (drvsData.success) {
-                                // WebSocket update will dispatch
-                              }
-                            }
-                          } catch (err) {
-                            console.error(err);
-                          }
-                        }}
-                        className="p-2.5 bg-black/40 rounded-lg border border-white/5 flex flex-col gap-2 mt-1"
-                      >
-                        <span className="text-[10px] font-bold text-gray-300">Register New Vehicle</span>
-                        
-                        <div className="flex gap-2">
-                          <div className="flex-1">
-                            <label className="text-[9px] text-gray-500 block mb-0.5">Model Name</label>
-                            <input name="vehName" type="text" placeholder="e.g. TVS Apache Bike" style={{ width: '100%', fontSize: '10px', padding: '4px 6px', background: '#111', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '4px', outline: 'none' }} required />
-                          </div>
-                          <div className="w-[100px]">
-                            <label className="text-[9px] text-gray-500 block mb-0.5">License Plate</label>
-                            <input name="vehNumber" type="text" placeholder="e.g. WB-02-1234" style={{ width: '100%', fontSize: '10px', padding: '4px 6px', background: '#111', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '4px', outline: 'none' }} required />
-                          </div>
-                        </div>
- 
-                        <div>
-                          <label className="text-[9px] text-gray-500 block mb-0.5">Category Dispatch Pool</label>
-                          <select 
-                            name="vehType"
-                            style={{ width: '100%', fontSize: '10px', padding: '4px', background: '#111', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '4px', outline: 'none' }}
-                          >
-                            <option value="car_ac">4-Wheeler AC Car Fares</option>
-                            <option value="car_nonac">4-Wheeler Non-AC Car Fares</option>
-                            <option value="bike">App Bike Fares</option>
-                          </select>
-                        </div>
- 
-                        <button type="submit" className="btn-primary py-1 text-[10px] font-bold mt-1" style={{ padding: '6px' }}>
-                          Add to Garage
-                        </button>
-                      </form>
-                    </div>
-                  )}
-
-                  {tab === 'history' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }} className="text-left mt-2">
-                      <span className="text-[10px] text-gray-500 font-extrabold uppercase block tracking-wider">📜 Completed Rides History</span>
-                      
-                      {loadingHistory ? (
-                        <div className="text-center py-4 text-xs text-gray-500">Loading history logs...</div>
-                      ) : history.length === 0 ? (
-                        <div className="text-center py-6 text-xs text-gray-500 italic">No completed rides logged for this partner.</div>
                       ) : (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '250px', overflowY: 'auto' }}>
-                          {history.map(item => (
-                            <div key={item.id} className="p-3 bg-black/40 border border-white/5 rounded-lg flex flex-col gap-1.5 text-xs">
-                              <div className="flex justify-between items-center font-bold">
-                                <span className="text-green-400">₹{item.takeHome.toFixed(2)} Take-Home</span>
-                                <span className="text-gray-500 font-mono text-[9px]">{new Date(item.createdAt).toLocaleDateString()}</span>
+                        /* Explore All Issues list */
+                        <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          {[
+                            { title: 'Nearby Demand Locations', icon: '📍' },
+                            { title: 'Earnings', icon: '💵' },
+                            { title: 'Account and Service Management', icon: '👤' },
+                            { title: 'App issues', icon: '📱' },
+                            { title: 'Emergency', icon: '⚠️' },
+                            { title: 'Accidental Insurance', icon: '🛡️' },
+                            { title: 'Getting Started', icon: '🚀' }
+                          ].map((issue, idx) => (
+                            <div
+                              key={idx}
+                              onClick={() => {
+                                if (issue.title === 'Earnings') {
+                                  setTab('earnings');
+                                } else if (issue.title === 'Account and Service Management') {
+                                  setTab('garage');
+                                } else {
+                                  alert(`ℹ️ Support Guide: Details on "${issue.title}" can be resolved via active JoldiGo local dispatch hubs.`);
+                                }
+                              }}
+                              style={{
+                                backgroundColor: '#ffffff',
+                                border: '1px solid #e5e7eb',
+                                borderRadius: '12px',
+                                padding: '14px 16px',
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                cursor: 'pointer',
+                                boxSizing: 'border-box',
+                                boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
+                              }}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <span style={{ fontSize: '18px' }}>{issue.icon}</span>
+                                <span style={{ fontSize: '12px', fontWeight: '800', color: '#1f2937' }}>{issue.title}</span>
                               </div>
-                              <div className="text-gray-400 leading-tight">
-                                <div><span className="text-amber-500 font-bold">A:</span> {item.pickupName}</div>
-                                <div className="mt-0.5"><span className="text-amber-500 font-bold">B:</span> {item.dropoffName}</div>
-                              </div>
-                              <div className="flex justify-between items-center text-[10px] text-gray-500 border-t border-white/5 pt-1.5 mt-0.5">
-                                <span>Distance: {item.distance.toFixed(2)} km</span>
-                                <span className="text-gray-400">Fare: ₹{item.totalFare.toFixed(2)}</span>
-                              </div>
-                              {item.rating && (
-                                <div className="bg-amber-950/20 border border-amber-500/10 p-2 rounded flex flex-col gap-1 mt-0.5">
-                                  <div className="flex items-center gap-1">
-                                    <span className="text-[10px] text-amber-400 font-bold">Rating:</span>
-                                    <div className="flex text-amber-400 font-bold text-[10px]">
-                                      {Array.from({ length: item.rating }).map((_, i) => '★').join('')}
-                                    </div>
-                                  </div>
-                                  {item.comment && (
-                                    <p className="text-[10px] text-gray-400 italic">"{item.comment}"</p>
-                                  )}
-                                </div>
-                              )}
+                              <span style={{ color: '#9ca3af', fontSize: '14px', fontWeight: 'bold' }}>&gt;</span>
                             </div>
                           ))}
                         </div>
@@ -3103,74 +3442,531 @@ export default function DriverApp({ isStandalone }) {
                     </div>
                   )}
 
-                  {tab === 'subscription' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }} className="text-left mt-2">
-                      <span className="text-[10px] text-gray-500 font-extrabold uppercase block tracking-wider">🌟 Premium Subscriptions</span>
-
-                      <div className="p-3 bg-black/40 border border-white/5 rounded-lg flex flex-col gap-1 text-xs">
-                        <div className="flex justify-between items-center">
-                          <span className="text-gray-400">Current active tier:</span>
-                          <span className="font-black text-amber-500 uppercase tracking-widest text-[11px] bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
-                            🛡️ {subTier}
-                          </span>
+                  {/* Service Manager Tab (garage) */}
+                  {tab === 'garage' && (
+                    <div style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, backgroundColor: '#f3f4f6', color: '#000000', display: 'flex', flexDirection: 'column', zIndex: 1000, fontFamily: 'sans-serif' }}>
+                      {/* Service Manager Header */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '56px', backgroundColor: '#ffffff', padding: '0 16px', borderBottom: '1px solid #e5e7eb', flexShrink: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <button
+                            type="button"
+                            onClick={() => setTab('dashboard')}
+                            style={{ background: 'none', border: 'none', fontSize: '18px', color: '#000', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                          >
+                            ←
+                          </button>
+                          <span style={{ fontSize: '16px', fontWeight: '800', color: '#000000' }}>Service Manager</span>
                         </div>
-                        {subExpires && (
-                          <span className="text-[8px] text-gray-500 block mt-1">
-                            Expires on: {new Date(subExpires).toLocaleDateString()} (Auto-Renews)
-                          </span>
-                        )}
+                        <button
+                          type="button"
+                          onClick={() => setTab('disputes')}
+                          style={{
+                            backgroundColor: '#ffffff',
+                            border: '1px solid #e5e7eb',
+                            borderRadius: '9999px',
+                            padding: '4px 12px',
+                            fontSize: '11px',
+                            fontWeight: '800',
+                            color: '#000000',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                        >
+                          👤 Help
+                        </button>
                       </div>
 
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
-                        {[
-                          { key: 'free', name: 'Free Partner Standard', fee: '₹0 / mo', commission: '5.0% commission cut', desc: 'Standard JoldiGo platform fee indexing.' },
-                          { key: 'silver', name: 'Premium Silver Tier', fee: '₹299 / mo', commission: '2.5% commission cut', desc: 'Halves standard per-ride platform fees + standard dispatch priority.' },
-                          { key: 'gold', name: 'Premium Gold Tier', fee: '₹599 / mo', commission: '1.0% commission cut', desc: 'Waives base fees to just 1% commission + maximum booking matching dispatch priority.' }
-                        ].map(tier => {
-                          const isCurrent = subTier === tier.key;
-
-                          return (
-                            <div 
-                              key={tier.key}
-                              className={`p-3 rounded-lg border text-left flex justify-between items-center transition-all ${
-                                isCurrent 
-                                  ? 'border-amber-400 bg-amber-500/5' 
-                                  : 'border-white/5 bg-black/30 hover:border-white/10'
-                              }`}
+                      {/* Content Body */}
+                      <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        {/* Services List cards */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          {[
+                            { name: 'Bike Metro', active: true, avatar: '🚴‍♂️' },
+                            { name: 'Bike Boost', active: true, avatar: '⚡' },
+                            { name: 'Bike', active: true, avatar: '🛵' },
+                            { name: 'Parcel Delivery', active: true, avatar: '📦' }
+                          ].map((s, idx) => (
+                            <div
+                              key={idx}
+                              style={{
+                                backgroundColor: '#fef3c7',
+                                border: '1px solid #fde68a',
+                                borderRadius: '16px',
+                                padding: '16px',
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                textAlign: 'left',
+                                boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
+                              }}
                             >
-                              <div className="flex flex-col gap-0.5">
-                                <span className="text-[11px] font-black text-white">{tier.name}</span>
-                                <span className="text-[10px] font-extrabold text-green-400 mt-0.5">{tier.commission} ({tier.fee})</span>
-                                <p className="text-[9.5px] text-gray-400 mt-1 leading-snug">{tier.desc}</p>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <span style={{ fontSize: '24px' }}>{s.avatar}</span>
+                                <span style={{ fontSize: '13px', fontWeight: '800', color: '#1f2937' }}>{s.name}</span>
                               </div>
+                              <span style={{
+                                fontSize: '10px',
+                                fontWeight: '800',
+                                backgroundColor: '#10b981',
+                                color: '#ffffff',
+                                padding: '4px 12px',
+                                borderRadius: '9999px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}>
+                                ✓ Active
+                              </span>
+                            </div>
+                          ))}
+                        </div>
 
+                        {/* Extra earnings promo banner */}
+                        <div style={{
+                          backgroundColor: '#ffffff',
+                          borderRadius: '16px',
+                          border: '1px solid #e5e7eb',
+                          padding: '16px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          textAlign: 'left',
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
+                        }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', flex: 1 }}>
+                            <span style={{ fontSize: '13.5px', fontWeight: '900', color: '#111827' }}>JoldiGo Delivery captains</span>
+                            <span style={{ fontSize: '13.5px', fontWeight: '900', color: '#111827', marginTop: '2px' }}>earn 40% extra daily !! 🎉</span>
+                          </div>
+                          <span style={{ fontSize: '32px' }}>🪙</span>
+                        </div>
+
+                        {/* Start Delivery category actions */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          {[
+                            { name: 'Food Delivery', desc: 'Watch Video ▶', actionLabel: 'Start', avatar: '🍔' },
+                            { name: 'Grocery Delivery', desc: 'Courier packages', actionLabel: 'Start', avatar: '🛒' }
+                          ].map((d, idx) => (
+                            <div
+                              key={idx}
+                              style={{
+                                backgroundColor: '#ffffff',
+                                border: '1px solid #e5e7eb',
+                                borderRadius: '16px',
+                                padding: '16px',
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                textAlign: 'left',
+                                boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
+                              }}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <span style={{ fontSize: '24px' }}>{d.avatar}</span>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                  <span style={{ fontSize: '12px', fontWeight: '800', color: '#1f2937' }}>{d.name}</span>
+                                  <span style={{ fontSize: '9px', color: '#2563eb', fontWeight: 'bold' }}>{d.desc}</span>
+                                </div>
+                              </div>
                               <button
                                 type="button"
-                                disabled={isCurrent || loadingSub}
-                                onClick={() => handleUpgradeSubscription(tier.key)}
+                                onClick={() => alert(`🚀 Starting setup workflow for "${d.name}" dispatch channels...`)}
                                 style={{
-                                  padding: '6px 12px',
-                                  fontSize: '9px',
-                                  fontWeight: 'bold',
-                                  borderRadius: '4px',
-                                  backgroundColor: isCurrent ? 'rgba(255,255,255,0.05)' : 'var(--color-primary)',
-                                  border: isCurrent ? '1px solid transparent' : '1px solid transparent',
-                                  color: isCurrent ? '#666' : '#000',
-                                  cursor: isCurrent ? 'default' : 'pointer',
-                                  marginLeft: '8px',
-                                  flexShrink: 0
+                                  backgroundColor: '#ffffff',
+                                  border: '1px solid #10b981',
+                                  color: '#10b981',
+                                  borderRadius: '8px',
+                                  padding: '6px 16px',
+                                  fontSize: '11px',
+                                  fontWeight: '800',
+                                  cursor: 'pointer'
                                 }}
-                                className={isCurrent ? '' : 'hover:bg-amber-400'}
                               >
-                                {isCurrent ? 'Active' : 'Upgrade'}
+                                {d.actionLabel}
                               </button>
                             </div>
-                          );
-                        })}
+                          ))}
+                        </div>
+
+                        {/* Garage inputs for registration (from existing code) */}
+                        <div style={{ backgroundColor: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '16px', padding: '16px', textAlign: 'left', marginTop: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+                          <span style={{ fontSize: '11px', color: '#6b7280', fontWeight: '800', display: 'block', marginBottom: '8px' }}>🚗 Register New Dispatch Vehicle</span>
+                          {currentDriver.vehicles && currentDriver.vehicles.map(veh => (
+                            <div key={veh.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #f3f4f6' }}>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                <span style={{ fontSize: '11.5px', fontWeight: '800', color: '#111827' }}>{veh.name}</span>
+                                <span style={{ fontSize: '9px', color: '#9ca3af', fontFamily: 'monospace' }}>{veh.number}</span>
+                              </div>
+                              <span style={{ fontSize: '9px', color: veh.active ? '#10b981' : '#6b7280', fontWeight: 'bold' }}>
+                                {veh.active ? '● Active' : 'Select'}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Ride History Tab */}
+                  {tab === 'history' && (
+                    <div style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, backgroundColor: '#f3f4f6', color: '#000000', display: 'flex', flexDirection: 'column', zIndex: 1000, fontFamily: 'sans-serif' }}>
+                      {/* History Header */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '56px', backgroundColor: '#ffffff', padding: '0 16px', borderBottom: '1px solid #e5e7eb', flexShrink: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <button
+                            type="button"
+                            onClick={() => setTab('dashboard')}
+                            style={{ background: 'none', border: 'none', fontSize: '18px', color: '#000', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                          >
+                            ←
+                          </button>
+                          <span style={{ fontSize: '16px', fontWeight: '800', color: '#000000' }}>Ride History</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setTab('disputes')}
+                          style={{
+                            backgroundColor: '#ffffff',
+                            border: '1px solid #e5e7eb',
+                            borderRadius: '9999px',
+                            padding: '4px 12px',
+                            fontSize: '11px',
+                            fontWeight: '800',
+                            color: '#000000',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                        >
+                          👤 Help
+                        </button>
+                      </div>
+
+                      {/* Content Body */}
+                      <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <span style={{ fontSize: '12px', fontWeight: '800', color: '#1f2937', textAlign: 'left' }}>📜 Completed Rides History</span>
+                        
+                        {loadingHistory ? (
+                          <div style={{ textAlign: 'center', padding: '24px', fontSize: '12px', color: '#6b7280' }}>Loading history logs...</div>
+                        ) : history.length === 0 ? (
+                          <div style={{ textAlign: 'center', padding: '36px', fontSize: '12px', color: '#6b7280', fontStyle: 'italic' }}>No completed rides logged for this partner.</div>
+                        ) : (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            {history.map(item => (
+                              <div key={item.id} style={{ backgroundColor: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px', textAlign: 'left', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                  <span style={{ fontSize: '13px', fontWeight: '800', color: '#10b981' }}>₹{item.takeHome.toFixed(2)} Take-Home</span>
+                                  <span style={{ fontSize: '10px', color: '#6b7280', fontWeight: 'bold' }}>{new Date(item.createdAt).toLocaleDateString()}</span>
+                                </div>
+
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', position: 'relative', paddingLeft: '16px', marginTop: '4px' }}>
+                                  <div style={{ position: 'absolute', left: '4px', top: '4px', bottom: '4px', width: '2.5px', backgroundColor: '#e5e7eb' }}></div>
+                                  <div style={{ position: 'relative' }}>
+                                    <div style={{ position: 'absolute', left: '-15px', top: '4px', width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10b981' }}></div>
+                                    <span style={{ fontSize: '11px', color: '#4b5563', lineHeight: '1.4' }}><b>Pickup:</b> {item.pickupName}</span>
+                                  </div>
+                                  <div style={{ position: 'relative' }}>
+                                    <div style={{ position: 'absolute', left: '-15px', top: '4px', width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#ef4444' }}></div>
+                                    <span style={{ fontSize: '11px', color: '#4b5563', lineHeight: '1.4' }}><b>Dropoff:</b> {item.dropoffName}</span>
+                                  </div>
+                                </div>
+
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '10px', color: '#6b7280', borderTop: '1px solid #f3f4f6', paddingTop: '8px', marginTop: '4px' }}>
+                                  <span>Distance: {item.distance.toFixed(1)} km</span>
+                                  <span>Gross Fare: ₹{item.totalFare.toFixed(0)}</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Incentives and More / Rewards Tab (subscription) */}
+                  {tab === 'subscription' && (
+                    <div style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, backgroundColor: '#f3f4f6', color: '#000000', display: 'flex', flexDirection: 'column', zIndex: 1000, fontFamily: 'sans-serif' }}>
+                      {/* Incentives Header */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '56px', backgroundColor: '#ffffff', padding: '0 16px', borderBottom: '1px solid #e5e7eb', flexShrink: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <button
+                            type="button"
+                            onClick={() => setTab('dashboard')}
+                            style={{ background: 'none', border: 'none', fontSize: '18px', color: '#000', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                          >
+                            ←
+                          </button>
+                          <span style={{ fontSize: '16px', fontWeight: '800', color: '#000000' }}>Incentives and More</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setTab('disputes')}
+                          style={{
+                            backgroundColor: '#ffffff',
+                            border: '1px solid #e5e7eb',
+                            borderRadius: '9999px',
+                            padding: '4px 12px',
+                            fontSize: '11px',
+                            fontWeight: '800',
+                            color: '#000000',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                        >
+                          👤 Help
+                        </button>
+                      </div>
+
+                      {/* Content Body */}
+                      <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        
+                        {/* Incentives Row Card */}
+                        <div style={{
+                          backgroundColor: '#ffffff',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '16px',
+                          padding: '16px',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          textAlign: 'left',
+                          cursor: 'pointer',
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
+                        }}
+                          onClick={() => alert("📈 Incentives breakdown: Daily targets completed: 0/6. Weekly target bonus: ₹500 on 30 rides.")}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <span style={{ fontSize: '24px' }}>💵</span>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                              <span style={{ fontSize: '13px', fontWeight: '800', color: '#1f2937' }}>Incentives</span>
+                              <span style={{ fontSize: '10px', color: '#6b7280', fontWeight: 'bold' }}>Daily, Weekly, Bonus</span>
+                            </div>
+                          </div>
+                          <span style={{ color: '#9ca3af', fontSize: '14px', fontWeight: 'bold' }}>&gt;</span>
+                        </div>
+
+                        {/* Choose Plan Banner */}
+                        <div style={{
+                          backgroundColor: '#000000',
+                          borderRadius: '16px',
+                          padding: '20px 16px',
+                          color: '#ffffff',
+                          textAlign: 'left',
+                          display: 'flex',
+                          justifyStyle: 'space-between',
+                          alignItems: 'center',
+                          cursor: 'pointer',
+                          position: 'relative',
+                          overflow: 'hidden',
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                        }}>
+                          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px', zIndex: 2 }}>
+                            <span style={{ fontSize: '15px', fontWeight: '900', letterSpacing: '0.5px' }}>Choose your</span>
+                            <span style={{ fontSize: '15px', fontWeight: '900', color: '#facc15' }}>earning plan</span>
+                            <span style={{ fontSize: '10px', color: '#ffffff', border: '1px solid #facc15', backgroundColor: 'rgba(250,204,21,0.2)', borderRadius: '4px', padding: '2px 8px', width: 'fit-content', marginTop: '8px', fontWeight: '800' }}>
+                              View All Plans →
+                            </span>
+                          </div>
+                          <div style={{
+                            backgroundColor: '#1d4ed8',
+                            color: '#ffffff',
+                            padding: '8px 16px',
+                            borderRadius: '8px',
+                            fontWeight: '900',
+                            fontSize: '16px',
+                            textTransform: 'uppercase',
+                            transform: 'rotate(-5deg)',
+                            border: '2px solid #facc15',
+                            boxShadow: '0 4px 10px rgba(0,0,0,0.3)',
+                            zIndex: 2
+                          }}>
+                            My Plan
+                          </div>
+                        </div>
+
+                        <span style={{ fontSize: '12px', fontWeight: '800', color: '#1f2937', textAlign: 'left', marginTop: '4px' }}>Know how you get paid</span>
+
+                        {/* Subscription Tier Card */}
+                        <div style={{
+                          backgroundColor: '#ffffff',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '16px',
+                          padding: '16px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '12px',
+                          textAlign: 'left',
+                          position: 'relative',
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
+                        }}>
+                          <span style={{
+                            position: 'absolute',
+                            right: '12px',
+                            top: '12px',
+                            backgroundColor: '#fee2e2',
+                            color: '#ef4444',
+                            border: '1px solid #fecaca',
+                            borderRadius: '4px',
+                            fontSize: '9px',
+                            fontWeight: '800',
+                            padding: '2px 6px',
+                            textTransform: 'uppercase'
+                          }}>
+                            Expired
+                          </span>
+
+                          <span style={{ fontSize: '14px', fontWeight: '900', color: '#1f2937', display: 'block', maxWidth: '160px' }}>
+                            Subscription Plans
+                          </span>
+                          <span style={{ fontSize: '11px', color: '#4b5563', fontWeight: 'bold' }}>
+                            Ride at ₹0 Commission
+                          </span>
+
+                          <button
+                            type="button"
+                            onClick={() => alert("🎉 Current active partner plan standard: waives per-ride platform base commissions. Gold and Silver tiers active.")}
+                            style={{
+                              backgroundColor: '#ffffff',
+                              border: '1px solid #2563eb',
+                              color: '#2563eb',
+                              borderRadius: '8px',
+                              padding: '8px 16px',
+                              fontSize: '11px',
+                              fontWeight: '800',
+                              cursor: 'pointer',
+                              width: 'fit-content'
+                            }}
+                          >
+                            Subscribe Now →
+                          </button>
+                        </div>
+
+                        {/* Rapido Rewards List */}
+                        <span style={{ fontSize: '12px', fontWeight: '800', color: '#1f2937', textAlign: 'left', marginTop: '8px' }}>JoldiGo Captain Rewards</span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                          {/* Health Insurance Card */}
+                          <div style={{
+                            backgroundColor: '#f0fdf4',
+                            borderRadius: '16px',
+                            border: '1px solid #dcfce7',
+                            padding: '16px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            textAlign: 'left',
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
+                          }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                              <span style={{ fontSize: '14px', fontWeight: '900', color: '#166534' }}>Health Insurance</span>
+                              <span style={{ fontSize: '10px', color: '#15803d', fontWeight: 'bold' }}>For you and your family</span>
+                              <button
+                                type="button"
+                                onClick={() => alert("🏥 Health Insurance: Complete 20 rides weekly to get outward clinic cover of ₹25,000 for outpatient medical cover.")}
+                                style={{
+                                  backgroundColor: '#ffffff',
+                                  border: '1px solid #e5e7eb',
+                                  borderRadius: '8px',
+                                  padding: '6px 12px',
+                                  fontSize: '10px',
+                                  fontWeight: '800',
+                                  color: '#000',
+                                  cursor: 'pointer',
+                                  width: 'fit-content',
+                                  marginTop: '8px',
+                                  boxSizing: 'border-box'
+                                }}
+                              >
+                                Know More
+                              </button>
+                            </div>
+                            <span style={{ fontSize: '36px' }}>🧑‍⚕️</span>
+                          </div>
+
+                          {/* Accidental Insurance Card */}
+                          <div style={{
+                            backgroundColor: '#fefaf0',
+                            borderRadius: '16px',
+                            border: '1px solid #fef3c7',
+                            padding: '16px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            textAlign: 'left',
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
+                          }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                              <span style={{ fontSize: '14px', fontWeight: '900', color: '#b45309' }}>Accidental Insurance</span>
+                              <span style={{ fontSize: '10px', color: '#d97706', fontWeight: 'bold' }}>Stay protected on ride</span>
+                              <button
+                                type="button"
+                                onClick={() => alert("🛡️ Accidental Cover: Active ₹2,0,000 accidental cover, details available on priority verification status.")}
+                                style={{
+                                  backgroundColor: '#ffffff',
+                                  border: '1px solid #e5e7eb',
+                                  borderRadius: '8px',
+                                  padding: '6px 12px',
+                                  fontSize: '10px',
+                                  fontWeight: '800',
+                                  color: '#000',
+                                  cursor: 'pointer',
+                                  width: 'fit-content',
+                                  marginTop: '8px',
+                                  boxSizing: 'border-box'
+                                }}
+                              >
+                                Know More
+                              </button>
+                            </div>
+                            <span style={{ fontSize: '36px' }}>🏍️</span>
+                          </div>
+
+                          {/* Medicine Discount Card */}
+                          <div style={{
+                            backgroundColor: '#faf5ff',
+                            borderRadius: '16px',
+                            border: '1px solid #f3e8ff',
+                            padding: '16px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            textAlign: 'left',
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
+                          }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                              <span style={{ fontSize: '14px', fontWeight: '900', color: '#6b21a8' }}>Medicine Discount</span>
+                              <span style={{ fontSize: '10px', color: '#7e22ce', fontWeight: 'bold' }}>Up to 10% discount on medicines</span>
+                              <button
+                                type="button"
+                                onClick={() => alert("💊 Medicine Discount: Show JoldiGo Partner ID Card at any Apollo Pharmacy outlet to get flat 10% discount.")}
+                                style={{
+                                  backgroundColor: '#ffffff',
+                                  border: '1px solid #e5e7eb',
+                                  borderRadius: '8px',
+                                  padding: '6px 12px',
+                                  fontSize: '10px',
+                                  fontWeight: '800',
+                                  color: '#000',
+                                  cursor: 'pointer',
+                                  width: 'fit-content',
+                                  marginTop: '8px',
+                                  boxSizing: 'border-box'
+                                }}
+                              >
+                                Know More
+                              </button>
+                            </div>
+                            <span style={{ fontSize: '36px' }}>💊</span>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   )}
                 </div>
+
               )}
             </div>
 
@@ -3447,11 +4243,11 @@ export default function DriverApp({ isStandalone }) {
               <div className="flex flex-col p-2 gap-1 mt-2">
                 {[
                   { icon: '📁', label: 'Earnings', desc: 'Transfer Money to Bank, History', action: () => { setTab('earnings'); setShowSidebar(false); } },
-                  { icon: '💵', label: 'Incentives and More', desc: 'Know how you get paid', action: () => { setShowIncentives(true); setShowSidebar(false); } },
-                  { icon: '🎁', label: 'Rewards', desc: 'Insurance and Discounts', action: () => { alert("🛡️ Captain Rewards: You have active accident insurance cover of ₹2,00,000 & 10% discount on partner fuel refuels."); } },
-                  { icon: '🎛️', label: 'Service Manager', desc: 'Auto, Cab & Courier status', action: () => { alert("⚙️ Service Setup: Bookings enabled for " + getVehicleLabel(currentDriver.vehicleType) + "."); } },
-                  { icon: '🗺️', label: 'Demand Planner', desc: 'High Demand Areas & Hotspots', action: () => { alert("🗺️ Demand Hotspots highlighted in red rings on your standby screen."); } },
-                  { icon: '🎧', label: 'Help', desc: 'Get support, Accident Insurance', action: () => { alert("🎧 Emergency Helpline: Call 100 or tap the SOS button to alert local command center operators."); } },
+                  { icon: '💵', label: 'Incentives and More', desc: 'Know how you get paid', action: () => { setTab('subscription'); setShowSidebar(false); } },
+                  { icon: '🎁', label: 'Rewards', desc: 'Insurance and Discounts', action: () => { setTab('subscription'); setShowSidebar(false); } },
+                  { icon: '🎛️', label: 'Service Manager', desc: 'Auto, Cab & Courier status', action: () => { setTab('garage'); setShowSidebar(false); } },
+                  { icon: '🗺️', label: 'Demand Planner', desc: 'High Demand Areas & Hotspots', action: () => { alert("🗺️ Demand Hotspots highlighted in red rings on your standby screen."); setShowSidebar(false); } },
+                  { icon: '🎧', label: 'Help', desc: 'Get support, Accident Insurance', action: () => { setTab('disputes'); setShowSidebar(false); } },
                 ].map((item, idx) => (
                   <button
                     key={idx}
