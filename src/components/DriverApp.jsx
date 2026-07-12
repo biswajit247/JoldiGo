@@ -2030,7 +2030,7 @@ export default function DriverApp({ isStandalone }) {
         {currentDriver.verificationStatus === 'verified' && (
           <div className="app-screen-layout relative flex flex-col justify-between">
             
-            {!isNavActive && (
+            {!isNavActive && tab === 'dashboard' && (
               <div 
                 style={{
                   height: '56px',
@@ -2697,91 +2697,154 @@ export default function DriverApp({ isStandalone }) {
                     pointerEvents: tab === 'dashboard' ? 'none' : 'auto'
                   }}
                 >
-                  {/* Standby Dashboard View */}
+                  {/* Standby Dashboard View with Premium Radar and Floating Capsule Menu */}
                   {tab === 'dashboard' && !isNavActive && (
                     <div style={{ pointerEvents: 'auto' }}>
-                      {/* Floating Searching HUD over map */}
+                      <style>{`
+                        @keyframes pulse-radar {
+                          0% { transform: scale(0.95); opacity: 0.85; box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.4); }
+                          50% { transform: scale(1.05); opacity: 1; box-shadow: 0 0 20px 10px rgba(37, 99, 235, 0.2); }
+                          100% { transform: scale(0.95); opacity: 0.85; box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.4); }
+                        }
+                        @keyframes radar-ring {
+                          0% { transform: scale(0.6); opacity: 0.8; }
+                          100% { transform: scale(2.0); opacity: 0; }
+                        }
+                        .radar-pulse {
+                          animation: pulse-radar 2.5s infinite ease-in-out;
+                        }
+                        .radar-ring {
+                          animation: radar-ring 3s infinite cubic-bezier(0.215, 0.610, 0.355, 1.000);
+                        }
+                      `}</style>
+
+                      {/* Radar Overlay Animation for Online Captain */}
                       {currentDriver.status === 'online' && (
                         <div 
                           style={{
                             position: 'absolute',
-                            bottom: '86px', // Floating above the bottom navigation dock (62px)
+                            top: '40%',
                             left: '50%',
-                            transform: 'translateX(-50%)',
-                            zIndex: 900,
+                            transform: 'translate(-50%, -50%)',
+                            zIndex: 800,
                             display: 'flex',
                             flexDirection: 'column',
                             alignItems: 'center',
-                            gap: '8px',
-                            width: '260px',
                             pointerEvents: 'none'
                           }}
                         >
-                          <span 
-                            style={{
-                              backgroundColor: 'rgba(255,255,255,0.95)',
-                              color: '#000000',
-                              fontSize: '13px',
-                              fontWeight: '800',
-                              padding: '8px 16px',
-                              borderRadius: '9999px',
-                              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                              border: '1px solid rgba(0,0,0,0.05)',
-                              backdropFilter: 'blur(4px)',
-                              textAlign: 'center',
-                              whiteSpace: 'nowrap'
-                            }}
-                          >
-                            Searching for orders...
+                          <div style={{ position: 'relative', width: '120px', height: '120px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <div className="radar-ring" style={{ position: 'absolute', width: '100%', height: '100%', borderRadius: '50%', border: '2.5px solid #3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.05)' }}></div>
+                            <div className="radar-ring" style={{ position: 'absolute', width: '100%', height: '100%', borderRadius: '50%', border: '2.5px solid #2563eb', backgroundColor: 'rgba(37, 99, 235, 0.05)', animationDelay: '1.5s' }}></div>
+                            <div className="radar-pulse" style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '3px solid #ffffff', zIndex: 10 }}>
+                              <span style={{ fontSize: '18px' }}>🏍️</span>
+                            </div>
+                          </div>
+                          <span style={{
+                            marginTop: '16px',
+                            backgroundColor: 'rgba(0, 0, 0, 0.85)',
+                            color: '#ffffff',
+                            fontSize: '11px',
+                            fontWeight: '800',
+                            padding: '6px 16px',
+                            borderRadius: '9999px',
+                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                            letterSpacing: '0.3px',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                            textAlign: 'center'
+                          }}>
+                            Scanning area for bookings...
                           </span>
-
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (playSound) playSound();
-                              alert("↻ Checking GPS network satellite channels... No new bookings in immediate proximity.");
-                            }}
-                            style={{
-                              backgroundColor: '#ffffff',
-                              border: '1px solid #1d4ed8',
-                              borderRadius: '9999px',
-                              padding: '8px 24px',
-                              color: '#1d4ed8',
-                              fontWeight: '800',
-                              fontSize: '12px',
-                              cursor: 'pointer',
-                              pointerEvents: 'auto',
-                              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: '6px'
-                            }}
-                          >
-                            Refresh ↻
-                          </button>
                         </div>
                       )}
 
-                      {/* Bottom Navigation Dock Bar */}
+                      {/* Floating HUD Statistics Overlay */}
+                      {currentDriver.status === 'online' && (
+                        <div 
+                          style={{
+                            position: 'absolute',
+                            top: '80px',
+                            left: '16px',
+                            right: '16px',
+                            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                            backdropFilter: 'blur(10px)',
+                            border: '1px solid rgba(255, 255, 255, 0.8)',
+                            borderRadius: '16px',
+                            padding: '12px 16px',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            zIndex: 900,
+                            boxShadow: '0 8px 24px rgba(0,0,0,0.06)'
+                          }}
+                        >
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', textAlign: 'left' }}>
+                            <span style={{ fontSize: '9px', color: '#6b7280', fontWeight: 'bold', textTransform: 'uppercase' }}>Today's Pay</span>
+                            <span style={{ fontSize: '16px', fontWeight: '900', color: '#111827' }}>₹{currentDriver.earnings.daily.toFixed(0)}</span>
+                          </div>
+                          <div style={{ width: '1px', height: '24px', backgroundColor: '#e5e7eb' }}></div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', textAlign: 'left' }}>
+                            <span style={{ fontSize: '9px', color: '#6b7280', fontWeight: 'bold', textTransform: 'uppercase' }}>Target Bonus</span>
+                            <span style={{ fontSize: '13px', fontWeight: '800', color: '#2563eb' }}>₹550 Bonus</span>
+                          </div>
+                          <div style={{ width: '1px', height: '24px', backgroundColor: '#e5e7eb' }}></div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', textAlign: 'left' }}>
+                            <span style={{ fontSize: '9px', color: '#6b7280', fontWeight: 'bold', textTransform: 'uppercase' }}>Status</span>
+                            <span style={{ fontSize: '10px', color: '#10b981', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              ● ONLINE
+                            </span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Floating Action Button (Settings/Refresh) */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (playSound) playSound();
+                          alert("↻ Connecting with dispatch server GPS logs... Signal quality strong (98%).");
+                        }}
+                        style={{
+                          position: 'absolute',
+                          bottom: '96px',
+                          right: '20px',
+                          width: '42px',
+                          height: '42px',
+                          borderRadius: '50%',
+                          backgroundColor: '#ffffff',
+                          border: '1px solid #e5e7eb',
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '18px',
+                          cursor: 'pointer',
+                          zIndex: 900
+                        }}
+                      >
+                        ↻
+                      </button>
+
+                      {/* Floating Glassmorphic Bottom Navigation Dock Capsule */}
                       <div 
                         style={{
                           position: 'absolute',
-                          bottom: 0,
-                          left: 0,
-                          right: 0,
-                          height: '62px',
-                          backgroundColor: '#ffffff',
-                          borderTop: '1px solid #e5e7eb',
+                          bottom: '16px',
+                          left: '16px',
+                          right: '16px',
+                          height: '64px',
+                          backgroundColor: 'rgba(255, 255, 255, 0.92)',
+                          backdropFilter: 'blur(20px)',
+                          borderRadius: '32px',
                           display: 'flex',
                           alignItems: 'center',
-                          justifyContent: 'space-between',
-                          padding: '0 32px',
+                          justifyContent: 'space-around',
+                          padding: '0 12px',
                           zIndex: 990,
-                          boxShadow: '0 -2px 10px rgba(0,0,0,0.05)'
+                          border: '1px solid rgba(255, 255, 255, 0.6)',
+                          boxShadow: '0 8px 32px rgba(0,0,0,0.12)'
                         }}
                       >
-                        {/* Home tab button */}
                         <button
                           type="button"
                           onClick={() => setTab('dashboard')}
@@ -2791,44 +2854,93 @@ export default function DriverApp({ isStandalone }) {
                             display: 'flex',
                             flexDirection: 'column',
                             alignItems: 'center',
-                            gap: '2px',
+                            gap: '4px',
                             cursor: 'pointer',
-                            color: '#000000'
+                            color: tab === 'dashboard' ? '#2563eb' : '#6b7280'
                           }}
                         >
-                          <span style={{ fontSize: '18px' }}>🏠</span>
-                          <span style={{ fontSize: '10px', fontWeight: 'bold' }}>Home</span>
+                          <span style={{ fontSize: '20px' }}>🗺️</span>
+                          <span style={{ fontSize: '9px', fontWeight: '800' }}>Radar</span>
                         </button>
 
-                        {/* Orders button */}
                         <button
                           type="button"
-                          onClick={() => setTab('earnings')}
+                          onClick={() => { setTab('earnings'); setEarningsSubTab('all'); }}
                           style={{
-                            backgroundColor: '#000000',
+                            background: 'none',
                             border: 'none',
-                            borderRadius: '9999px',
-                            padding: '8px 20px',
                             display: 'flex',
+                            flexDirection: 'column',
                             alignItems: 'center',
-                            gap: '6px',
+                            gap: '4px',
                             cursor: 'pointer',
-                            color: '#ffffff',
-                            boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                            color: tab === 'earnings' && earningsSubTab === 'all' ? '#2563eb' : '#6b7280'
                           }}
                         >
-                          <span style={{ fontSize: '12px', fontWeight: 'bold' }}>↓</span>
-                          <span style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase' }}>Orders</span>
+                          <span style={{ fontSize: '20px' }}>📊</span>
+                          <span style={{ fontSize: '9px', fontWeight: '800' }}>Earnings</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => { setTab('earnings'); setEarningsSubTab('wallet'); }}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '4px',
+                            cursor: 'pointer',
+                            color: tab === 'earnings' && earningsSubTab === 'wallet' ? '#2563eb' : '#6b7280'
+                          }}
+                        >
+                          <span style={{ fontSize: '20px' }}>💳</span>
+                          <span style={{ fontSize: '9px', fontWeight: '800' }}>Wallet</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setTab('garage')}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '4px',
+                            cursor: 'pointer',
+                            color: tab === 'garage' ? '#2563eb' : '#6b7280'
+                          }}
+                        >
+                          <span style={{ fontSize: '20px' }}>🔧</span>
+                          <span style={{ fontSize: '9px', fontWeight: '800' }}>Services</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setTab('disputes')}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '4px',
+                            cursor: 'pointer',
+                            color: tab === 'disputes' ? '#2563eb' : '#6b7280'
+                          }}
+                        >
+                          <span style={{ fontSize: '20px' }}>🎧</span>
+                          <span style={{ fontSize: '9px', fontWeight: '800' }}>Help</span>
                         </button>
                       </div>
                     </div>
                   )}
 
-                  {/* All sub-pages (earnings, disputes, garage, history, subscription) render with premium light layouts */}
-                  
                   {/* Earnings Tab (All Earnings & Wallet view) */}
                   {tab === 'earnings' && (
-                    <div style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, backgroundColor: '#f3f4f6', color: '#000000', display: 'flex', flexDirection: 'column', zIndex: 1000, fontFamily: 'sans-serif' }}>
+                    <div style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, backgroundColor: '#f9fafb', color: '#000000', display: 'flex', flexDirection: 'column', zIndex: 1000, fontFamily: 'sans-serif' }}>
                       {/* Earnings Header */}
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '56px', backgroundColor: '#ffffff', padding: '0 16px', borderBottom: '1px solid #e5e7eb', flexShrink: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -2839,7 +2951,7 @@ export default function DriverApp({ isStandalone }) {
                           >
                             ←
                           </button>
-                          <span style={{ fontSize: '16px', fontWeight: '800', color: '#000000' }}>Earnings</span>
+                          <span style={{ fontSize: '16px', fontWeight: '800', color: '#000000' }}>Earnings Overview</span>
                         </div>
                         <button
                           type="button"
@@ -2874,12 +2986,12 @@ export default function DriverApp({ isStandalone }) {
                             fontWeight: '800',
                             border: 'none',
                             background: 'none',
-                            color: earningsSubTab === 'all' ? '#1d4ed8' : '#4b5563',
-                            borderBottom: earningsSubTab === 'all' ? '3px solid #1d4ed8' : '3px solid transparent',
+                            color: earningsSubTab === 'all' ? '#2563eb' : '#4b5563',
+                            borderBottom: earningsSubTab === 'all' ? '3px solid #2563eb' : '3px solid transparent',
                             cursor: 'pointer'
                           }}
                         >
-                          All Earnings
+                          Earning Stats
                         </button>
                         <button
                           type="button"
@@ -2891,12 +3003,12 @@ export default function DriverApp({ isStandalone }) {
                             fontWeight: '800',
                             border: 'none',
                             background: 'none',
-                            color: earningsSubTab === 'wallet' ? '#1d4ed8' : '#4b5563',
-                            borderBottom: earningsSubTab === 'wallet' ? '3px solid #1d4ed8' : '3px solid transparent',
+                            color: earningsSubTab === 'wallet' ? '#2563eb' : '#4b5563',
+                            borderBottom: earningsSubTab === 'wallet' ? '3px solid #2563eb' : '3px solid transparent',
                             cursor: 'pointer'
                           }}
                         >
-                          Wallet
+                          Earning Wallet
                         </button>
                       </div>
 
@@ -2904,12 +3016,33 @@ export default function DriverApp({ isStandalone }) {
                       <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                         {earningsSubTab === 'all' ? (
                           <>
-                            {/* Today's Earnings card */}
-                            <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e5e7eb', padding: '20px', textAlign: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-                              <span style={{ fontSize: '11px', color: '#6b7280', fontWeight: 'bold', textTransform: 'uppercase', tracking: '0.5px' }}>Today's Earnings</span>
-                              <h2 style={{ fontSize: '32px', fontWeight: '900', color: '#111827', margin: '8px 0 0 0' }}>
+                            {/* Today's Earnings card - Blue Gradient */}
+                            <div style={{ 
+                              background: 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)', 
+                              borderRadius: '16px', 
+                              padding: '24px 20px', 
+                              textAlign: 'center', 
+                              boxShadow: '0 8px 24px rgba(37,99,235,0.2)',
+                              color: '#ffffff',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '6px'
+                            }}>
+                              <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.8)', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '1px' }}>Net Earnings Today</span>
+                              <h2 style={{ fontSize: '36px', fontWeight: '900', margin: 0, textShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
                                 ₹{currentDriver.earnings.daily.toFixed(0)}
                               </h2>
+                              <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginTop: '12px', borderTop: '1px solid rgba(255,255,255,0.15)', paddingTop: '12px' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                  <span style={{ fontSize: '9px', color: 'rgba(255,255,255,0.7)', fontWeight: 'bold' }}>Trips</span>
+                                  <span style={{ fontSize: '14px', fontWeight: '900' }}>8 Rides</span>
+                                </div>
+                                <div style={{ width: '1px', backgroundColor: 'rgba(255,255,255,0.15)' }}></div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                  <span style={{ fontSize: '9px', color: 'rgba(255,255,255,0.7)', fontWeight: 'bold' }}>Online Hrs</span>
+                                  <span style={{ fontSize: '14px', fontWeight: '900' }}>6.2 hrs</span>
+                                </div>
+                              </div>
                             </div>
 
                             {/* List options */}
@@ -2932,7 +3065,7 @@ export default function DriverApp({ isStandalone }) {
                               >
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                   <span style={{ fontSize: '18px' }}>📝</span>
-                                  <span style={{ fontSize: '12.5px', fontWeight: '800', color: '#1f2937' }}>All Orders - Order History</span>
+                                  <span style={{ fontSize: '13px', fontWeight: '800', color: '#1f2937' }}>All Orders & History logs</span>
                                 </div>
                                 <span style={{ color: '#9ca3af', fontSize: '14px', fontWeight: 'bold' }}>&gt;</span>
                               </button>
@@ -2955,19 +3088,19 @@ export default function DriverApp({ isStandalone }) {
                               >
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                   <span style={{ fontSize: '18px' }}>💳</span>
-                                  <span style={{ fontSize: '12.5px', fontWeight: '800', color: '#1f2937' }}>View Rate Card</span>
+                                  <span style={{ fontSize: '13px', fontWeight: '800', color: '#1f2937' }}>View Rate Card parameters</span>
                                 </div>
                                 <span style={{ color: '#9ca3af', fontSize: '14px', fontWeight: 'bold' }}>&gt;</span>
                               </button>
                             </div>
 
-                            {/* Black Choose Plan banner */}
+                            {/* Earning Target Banner */}
                             <div 
                               onClick={() => setTab('subscription')}
                               style={{
                                 backgroundColor: '#000000',
                                 borderRadius: '16px',
-                                padding: '20px 16px',
+                                padding: '16px 20px',
                                 color: '#ffffff',
                                 textAlign: 'left',
                                 display: 'flex',
@@ -2980,30 +3113,16 @@ export default function DriverApp({ isStandalone }) {
                               }}
                             >
                               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px', zIndex: 2 }}>
-                                <span style={{ fontSize: '15px', fontWeight: '900', letterSpacing: '0.5px' }}>Choose your</span>
-                                <span style={{ fontSize: '15px', fontWeight: '900', color: '#facc15' }}>earning plan</span>
-                                <span style={{ fontSize: '10px', color: '#ffffff', border: '1px solid #facc15', backgroundColor: 'rgba(250,204,21,0.2)', borderRadius: '4px', padding: '2px 8px', width: 'fit-content', marginTop: '8px', fontWeight: '800' }}>
-                                  View All Plans →
+                                <span style={{ fontSize: '14px', fontWeight: '900', letterSpacing: '0.5px' }}>Earning Subscription Plans</span>
+                                <span style={{ fontSize: '12px', color: '#facc15', fontWeight: '800' }}>Ride commission free today!</span>
+                                <span style={{ fontSize: '9px', color: '#ffffff', border: '1px solid #facc15', backgroundColor: 'rgba(250,204,21,0.2)', borderRadius: '4px', padding: '2px 8px', width: 'fit-content', marginTop: '6px', fontWeight: '800' }}>
+                                  Choose Earning Plan →
                                 </span>
                               </div>
-                              <div style={{
-                                backgroundColor: '#1d4ed8',
-                                color: '#ffffff',
-                                padding: '8px 16px',
-                                borderRadius: '8px',
-                                fontWeight: '900',
-                                fontSize: '16px',
-                                textTransform: 'uppercase',
-                                transform: 'rotate(-5deg)',
-                                border: '2px solid #facc15',
-                                boxShadow: '0 4px 10px rgba(0,0,0,0.3)',
-                                zIndex: 2
-                              }}>
-                                My Plan
-                              </div>
+                              <span style={{ fontSize: '32px', zIndex: 2 }}>🎁</span>
                             </div>
 
-                            {/* Interactive weekly bar chart */}
+                            {/* Weekly Trend Card */}
                             <div style={{ backgroundColor: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '16px', padding: '16px', textAlign: 'left', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
                               <span style={{ fontSize: '11px', color: '#4b5563', fontWeight: '800', display: 'block', marginBottom: '12px' }}>📊 Weekly Earnings Trend (₹)</span>
                               
@@ -3021,7 +3140,7 @@ export default function DriverApp({ isStandalone }) {
                                   const pctHeight = (d.amt / maxAmt) * 100;
                                   return (
                                     <div key={idx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
-                                      <span style={{ fontSize: '8px', color: '#1d4ed8', fontWeight: 'bold', fontFamily: 'monospace' }}>₹{d.amt}</span>
+                                      <span style={{ fontSize: '8px', color: '#2563eb', fontWeight: 'bold', fontFamily: 'monospace' }}>₹{d.amt}</span>
                                       <div 
                                         style={{
                                           height: `${Math.max(4, pctHeight * 0.5)}px`,
@@ -3041,39 +3160,85 @@ export default function DriverApp({ isStandalone }) {
                           </>
                         ) : (
                           <>
-                            {/* Low balance warning card */}
-                            <div style={{ backgroundColor: '#ffffff', border: '1px solid #fee2e2', borderRadius: '16px', padding: '20px', textAlign: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-                              <span style={{ fontSize: '11px', color: '#ef4444', fontWeight: '800', textTransform: 'uppercase', tracking: '0.5px' }}>Your balance is low, please recharge</span>
-                              <h2 style={{ fontSize: '32px', fontWeight: '900', color: '#dc2626', margin: '8px 0' }}>
-                                -₹25.38
-                              </h2>
+                            {/* Premium Metallic Gold Credit Card for Wallet */}
+                            <div style={{
+                              background: 'linear-gradient(135deg, #b45309 0%, #d97706 50%, #facc15 100%)',
+                              borderRadius: '20px',
+                              padding: '20px',
+                              color: '#ffffff',
+                              textAlign: 'left',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              justifyContent: 'space-between',
+                              height: '150px',
+                              boxShadow: '0 10px 25px rgba(217,119,6,0.25)',
+                              position: 'relative',
+                              overflow: 'hidden'
+                            }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', zIndex: 2 }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                  <span style={{ fontSize: '9px', color: 'rgba(255,255,255,0.7)', fontWeight: 'bold', letterSpacing: '1px', textTransform: 'uppercase' }}>JoldiGo Cash Card</span>
+                                  <span style={{ fontSize: '16px', fontWeight: '900' }}>{currentDriver.name}</span>
+                                </div>
+                                <span style={{ fontSize: '24px' }}>💳</span>
+                              </div>
+                              
+                              <div style={{ zIndex: 2 }}>
+                                <span style={{ fontSize: '9px', color: 'rgba(255,255,255,0.7)', fontWeight: 'bold' }}>Current Captain Balance</span>
+                                <h3 style={{ fontSize: '24px', fontWeight: '900', margin: '2px 0 0 0' }}>-₹25.38</h3>
+                              </div>
+
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', zIndex: 2 }}>
+                                <span style={{ fontSize: '10px', fontFamily: 'monospace', letterSpacing: '2px' }}>•••• •••• •••• 9811</span>
+                                <span style={{ fontSize: '9px', color: 'rgba(255,255,255,0.8)', fontWeight: 'bold', border: '1px solid rgba(255,255,255,0.4)', borderRadius: '4px', padding: '1px 6px' }}>Status: Expired</span>
+                              </div>
+                              {/* Glowing card graphic background details */}
+                              <div style={{ position: 'absolute', right: '-40px', bottom: '-40px', width: '120px', height: '120px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.06)', zIndex: 1 }}></div>
+                            </div>
+
+                            {/* Wallet Action Box */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                               <button
                                 type="button"
-                                onClick={() => {
-                                  alert("💳 Opening secure wallet payment gateway to top up Captain balance...");
-                                }}
+                                onClick={() => alert("💳 Opening secure wallet payment gateway to top up Captain balance...")}
                                 style={{
                                   backgroundColor: '#facc15',
                                   border: 'none',
-                                  borderRadius: '9999px',
-                                  width: '100%',
-                                  padding: '12px 0',
+                                  borderRadius: '12px',
+                                  padding: '14px 0',
                                   fontSize: '13px',
-                                  fontWeight: '800',
+                                  fontWeight: '900',
                                   color: '#000000',
                                   cursor: 'pointer',
-                                  marginTop: '8px',
-                                  boxShadow: '0 4px 6px rgba(0,0,0,0.05)'
+                                  boxShadow: '0 4px 12px rgba(250,204,21,0.2)'
                                 }}
                               >
-                                Recharge now
+                                Recharge Captain Card Now
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  await payoutDriver(currentDriver.id);
+                                  alert(`💸 Payout request submitted! Net earnings successfully transferred to your bank account.`);
+                                }}
+                                style={{
+                                  backgroundColor: '#000000',
+                                  border: 'none',
+                                  borderRadius: '12px',
+                                  padding: '14px 0',
+                                  fontSize: '13px',
+                                  fontWeight: '800',
+                                  color: '#ffffff',
+                                  cursor: 'pointer',
+                                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                                }}
+                              >
+                                Payout to Registered Bank
                               </button>
                             </div>
-                            <p style={{ fontSize: '10.5px', color: '#6b7280', margin: 0, textAlign: 'left', lineHeight: '1.4' }}>
-                              Money transfer renews every Monday! <span style={{ color: '#2563eb', cursor: 'pointer', fontWeight: 'bold' }}>Learn More</span>
-                            </p>
 
-                            {/* Refer and Earn card */}
+                            {/* Refer and Earn */}
                             <div style={{
                               backgroundColor: '#faf5ff',
                               borderRadius: '16px',
@@ -3087,40 +3252,9 @@ export default function DriverApp({ isStandalone }) {
                             }}>
                               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                                 <span style={{ fontSize: '11px', color: '#6b7280', fontWeight: 'bold' }}>Refer and Earn</span>
-                                <span style={{ fontSize: '16px', fontWeight: '900', color: '#6b21a8' }}>Up to ₹4500</span>
+                                <span style={{ fontSize: '15px', fontWeight: '900', color: '#6b21a8' }}>Up to ₹4500 per approval</span>
                               </div>
-                              <span style={{ fontSize: '36px' }}>💵</span>
-                            </div>
-
-                            {/* Payout withdraw option (from existing code) */}
-                            <div style={{ backgroundColor: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '16px', padding: '16px', textAlign: 'left', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <span style={{ fontSize: '11px', color: '#1f2937', fontWeight: '800' }}>🏦 Instant Wallet Payout</span>
-                                <span style={{ fontSize: '9px', color: '#10b981', fontWeight: '800', backgroundColor: '#d1fae5', padding: '2px 6px', borderRadius: '4px' }}>Instant</span>
-                              </div>
-                              <p style={{ fontSize: '10.5px', color: '#4b5563', margin: '8px 0', lineHeight: '1.4' }}>
-                                Withdraw your JoldiGo net earnings immediately to your bank account ({currentDriver.bankAccountNumber ? `Ending ${currentDriver.bankAccountNumber.slice(-4)}` : 'Pending'}).
-                              </p>
-                              <button
-                                type="button"
-                                onClick={async () => {
-                                  await payoutDriver(currentDriver.id);
-                                  alert(`💸 instant transfer completed! Payout successfully sent to your bank.`);
-                                }}
-                                style={{
-                                  backgroundColor: '#000000',
-                                  border: 'none',
-                                  borderRadius: '12px',
-                                  padding: '12px 0',
-                                  width: '100%',
-                                  color: '#ffffff',
-                                  fontWeight: '800',
-                                  fontSize: '11px',
-                                  cursor: 'pointer'
-                                }}
-                              >
-                                Payout to Bank Account
-                              </button>
+                              <span style={{ fontSize: '32px' }}>💵</span>
                             </div>
 
                             {/* Transaction history */}
@@ -3165,7 +3299,7 @@ export default function DriverApp({ isStandalone }) {
 
                   {/* Disputes Tab (Help & Support + Explore All Issues view) */}
                   {tab === 'disputes' && (
-                    <div style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, backgroundColor: '#f3f4f6', color: '#000000', display: 'flex', flexDirection: 'column', zIndex: 1000, fontFamily: 'sans-serif' }}>
+                    <div style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, backgroundColor: '#f9fafb', color: '#000000', display: 'flex', flexDirection: 'column', zIndex: 1000, fontFamily: 'sans-serif' }}>
                       {/* Custom Help Header */}
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '56px', backgroundColor: '#ffffff', padding: '0 16px', borderBottom: '1px solid #e5e7eb', flexShrink: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -3203,7 +3337,7 @@ export default function DriverApp({ isStandalone }) {
                             gap: '4px'
                           }}
                         >
-                          👤 Help
+                          👤 Emergency
                         </button>
                       </div>
 
@@ -3236,8 +3370,8 @@ export default function DriverApp({ isStandalone }) {
                             
                             <div style={{ backgroundColor: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px', textAlign: 'left', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <span style={{ fontSize: '13px', fontWeight: '800', color: '#1f2937' }}>Bike Boost</span>
-                                <span style={{ fontSize: '13px', fontWeight: '800', color: '#10b981' }}>₹0</span>
+                                <span style={{ fontSize: '13px', fontWeight: '800', color: '#1f2937' }}>Bike Boost (ID: jld_9801)</span>
+                                <span style={{ fontSize: '13px', fontWeight: '800', color: '#10b981' }}>₹140.00</span>
                               </div>
                               <span style={{ fontSize: '10px', color: '#6b7280', fontWeight: 'bold' }}>05 July 2026, 10:30 AM</span>
 
@@ -3248,13 +3382,13 @@ export default function DriverApp({ isStandalone }) {
                                 <div style={{ position: 'relative' }}>
                                   <div style={{ position: 'absolute', left: '-15px', top: '4px', width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10b981' }}></div>
                                   <p style={{ margin: 0, fontSize: '11px', color: '#4b5563', lineHeight: '1.4' }}>
-                                    302, Jodhbhim, Hatgacha, Newtown, Kolkata, West Bengal 700107, India
+                                    302, Jodhbhim, Hatgacha, Newtown, Kolkata, West Bengal 700107
                                   </p>
                                 </div>
                                 <div style={{ position: 'relative' }}>
                                   <div style={{ position: 'absolute', left: '-15px', top: '4px', width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#ef4444' }}></div>
                                   <p style={{ margin: 0, fontSize: '11px', color: '#4b5563', lineHeight: '1.4' }}>
-                                    Axis Mall, Major Arterial Road(South-East), Newtown, West Bengal, India
+                                    Axis Mall, Major Arterial Road(South-East), Newtown, West Bengal
                                   </p>
                                 </div>
                               </div>
@@ -3280,7 +3414,7 @@ export default function DriverApp({ isStandalone }) {
                                 boxSizing: 'border-box'
                               }}
                             >
-                              <span>View All Orders</span>
+                              <span>View All Ride Orders</span>
                               <span>&gt;</span>
                             </button>
                           </div>
@@ -3299,8 +3433,8 @@ export default function DriverApp({ isStandalone }) {
                             boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
                           }}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
-                              <span style={{ fontSize: '14px', fontWeight: '800', color: '#1f2937' }}>Need help?</span>
-                              <span style={{ fontSize: '11px', color: '#4b5563', lineHeight: '1.4' }}>Find answers to primary issues</span>
+                              <span style={{ fontSize: '14px', fontWeight: '800', color: '#1f2937' }}>Need immediate support?</span>
+                              <span style={{ fontSize: '11px', color: '#4b5563', lineHeight: '1.4' }}>Connect with local dispatch resolution desk</span>
                               <button
                                 type="button"
                                 onClick={() => {
@@ -3319,12 +3453,10 @@ export default function DriverApp({ isStandalone }) {
                                   marginTop: '6px'
                                 }}
                               >
-                                Get help
+                                Start Chat
                               </button>
                             </div>
-                            
-                            {/* Smiling helper agent avatar */}
-                            <div style={{ fontSize: '48px' }}>👨‍💼</div>
+                            <div style={{ fontSize: '42px' }}>👨‍💼</div>
                           </div>
 
                           {/* Two action cards */}
@@ -3346,7 +3478,7 @@ export default function DriverApp({ isStandalone }) {
                               }}
                             >
                               <span style={{ fontSize: '24px' }}>💬</span>
-                              <span style={{ fontSize: '12px', fontWeight: '800', color: '#1e3a8a' }}>Explore All Issues</span>
+                              <span style={{ fontSize: '12px', fontWeight: '800', color: '#1e3a8a' }}>Explore FAQ Issues</span>
                             </div>
 
                             <div 
@@ -3399,22 +3531,21 @@ export default function DriverApp({ isStandalone }) {
                         <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                           {[
                             { title: 'Nearby Demand Locations', icon: '📍' },
-                            { title: 'Earnings', icon: '💵' },
-                            { title: 'Account and Service Management', icon: '👤' },
-                            { title: 'App issues', icon: '📱' },
-                            { title: 'Emergency', icon: '⚠️' },
-                            { title: 'Accidental Insurance', icon: '🛡️' },
-                            { title: 'Getting Started', icon: '🚀' }
+                            { title: 'Earnings & Payments', icon: '💵' },
+                            { title: 'Account and Profile Update', icon: '👤' },
+                            { title: 'App & GPS satellite issues', icon: '📱' },
+                            { title: 'Helpline & Emergency', icon: '⚠️' },
+                            { title: 'Accidental Cover claims', icon: '🛡️' }
                           ].map((issue, idx) => (
                             <div
                               key={idx}
                               onClick={() => {
-                                if (issue.title === 'Earnings') {
+                                if (issue.title.includes('Earnings')) {
                                   setTab('earnings');
-                                } else if (issue.title === 'Account and Service Management') {
+                                } else if (issue.title.includes('Account')) {
                                   setTab('garage');
                                 } else {
-                                  alert(`ℹ️ Support Guide: Details on "${issue.title}" can be resolved via active JoldiGo local dispatch hubs.`);
+                                  alert(`ℹ️ Support Desk: Details on "${issue.title}" can be resolved via active JoldiGo local dispatch hubs.`);
                                 }
                               }}
                               style={{
@@ -3444,7 +3575,7 @@ export default function DriverApp({ isStandalone }) {
 
                   {/* Service Manager Tab (garage) */}
                   {tab === 'garage' && (
-                    <div style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, backgroundColor: '#f3f4f6', color: '#000000', display: 'flex', flexDirection: 'column', zIndex: 1000, fontFamily: 'sans-serif' }}>
+                    <div style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, backgroundColor: '#f9fafb', color: '#000000', display: 'flex', flexDirection: 'column', zIndex: 1000, fontFamily: 'sans-serif' }}>
                       {/* Service Manager Header */}
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '56px', backgroundColor: '#ffffff', padding: '0 16px', borderBottom: '1px solid #e5e7eb', flexShrink: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -3455,7 +3586,7 @@ export default function DriverApp({ isStandalone }) {
                           >
                             ←
                           </button>
-                          <span style={{ fontSize: '16px', fontWeight: '800', color: '#000000' }}>Service Manager</span>
+                          <span style={{ fontSize: '16px', fontWeight: '800', color: '#000000' }}>Service Setup</span>
                         </div>
                         <button
                           type="button"
@@ -3483,10 +3614,10 @@ export default function DriverApp({ isStandalone }) {
                         {/* Services List cards */}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                           {[
-                            { name: 'Bike Metro', active: true, avatar: '🚴‍♂️' },
-                            { name: 'Bike Boost', active: true, avatar: '⚡' },
-                            { name: 'Bike', active: true, avatar: '🛵' },
-                            { name: 'Parcel Delivery', active: true, avatar: '📦' }
+                            { name: 'Bike Metro Stream', active: true, avatar: '🚴‍♂️' },
+                            { name: 'Bike Boost Premium', active: true, avatar: '⚡' },
+                            { name: 'Regular Bike Cab', active: true, avatar: '🛵' },
+                            { name: 'Parcel Dispatch', active: true, avatar: '📦' }
                           ].map((s, idx) => (
                             <div
                               key={idx}
@@ -3531,12 +3662,12 @@ export default function DriverApp({ isStandalone }) {
                           padding: '16px',
                           display: 'flex',
                           alignItems: 'center',
-                          justifyContent: 'space-between',
+                          justifyStyle: 'space-between',
                           textAlign: 'left',
                           boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
                         }}>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', flex: 1 }}>
-                            <span style={{ fontSize: '13.5px', fontWeight: '900', color: '#111827' }}>JoldiGo Delivery captains</span>
+                            <span style={{ fontSize: '13.5px', fontWeight: '900', color: '#111827' }}>JoldiGo Delivery Captains</span>
                             <span style={{ fontSize: '13.5px', fontWeight: '900', color: '#111827', marginTop: '2px' }}>earn 40% extra daily !! 🎉</span>
                           </div>
                           <span style={{ fontSize: '32px' }}>🪙</span>
@@ -3545,8 +3676,8 @@ export default function DriverApp({ isStandalone }) {
                         {/* Start Delivery category actions */}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                           {[
-                            { name: 'Food Delivery', desc: 'Watch Video ▶', actionLabel: 'Start', avatar: '🍔' },
-                            { name: 'Grocery Delivery', desc: 'Courier packages', actionLabel: 'Start', avatar: '🛒' }
+                            { name: 'Food Delivery Stream', desc: 'Watch Setup Guide ▶', actionLabel: 'Configure', avatar: '🍔' },
+                            { name: 'Grocery Delivery Courier', desc: 'Accept local packages', actionLabel: 'Configure', avatar: '🛒' }
                           ].map((d, idx) => (
                             <div
                               key={idx}
@@ -3591,7 +3722,7 @@ export default function DriverApp({ isStandalone }) {
 
                         {/* Garage inputs for registration (from existing code) */}
                         <div style={{ backgroundColor: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '16px', padding: '16px', textAlign: 'left', marginTop: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-                          <span style={{ fontSize: '11px', color: '#6b7280', fontWeight: '800', display: 'block', marginBottom: '8px' }}>🚗 Register New Dispatch Vehicle</span>
+                          <span style={{ fontSize: '11px', color: '#6b7280', fontWeight: '800', display: 'block', marginBottom: '8px' }}>🚗 Registered Dispatch Vehicles</span>
                           {currentDriver.vehicles && currentDriver.vehicles.map(veh => (
                             <div key={veh.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #f3f4f6' }}>
                               <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
@@ -3610,7 +3741,7 @@ export default function DriverApp({ isStandalone }) {
 
                   {/* Ride History Tab */}
                   {tab === 'history' && (
-                    <div style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, backgroundColor: '#f3f4f6', color: '#000000', display: 'flex', flexDirection: 'column', zIndex: 1000, fontFamily: 'sans-serif' }}>
+                    <div style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, backgroundColor: '#f9fafb', color: '#000000', display: 'flex', flexDirection: 'column', zIndex: 1000, fontFamily: 'sans-serif' }}>
                       {/* History Header */}
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '56px', backgroundColor: '#ffffff', padding: '0 16px', borderBottom: '1px solid #e5e7eb', flexShrink: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -3621,7 +3752,7 @@ export default function DriverApp({ isStandalone }) {
                           >
                             ←
                           </button>
-                          <span style={{ fontSize: '16px', fontWeight: '800', color: '#000000' }}>Ride History</span>
+                          <span style={{ fontSize: '16px', fontWeight: '800', color: '#000000' }}>Ride History logs</span>
                         </div>
                         <button
                           type="button"
@@ -3687,7 +3818,7 @@ export default function DriverApp({ isStandalone }) {
 
                   {/* Incentives and More / Rewards Tab (subscription) */}
                   {tab === 'subscription' && (
-                    <div style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, backgroundColor: '#f3f4f6', color: '#000000', display: 'flex', flexDirection: 'column', zIndex: 1000, fontFamily: 'sans-serif' }}>
+                    <div style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, backgroundColor: '#f9fafb', color: '#000000', display: 'flex', flexDirection: 'column', zIndex: 1000, fontFamily: 'sans-serif' }}>
                       {/* Incentives Header */}
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '56px', backgroundColor: '#ffffff', padding: '0 16px', borderBottom: '1px solid #e5e7eb', flexShrink: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -3698,7 +3829,7 @@ export default function DriverApp({ isStandalone }) {
                           >
                             ←
                           </button>
-                          <span style={{ fontSize: '16px', fontWeight: '800', color: '#000000' }}>Incentives and More</span>
+                          <span style={{ fontSize: '16px', fontWeight: '800', color: '#000000' }}>Incentives & Rewards</span>
                         </div>
                         <button
                           type="button"
@@ -3742,8 +3873,8 @@ export default function DriverApp({ isStandalone }) {
                           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                             <span style={{ fontSize: '24px' }}>💵</span>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                              <span style={{ fontSize: '13px', fontWeight: '800', color: '#1f2937' }}>Incentives</span>
-                              <span style={{ fontSize: '10px', color: '#6b7280', fontWeight: 'bold' }}>Daily, Weekly, Bonus</span>
+                              <span style={{ fontSize: '13px', fontWeight: '800', color: '#1f2937' }}>Daily Incentive Milestones</span>
+                              <span style={{ fontSize: '10px', color: '#6b7280', fontWeight: 'bold' }}>Complete 5 rides to unlock ₹120</span>
                             </div>
                           </div>
                           <span style={{ color: '#9ca3af', fontSize: '14px', fontWeight: 'bold' }}>&gt;</span>
@@ -3753,7 +3884,7 @@ export default function DriverApp({ isStandalone }) {
                         <div style={{
                           backgroundColor: '#000000',
                           borderRadius: '16px',
-                          padding: '20px 16px',
+                          padding: '16px 20px',
                           color: '#ffffff',
                           textAlign: 'left',
                           display: 'flex',
@@ -3765,30 +3896,16 @@ export default function DriverApp({ isStandalone }) {
                           boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
                         }}>
                           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px', zIndex: 2 }}>
-                            <span style={{ fontSize: '15px', fontWeight: '900', letterSpacing: '0.5px' }}>Choose your</span>
-                            <span style={{ fontSize: '15px', fontWeight: '900', color: '#facc15' }}>earning plan</span>
-                            <span style={{ fontSize: '10px', color: '#ffffff', border: '1px solid #facc15', backgroundColor: 'rgba(250,204,21,0.2)', borderRadius: '4px', padding: '2px 8px', width: 'fit-content', marginTop: '8px', fontWeight: '800' }}>
+                            <span style={{ fontSize: '14px', fontWeight: '900', letterSpacing: '0.5px' }}>Choose your earning plan</span>
+                            <span style={{ fontSize: '12px', color: '#facc15', fontWeight: '800' }}>Flat commission plans available</span>
+                            <span style={{ fontSize: '9px', color: '#ffffff', border: '1px solid #facc15', backgroundColor: 'rgba(250,204,21,0.2)', borderRadius: '4px', padding: '2px 8px', width: 'fit-content', marginTop: '6px', fontWeight: '800' }}>
                               View All Plans →
                             </span>
                           </div>
-                          <div style={{
-                            backgroundColor: '#1d4ed8',
-                            color: '#ffffff',
-                            padding: '8px 16px',
-                            borderRadius: '8px',
-                            fontWeight: '900',
-                            fontSize: '16px',
-                            textTransform: 'uppercase',
-                            transform: 'rotate(-5deg)',
-                            border: '2px solid #facc15',
-                            boxShadow: '0 4px 10px rgba(0,0,0,0.3)',
-                            zIndex: 2
-                          }}>
-                            My Plan
-                          </div>
+                          <span style={{ fontSize: '32px', zIndex: 2 }}>⚡</span>
                         </div>
 
-                        <span style={{ fontSize: '12px', fontWeight: '800', color: '#1f2937', textAlign: 'left', marginTop: '4px' }}>Know how you get paid</span>
+                        <span style={{ fontSize: '12px', fontWeight: '800', color: '#1f2937', textAlign: 'left', marginTop: '4px' }}>Commission Settings</span>
 
                         {/* Subscription Tier Card */}
                         <div style={{
@@ -3820,10 +3937,10 @@ export default function DriverApp({ isStandalone }) {
                           </span>
 
                           <span style={{ fontSize: '14px', fontWeight: '900', color: '#1f2937', display: 'block', maxWidth: '160px' }}>
-                            Subscription Plans
+                            Zero Commission Plan
                           </span>
                           <span style={{ fontSize: '11px', color: '#4b5563', fontWeight: 'bold' }}>
-                            Ride at ₹0 Commission
+                            Base rate flat ₹0 commission on all dispatch streams
                           </span>
 
                           <button
@@ -3841,12 +3958,12 @@ export default function DriverApp({ isStandalone }) {
                               width: 'fit-content'
                             }}
                           >
-                            Subscribe Now →
+                            Subscribe Plan Now
                           </button>
                         </div>
 
                         {/* Rapido Rewards List */}
-                        <span style={{ fontSize: '12px', fontWeight: '800', color: '#1f2937', textAlign: 'left', marginTop: '8px' }}>JoldiGo Captain Rewards</span>
+                        <span style={{ fontSize: '12px', fontWeight: '800', color: '#1f2937', textAlign: 'left', marginTop: '8px' }}>Captain Rewards program</span>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                           {/* Health Insurance Card */}
                           <div style={{
@@ -3861,8 +3978,8 @@ export default function DriverApp({ isStandalone }) {
                             boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
                           }}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                              <span style={{ fontSize: '14px', fontWeight: '900', color: '#166534' }}>Health Insurance</span>
-                              <span style={{ fontSize: '10px', color: '#15803d', fontWeight: 'bold' }}>For you and your family</span>
+                              <span style={{ fontSize: '14px', fontWeight: '900', color: '#166534' }}>Health Insurance Cover</span>
+                              <span style={{ fontSize: '10px', color: '#15803d', fontWeight: 'bold' }}>🏥 Outward clinic cover up to ₹25,000</span>
                               <button
                                 type="button"
                                 onClick={() => alert("🏥 Health Insurance: Complete 20 rides weekly to get outward clinic cover of ₹25,000 for outpatient medical cover.")}
@@ -3880,10 +3997,10 @@ export default function DriverApp({ isStandalone }) {
                                   boxSizing: 'border-box'
                                 }}
                               >
-                                Know More
+                                View Details
                               </button>
                             </div>
-                            <span style={{ fontSize: '36px' }}>🧑‍⚕️</span>
+                            <span style={{ fontSize: '32px' }}>🧑‍⚕️</span>
                           </div>
 
                           {/* Accidental Insurance Card */}
@@ -3899,11 +4016,11 @@ export default function DriverApp({ isStandalone }) {
                             boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
                           }}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                              <span style={{ fontSize: '14px', fontWeight: '900', color: '#b45309' }}>Accidental Insurance</span>
-                              <span style={{ fontSize: '10px', color: '#d97706', fontWeight: 'bold' }}>Stay protected on ride</span>
+                              <span style={{ fontSize: '14px', fontWeight: '900', color: '#b45309' }}>Accidental Protection</span>
+                              <span style={{ fontSize: '10px', color: '#d97706', fontWeight: 'bold' }}>🏍️ ₹2,0,000 active accidental cover</span>
                               <button
                                 type="button"
-                                onClick={() => alert("🛡️ Accidental Cover: Active ₹2,0,000 accidental cover, details available on priority verification status.")}
+                                onClick={() => alert("🛡️ Accidental Cover: Active ₹2,00,000 accidental cover, details available on priority verification status.")}
                                 style={{
                                   backgroundColor: '#ffffff',
                                   border: '1px solid #e5e7eb',
@@ -3918,10 +4035,10 @@ export default function DriverApp({ isStandalone }) {
                                   boxSizing: 'border-box'
                                 }}
                               >
-                                Know More
+                                View Details
                               </button>
                             </div>
-                            <span style={{ fontSize: '36px' }}>🏍️</span>
+                            <span style={{ fontSize: '32px' }}>🏍️</span>
                           </div>
 
                           {/* Medicine Discount Card */}
@@ -3937,11 +4054,11 @@ export default function DriverApp({ isStandalone }) {
                             boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
                           }}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                              <span style={{ fontSize: '14px', fontWeight: '900', color: '#6b21a8' }}>Medicine Discount</span>
-                              <span style={{ fontSize: '10px', color: '#7e22ce', fontWeight: 'bold' }}>Up to 10% discount on medicines</span>
+                              <span style={{ fontSize: '14px', fontWeight: '900', color: '#6b21a8' }}>Medicine Cashbacks</span>
+                              <span style={{ fontSize: '10px', color: '#7e22ce', fontWeight: 'bold' }}>💊 Flat 10% off Apollo Pharmacy</span>
                               <button
                                 type="button"
-                                onClick={() => alert("💊 Medicine Discount: Show JoldiGo Partner ID Card at any Apollo Pharmacy outlet to get flat 10% discount.")}
+                                onClick={() => alert("💊 Medicine Discount: Show JoldiGo Captain ID Card at any Apollo Pharmacy outlet to get flat 10% discount.")}
                                 style={{
                                   backgroundColor: '#ffffff',
                                   border: '1px solid #e5e7eb',
@@ -3956,10 +4073,10 @@ export default function DriverApp({ isStandalone }) {
                                   boxSizing: 'border-box'
                                 }}
                               >
-                                Know More
+                                View Code
                               </button>
                             </div>
-                            <span style={{ fontSize: '36px' }}>💊</span>
+                            <span style={{ fontSize: '32px' }}>💊</span>
                           </div>
                         </div>
                       </div>
