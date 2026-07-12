@@ -110,18 +110,30 @@ const generateRoutePoints = (start, end, steps = 30) => {
   return points;
 };
 
-const getRouteCoordinates = async (start, end) => {
+const getRouteCoordinates = async (start, end, isWaterlogged = false) => {
+  let points = [];
   try {
     const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${start.lng},${start.lat};${end.lng},${end.lat}?overview=full&geometries=geojson`);
     const data = await res.json();
     if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
       const coords = data.routes[0].geometry.coordinates;
-      return coords.map(coord => ({ lat: coord[1], lng: coord[0] }));
+      points = coords.map(coord => ({ lat: coord[1], lng: coord[0] }));
     }
   } catch (err) {
     console.warn("OSRM routing API failed, falling back to straight-line interpolation.", err);
   }
-  return generateRoutePoints(start, end, 30);
+  if (points.length === 0) {
+    points = generateRoutePoints(start, end, 30);
+  }
+  if (isWaterlogged && points.length > 2) {
+    const midIdx = Math.floor(points.length / 2);
+    const midPoint = points[midIdx];
+    // Detour coordinates: deviating slightly outward to simulate navigating around standing water/floods
+    const detourPoint1 = { lat: midPoint.lat + 0.003, lng: midPoint.lng + 0.003 };
+    const detourPoint2 = { lat: midPoint.lat + 0.001, lng: midPoint.lng - 0.002 };
+    points.splice(midIdx, 1, detourPoint1, detourPoint2);
+  }
+  return points;
 };
 
 export const SimulatorProvider = ({ children }) => {
@@ -385,11 +397,14 @@ export const SimulatorProvider = ({ children }) => {
     const ratio = calculatedDemand / supply;
 
     let targetSurge = 1.0;
-    if (ratio > 1.0) {
-      targetSurge = parseFloat(Math.min(1.5, 1.0 + (ratio - 1.0) * 0.35).toFixed(2));
+    // Under night mode, there is a shortage of supply, so surge scales up by 1.25x
+    const nightFactor = isNightMode ? 1.25 : 1.0;
+    const modifiedRatio = ratio * nightFactor;
+    if (modifiedRatio > 1.0) {
+      targetSurge = parseFloat(Math.min(1.5, 1.0 + (modifiedRatio - 1.0) * 0.35).toFixed(2));
     }
     setDynamicSurgeMultiplier(targetSurge);
-  }, [drivers, activeRide, demandHotspots]);
+  }, [drivers, activeRide, demandHotspots, isNightMode]);
 
   // Web Audio Synth Cue
   const playSound = (type) => {
@@ -1239,7 +1254,7 @@ export const SimulatorProvider = ({ children }) => {
     const driver = drivers.find(d => d.id === driverId);
     if (!driver || !activeRide) return;
 
-    const pickupRoute = await getRouteCoordinates(driver.location, activeRide.pickup);
+    const pickupRoute = await getRouteCoordinates(driver.location, activeRide.pickup, settings.weather === 'waterlogged' || settings.weather === 'flooding');
 
     setActiveRide(prev => {
       if (!prev) return null;
@@ -1311,7 +1326,7 @@ export const SimulatorProvider = ({ children }) => {
       ws.send(JSON.stringify({ type: 'update_ride_status', rideId: activeRide.id, status: 'in_progress', passengerPhone: activeRide.passengerPhone }));
     }
 
-    const tripRoute = await getRouteCoordinates(activeRide.pickup, activeRide.dropoff);
+    const tripRoute = await getRouteCoordinates(activeRide.pickup, activeRide.dropoff, settings.weather === 'waterlogged' || settings.weather === 'flooding');
 
     setActiveRide(prev => {
       if (!prev) return null;
