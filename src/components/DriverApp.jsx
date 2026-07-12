@@ -146,6 +146,8 @@ export default function DriverApp({ isStandalone }) {
   const alert = (msg) => {
     setCustomAlert({ message: msg });
   };
+  const [showStayInPopover, setShowStayInPopover] = useState(false);
+  const [isGoltalaActive, setIsGoltalaActive] = useState(false);
 
   useEffect(() => {
     const currentDrv = drivers.find(d => d.id === selectedDriverId);
@@ -2618,10 +2620,13 @@ export default function DriverApp({ isStandalone }) {
                         <div className="w-full flex flex-col items-center gap-3">
                           
                           {/* Go To / Stay In Selector Pills */}
-                          <div className="flex gap-2 bg-black/40 p-1 rounded-full border border-white/5 w-fit">
+                          <div className="flex gap-2 bg-black/40 p-1 rounded-full border border-white/5 w-fit relative">
                             <button
                               type="button"
-                              onClick={() => setGoMode('go_to')}
+                              onClick={() => {
+                                setGoMode('go_to');
+                                setShowStayInPopover(false);
+                              }}
                               className={`px-3 py-1 rounded-full text-[10px] font-black uppercase cursor-pointer transition-all border-none ${
                                 goMode === 'go_to' 
                                   ? 'bg-white text-black' 
@@ -2632,7 +2637,10 @@ export default function DriverApp({ isStandalone }) {
                             </button>
                             <button
                               type="button"
-                              onClick={() => setGoMode('stay_in')}
+                              onClick={() => {
+                                setGoMode('stay_in');
+                                setShowStayInPopover(!showStayInPopover);
+                              }}
                               className={`px-3 py-1 rounded-full text-[10px] font-black uppercase cursor-pointer transition-all border-none ${
                                 goMode === 'stay_in' 
                                   ? 'bg-white text-black' 
@@ -2642,6 +2650,84 @@ export default function DriverApp({ isStandalone }) {
                               📌 Stay In
                             </button>
                           </div>
+
+                          {/* Stay In Area Popover Dialog */}
+                          {showStayInPopover && (
+                            <div 
+                              style={{
+                                position: 'absolute',
+                                bottom: '135px',
+                                zIndex: 1000,
+                                width: '220px',
+                                backgroundColor: '#fff',
+                                color: '#000',
+                                borderRadius: '16px',
+                                padding: '12px',
+                                boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '8px',
+                                border: '1px solid rgba(0,0,0,0.05)'
+                              }}
+                              className="animate-bounce-in text-center"
+                            >
+                              {/* Popover Arrow pointing down */}
+                              <div 
+                                style={{
+                                  position: 'absolute',
+                                  bottom: '-8px',
+                                  right: '35px',
+                                  width: '0',
+                                  height: '0',
+                                  borderLeft: '8px solid transparent',
+                                  borderRight: '8px solid transparent',
+                                  borderTop: '8px solid #fff'
+                                }}
+                              ></div>
+
+                              {/* Light blue header card */}
+                              <div 
+                                style={{
+                                  backgroundColor: '#e0f2fe',
+                                  borderRadius: '10px',
+                                  padding: '10px',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  alignItems: 'center',
+                                  gap: '4px'
+                                }}
+                              >
+                                <span style={{ fontSize: '20px' }}>🗺️</span>
+                                <h5 style={{ fontSize: '11px', margin: 0, fontWeight: '800', color: '#0369a1' }}>Stay In Area</h5>
+                                <p style={{ fontSize: '9px', margin: 0, color: '#0284c7', lineHeight: '1.2' }}>
+                                  Get orders within 3km from your current location
+                                </p>
+                              </div>
+
+                              {/* Goltala Switch Row */}
+                              <div 
+                                style={{
+                                  border: '1px solid rgba(0,0,0,0.1)',
+                                  borderRadius: '10px',
+                                  padding: '8px 10px',
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center'
+                                }}
+                              >
+                                <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#333' }}>Goltala</span>
+                                <label className="switch-toggle-label relative inline-flex items-center cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={isGoltalaActive}
+                                    onChange={() => setIsGoltalaActive(!isGoltalaActive)}
+                                    className="sr-only peer"
+                                  />
+                                  <div className="w-7 h-4 bg-gray-300 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-blue-500"></div>
+                                </label>
+                              </div>
+                            </div>
+                          )}
 
                           <div className="flex flex-col items-center gap-1 my-1">
                             <span className="text-[13px] font-black text-white">Searching for orders...</span>
