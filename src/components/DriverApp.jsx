@@ -126,6 +126,51 @@ export default function DriverApp({ isStandalone }) {
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = langCode || 'en-US';
+
+      // Load natural neural system voices dynamically
+      const voices = window.speechSynthesis.getVoices();
+      let selectedVoice = null;
+
+      if (voices && voices.length > 0) {
+        const langPrefix = (langCode || 'en').split('-')[0].toLowerCase();
+        const matchingLanguageVoices = voices.filter(v => v.lang.toLowerCase().startsWith(langPrefix));
+
+        if (matchingLanguageVoices.length > 0) {
+          // Prioritize high-quality natural sounding neural voices
+          selectedVoice = matchingLanguageVoices.find(v => 
+            v.name.toLowerCase().includes('google') || 
+            v.name.toLowerCase().includes('natural') || 
+            v.name.toLowerCase().includes('premium') || 
+            v.name.toLowerCase().includes('enhanced') || 
+            v.name.toLowerCase().includes('siri')
+          );
+
+          // Fallbacks for macOS
+          if (!selectedVoice) {
+            selectedVoice = matchingLanguageVoices.find(v => 
+              v.name.includes('Samantha') || 
+              v.name.includes('Daniel') || 
+              v.name.includes('Alex')
+            );
+          }
+
+          // Fallback to first matching language voice
+          if (!selectedVoice) {
+            selectedVoice = matchingLanguageVoices[0];
+          }
+        }
+      }
+
+      if (selectedVoice) {
+        utterance.voice = selectedVoice;
+        console.log(`[TTS Speech] Selected Voice: ${selectedVoice.name}`);
+      }
+
+      // Calm, clear cadence adjustments
+      utterance.rate = 0.95; 
+      utterance.pitch = 1.0;
+      utterance.volume = 1.0;
+
       console.log(`[TTS Speech] Speaking: "${text}" in ${utterance.lang}`);
       window.speechSynthesis.speak(utterance);
     } catch (e) {
@@ -442,7 +487,7 @@ export default function DriverApp({ isStandalone }) {
   useEffect(() => {
     if (simulatedSpeed > 50) {
       if (!lastSpokenSpeedingRef.current) {
-        speakText(`Warning: Speed limit exceeded! Your current speed is ${simulatedSpeed} kilometers per hour. Please slow down immediately for rider safety.`, 'en-US');
+        speakText(`Speed alert. Please slow down. Speed limit is 50 kilometers per hour.`, 'en-US');
         lastSpokenSpeedingRef.current = true;
         if (addLog) {
           addLog(`⚠️ Telemetry Alert: Captain ${currentDriver?.name} (${currentDriver?.vehicleType}) exceeded speed limit! Speed: ${simulatedSpeed} km/h (Limit: 50 km/h)`, 'warning');
