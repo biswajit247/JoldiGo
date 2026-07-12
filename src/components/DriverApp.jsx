@@ -2225,25 +2225,54 @@ export default function DriverApp({ isStandalone }) {
 
                 {/* Quick toggle settings button */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span className={`status-pill ${currentDriver.status === 'online' ? 'online' : 'offline'}`} style={{ fontSize: '9px', padding: '3px 8px', borderRadius: '12px', color: '#fff', backgroundColor: currentDriver.status === 'online' ? '#10b981' : '#6b7280' }}>
-                    {currentDriver.status.toUpperCase()}
-                  </span>
-                  <button 
-                    type="button"
-                    className="btn-status-toggle"
-                    onClick={() => toggleDriverStatus(currentDriver.id)}
-                    title="Toggle Status"
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}
-                  >
-                    <Power size={18} color={currentDriver.status === 'online' ? '#10b981' : '#9ca3af'} />
-                  </button>
+                  {currentDriver.status === 'online' ? (
+                    <button
+                      type="button"
+                      onClick={() => toggleDriverStatus(currentDriver.id)}
+                      style={{
+                        backgroundColor: '#10b981',
+                        border: 'none',
+                        borderRadius: '9999px',
+                        padding: '6px 14px',
+                        color: '#ffffff',
+                        fontSize: '11px',
+                        fontWeight: '900',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        boxShadow: '0 2px 10px rgba(16,185,129,0.3)',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      <span style={{ display: 'inline-block', width: '6px', height: '6px', backgroundColor: '#ffffff', borderRadius: '50%' }} className="radar-pulse"></span>
+                      ONLINE
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => toggleDriverStatus(currentDriver.id)}
+                      style={{
+                        backgroundColor: '#374151',
+                        border: 'none',
+                        borderRadius: '9999px',
+                        padding: '6px 14px',
+                        color: '#ffffff',
+                        fontSize: '11px',
+                        fontWeight: '900',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        boxShadow: '0 2px 10px rgba(55,65,81,0.3)',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      <span style={{ display: 'inline-block', width: '6px', height: '6px', backgroundColor: '#9ca3af', borderRadius: '50%' }}></span>
+                      OFFLINE
+                    </button>
+                  )}
+                  
                   <button
                     type="button"
                     onClick={() => setShowSettingsDrawer(true)}
@@ -2252,6 +2281,7 @@ export default function DriverApp({ isStandalone }) {
                       border: 'none',
                       fontSize: '18px',
                       cursor: 'pointer',
+                      padding: '4px',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center'
