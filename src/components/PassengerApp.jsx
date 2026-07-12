@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSimulator, KOLKATA_LOCATIONS, calculateDistance } from '../context/SimulatorContext';
+import TariffGuideModal from './TariffGuideModal';
+import TutorialTour from './TutorialTour';
 import { 
   MapPin, 
   Car, 
@@ -287,6 +289,13 @@ export default function PassengerApp({ isStandalone }) {
   const [showTopUpModal, setShowTopUpModal] = useState(false);
   const [topUpAmount, setTopUpAmount] = useState(500);
   const [topUpStep, setTopUpStep] = useState('select'); 
+  const [showTariffGuide, setShowTariffGuide] = useState(false); 
+  const [showTutorial, setShowTutorial] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('joldigo_tutorial_completed') !== 'true';
+    }
+    return false;
+  }); 
   const [topUpCardNumber, setTopUpCardNumber] = useState('');
   const [topUpCardExpiry, setTopUpCardExpiry] = useState('');
   const [topUpCardCvv, setTopUpCardCvv] = useState('');
@@ -2597,6 +2606,19 @@ export default function PassengerApp({ isStandalone }) {
               </div>
             </div>
 
+            <div className="border-t border-white/5 pt-3 mt-1 flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowTutorial(true);
+                  setShowSettingsDrawer(false);
+                }}
+                className="bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-[10px] py-2 rounded-lg cursor-pointer border-none uppercase transition-colors"
+              >
+                🎓 Replay Onboarding Tour
+              </button>
+            </div>
+
           </div>
         )}
         
@@ -2736,6 +2758,14 @@ export default function PassengerApp({ isStandalone }) {
                 </button>
 
                 <div className="flex gap-1">
+                  <button 
+                    className="header-icon-btn" 
+                    onClick={() => setShowTariffGuide(true)} 
+                    title="Tariff & Transparency Guide"
+                    style={{ backgroundColor: 'rgba(99,102,241,0.15)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.2)' }}
+                  >
+                    <span style={{ fontSize: '11px' }}>📜</span>
+                  </button>
                   <button 
                     className="header-icon-btn" 
                     onClick={() => setShowAiSupport(true)} 
@@ -3448,6 +3478,14 @@ export default function PassengerApp({ isStandalone }) {
 
           </div>
         </div>
+      )}
+
+      {showTariffGuide && (
+        <TariffGuideModal onClose={() => setShowTariffGuide(false)} />
+      )}
+
+      {showTutorial && (
+        <TutorialTour onClose={() => setShowTutorial(false)} />
       )}
 
       <div className="phone-home-bar"></div>

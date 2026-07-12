@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSimulator, calculateDistance, getServerEndpoints } from '../context/SimulatorContext';
+import TariffGuideModal from './TariffGuideModal';
 import { 
   ShieldAlert, 
   MapPin, 
@@ -116,8 +117,9 @@ export default function DriverApp({ isStandalone }) {
     enrollDriver,
     isNightMode,
     setIsNightMode,
-    simulationSpeed,
-    addLog
+    addLog,
+    playSound,
+    simulationSpeed
   } = useSimulator();
 
   const speakText = (text, langCode) => {
@@ -183,6 +185,7 @@ export default function DriverApp({ isStandalone }) {
   const [tab, setTab] = useState('dashboard');
   const [showSidebar, setShowSidebar] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [showTariffGuide, setShowTariffGuide] = useState(false);
   const [isOnRideBookingActive, setIsOnRideBookingActive] = useState(true);
   const [goMode, setGoMode] = useState('stay_in');
   const [showIdCard, setShowIdCard] = useState(false);
@@ -206,6 +209,7 @@ export default function DriverApp({ isStandalone }) {
       
       // If the destination doesn't match, filter it
       if (!dropoff.includes(target) && !target.includes(dropoff)) {
+        playSound('filter');
         addLog(`📍 [Go To Destination Filter] Filtered out ride offer to "${activeRide.dropoffName}" (not along route to ${goToDestination})`, 'warning');
         rejectRide();
         alert(`📍 [Destination Filter] Auto-filtered & rejected ride to "${activeRide.dropoffName}" (not along your route home to ${goToDestination}).`);
@@ -4452,6 +4456,7 @@ export default function DriverApp({ isStandalone }) {
                   { icon: '📁', label: 'Earnings', desc: 'Transfer Money to Bank, History', action: () => { setTab('earnings'); setShowSidebar(false); } },
                   { icon: '💵', label: 'Incentives and More', desc: 'Know how you get paid', action: () => { setTab('subscription'); setShowSidebar(false); } },
                   { icon: '🎁', label: 'Rewards', desc: 'Insurance and Discounts', action: () => { setTab('subscription'); setShowSidebar(false); } },
+                  { icon: '📜', label: 'Tariff Guide', desc: 'Pricing transparency policies', action: () => { setShowTariffGuide(true); setShowSidebar(false); } },
                   { icon: '🎛️', label: 'Service Manager', desc: 'Auto, Cab & Courier status', action: () => { setTab('garage'); setShowSidebar(false); } },
                   { icon: '🗺️', label: 'Demand Planner', desc: 'High Demand Areas & Hotspots', action: () => { alert("🗺️ Demand Hotspots highlighted in red rings on your standby screen."); setShowSidebar(false); } },
                   { icon: '🎧', label: 'Help', desc: 'Get support, Accident Insurance', action: () => { setTab('disputes'); setShowSidebar(false); } },
@@ -4776,6 +4781,10 @@ export default function DriverApp({ isStandalone }) {
             </button>
           </div>
         </div>
+      )}
+
+      {showTariffGuide && (
+        <TariffGuideModal onClose={() => setShowTariffGuide(false)} />
       )}
 
       <div className="phone-home-bar"></div>
