@@ -150,6 +150,23 @@ export default function DriverApp({ isStandalone }) {
   const [earningsSubTab, setEarningsSubTab] = useState('all');
   const [helpSubView, setHelpSubView] = useState('main');
   const [isGoltalaActive, setIsGoltalaActive] = useState(false);
+  const [isGoToActive, setIsGoToActive] = useState(false);
+  const [goToDestination, setGoToDestination] = useState('Howrah Station');
+  const [showGoToPopover, setShowGoToPopover] = useState(false);
+
+  useEffect(() => {
+    if (activeRide && activeRide.status === 'requested' && isGoToActive) {
+      const dropoff = (activeRide.dropoffName || "").toLowerCase();
+      const target = goToDestination.toLowerCase();
+      
+      // If the destination doesn't match, filter it
+      if (!dropoff.includes(target) && !target.includes(dropoff)) {
+        addLog(`📍 [Go To Destination Filter] Filtered out ride offer to "${activeRide.dropoffName}" (not along route to ${goToDestination})`, 'warning');
+        rejectRide();
+        alert(`📍 [Destination Filter] Auto-filtered & rejected ride to "${activeRide.dropoffName}" (not along your route home to ${goToDestination}).`);
+      }
+    }
+  }, [activeRide, isGoToActive, goToDestination]);
 
   useEffect(() => {
     const currentDrv = drivers.find(d => d.id === selectedDriverId);
@@ -2065,6 +2082,145 @@ export default function DriverApp({ isStandalone }) {
                     ☰
                   </button>
                   <span style={{ fontSize: '18px', fontWeight: '800', color: '#000000' }}>0 Orders</span>
+                </div>
+
+                {/* Destination Filter button */}
+                <div style={{ position: 'relative' }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowGoToPopover(!showGoToPopover)}
+                    style={{
+                      backgroundColor: isGoToActive ? '#e0f2fe' : '#f3f4f6',
+                      border: isGoToActive ? '1px solid #0284c7' : '1px solid #e5e7eb',
+                      borderRadius: '9999px',
+                      padding: '4px 12px',
+                      fontSize: '11px',
+                      fontWeight: '850',
+                      color: isGoToActive ? '#0284c7' : '#4b5563',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    📍 {isGoToActive ? `Go To: ${goToDestination.split(' ')[0]}` : 'Go To'}
+                  </button>
+
+                  {/* Go To Destination Filter Popover Dialog */}
+                  {showGoToPopover && (
+                    <div 
+                      style={{
+                        position: 'absolute',
+                        top: '36px',
+                        right: '-50px',
+                        zIndex: 1010,
+                        width: '260px',
+                        backgroundColor: '#ffffff',
+                        color: '#000000',
+                        borderRadius: '16px',
+                        padding: '16px',
+                        boxShadow: '0 10px 25px rgba(0,0,0,0.15)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '12px',
+                        border: '1px solid #e5e7eb',
+                        fontFamily: 'sans-serif'
+                      }}
+                      className="animate-bounce-in text-center"
+                    >
+                      {/* Arrow pointed up */}
+                      <div 
+                        style={{
+                          position: 'absolute',
+                          top: '-6px',
+                          right: '65px',
+                          width: '0',
+                          height: '0',
+                          borderLeft: '6px solid transparent',
+                          borderRight: '6px solid transparent',
+                          borderBottom: '6px solid #ffffff'
+                        }}
+                      ></div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', textAlign: 'left' }}>
+                        <span style={{ fontSize: '12px', fontWeight: '900', color: '#111827' }}>📍 Go Home / Destination Mode</span>
+                        <span style={{ fontSize: '10px', color: '#6b7280', lineHeight: '1.3' }}>Set a target destination. JoldiGo will only assign rides heading along your route.</span>
+                      </div>
+
+                      {/* Toggle Active Switch */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f3f4f6', paddingTop: '8px' }}>
+                        <span style={{ fontSize: '11px', fontWeight: '800', color: '#374151' }}>Enable Filter</span>
+                        <label className="switch-toggle-label relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={isGoToActive}
+                            onChange={() => setIsGoToActive(!isGoToActive)}
+                            className="sr-only peer"
+                          />
+                          <div className="w-7 h-4 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-blue-600"></div>
+                        </label>
+                      </div>
+
+                      {/* Custom input */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', textAlign: 'left' }}>
+                        <span style={{ fontSize: '9px', color: '#4b5563', fontWeight: 'bold', textTransform: 'uppercase' }}>Target Destination</span>
+                        <input
+                          type="text"
+                          value={goToDestination}
+                          onChange={(e) => {
+                            setGoToDestination(e.target.value);
+                            setIsGoToActive(true);
+                          }}
+                          placeholder="Enter station, mall or area"
+                          style={{
+                            width: '100%',
+                            padding: '8px 12px',
+                            border: '1px solid #d1d5db',
+                            borderRadius: '8px',
+                            fontSize: '11.5px',
+                            outline: 'none',
+                            boxSizing: 'border-box'
+                          }}
+                        />
+                      </div>
+
+                      {/* Presets Grid */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', textAlign: 'left' }}>
+                        <span style={{ fontSize: '9px', color: '#4b5563', fontWeight: 'bold', textTransform: 'uppercase' }}>Quick Presets</span>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                          {[
+                            { name: 'Howrah Station', label: 'Howrah' },
+                            { name: 'Salt Lake Sector V', label: 'Salt Lake' },
+                            { name: 'Newtown Axis Mall', label: 'Newtown' },
+                            { name: 'Sealdah Station', label: 'Sealdah' }
+                          ].map(preset => (
+                            <button
+                              key={preset.name}
+                              type="button"
+                              onClick={() => {
+                                setGoToDestination(preset.name);
+                                setIsGoToActive(true);
+                                setShowGoToPopover(false);
+                              }}
+                              style={{
+                                border: '1px solid #e5e7eb',
+                                backgroundColor: goToDestination === preset.name && isGoToActive ? '#e0f2fe' : '#ffffff',
+                                color: goToDestination === preset.name && isGoToActive ? '#0284c7' : '#374151',
+                                fontSize: '10px',
+                                fontWeight: '800',
+                                padding: '6px 0',
+                                borderRadius: '6px',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              🏠 {preset.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Quick toggle settings button */}
