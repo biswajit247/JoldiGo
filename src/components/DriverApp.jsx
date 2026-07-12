@@ -136,6 +136,12 @@ export default function DriverApp({ isStandalone }) {
   // Active Simulated Driver
   const [selectedDriverId, setSelectedDriverId] = useState('drv_1');
   const [tab, setTab] = useState('dashboard');
+  const [showSidebar, setShowSidebar] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
+  const [isOnRideBookingActive, setIsOnRideBookingActive] = useState(true);
+  const [goMode, setGoMode] = useState('stay_in');
+  const [showIdCard, setShowIdCard] = useState(false);
+  const [showIncentives, setShowIncentives] = useState(false);
 
   useEffect(() => {
     const currentDrv = drivers.find(d => d.id === selectedDriverId);
@@ -2018,8 +2024,27 @@ export default function DriverApp({ isStandalone }) {
             
             {!isNavActive && (
               <div className="driver-app-header card-glow">
-                <div className="driver-identity">
-                  <span className="drv-avatar-mini">{currentDriver.avatar}</span>
+                <div className="driver-identity" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowSidebar(true)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--color-primary)',
+                      fontSize: '16px',
+                      cursor: 'pointer',
+                      padding: '4px',
+                      marginRight: '2px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                    title="Sidebar Menu"
+                  >
+                    ☰
+                  </button>
+                  <span className="drv-avatar-mini" onClick={() => setShowSidebar(true)} style={{ cursor: 'pointer' }}>{currentDriver.avatar}</span>
                   <div className="drv-text-block">
                     <span className="drv-name-mini">{currentDriver.name}</span>
                     <span className="drv-vehicle-mini">{currentDriver.vehicleNumber}</span>
@@ -2584,19 +2609,61 @@ export default function DriverApp({ isStandalone }) {
                   </div>
 
                   {tab === 'dashboard' && (
-                    <div className="standby-dashboard-text py-2 flex flex-col items-center justify-center gap-2">
+                    <div className="standby-dashboard-text py-2 flex flex-col items-center justify-center gap-3">
                       {currentDriver.status === 'online' ? (
-                        <>
-                          <p className="status-tip text-green-400">👋 Online ({getVehicleLabel(currentDriver.vehicleType)}) & searching rides...</p>
+                        <div className="w-full flex flex-col items-center gap-3">
+                          
+                          {/* Go To / Stay In Selector Pills */}
+                          <div className="flex gap-2 bg-black/40 p-1 rounded-full border border-white/5 w-fit">
+                            <button
+                              type="button"
+                              onClick={() => setGoMode('go_to')}
+                              className={`px-3 py-1 rounded-full text-[10px] font-black uppercase cursor-pointer transition-all border-none ${
+                                goMode === 'go_to' 
+                                  ? 'bg-white text-black' 
+                                  : 'text-gray-400 bg-transparent'
+                              }`}
+                            >
+                              📍 Go To
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setGoMode('stay_in')}
+                              className={`px-3 py-1 rounded-full text-[10px] font-black uppercase cursor-pointer transition-all border-none ${
+                                goMode === 'stay_in' 
+                                  ? 'bg-white text-black' 
+                                  : 'text-gray-400 bg-transparent'
+                              }`}
+                            >
+                              📌 Stay In
+                            </button>
+                          </div>
+
+                          <div className="flex flex-col items-center gap-1 my-1">
+                            <span className="text-[13px] font-black text-white">Searching for orders...</span>
+                            <span className="text-[9px] text-gray-500">Current status: {goMode === 'stay_in' ? 'Local Standby' : 'Route Dispatcher'}</span>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (playSound) playSound();
+                              alert("↻ Checking GPS network satellite channels... No new bookings in immediate proximity.");
+                            }}
+                            className="flex items-center gap-1.5 px-4 py-1.5 rounded-full border border-blue-500/30 bg-blue-500/10 text-blue-400 font-extrabold text-[11px] hover:bg-blue-500/20 cursor-pointer transition-colors"
+                          >
+                            Refresh ↻
+                          </button>
+
                           <button
                             type="button"
                             onClick={() => isGpsActive ? stopGpsTracking() : startGpsTracking(currentDriver.id)}
-                            className={`px-3 py-1 rounded-full text-[10px] font-bold tracking-wide uppercase transition-all duration-300 flex items-center gap-1.5 ${isGpsActive ? 'bg-[#00ff66] text-black shadow-[0_0_10px_rgba(0,255,102,0.4)]' : 'bg-white/5 text-gray-300 border border-white/10 hover:bg-white/10'}`}
+                            className={`px-3 py-1 rounded-full text-[9px] font-bold tracking-wide uppercase transition-all duration-300 flex items-center gap-1.5 ${isGpsActive ? 'bg-[#00ff66] text-black shadow-[0_0_10px_rgba(0,255,102,0.4)]' : 'bg-white/5 text-gray-300 border border-white/10 hover:bg-white/10'}`}
                           >
                             <span>🛰️</span>
                             {isGpsActive ? 'Active GPS Tracking' : 'Use Real Device GPS'}
                           </button>
-                        </>
+                        </div>
                       ) : (
                         <p className="status-tip text-gray-400">💤 Go Online to start receiving ride alerts.</p>
                       )}
@@ -3228,6 +3295,368 @@ export default function DriverApp({ isStandalone }) {
                 </div>
               </button>
 
+            </div>
+          </div>
+        )}
+
+        {/* DRIVER SIDEBAR DRAWER MENU */}
+        {showSidebar && (
+          <div 
+            style={{
+              position: 'absolute',
+              top: 0,
+              bottom: 0,
+              left: 0,
+              width: '240px',
+              backgroundColor: '#111317',
+              borderRight: '1px solid rgba(255, 255, 255, 0.1)',
+              zIndex: 10000,
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              boxShadow: '4px 0 30px rgba(0, 0, 0, 0.8)'
+            }}
+            className="animate-slide-right text-left"
+          >
+            <div>
+              {/* Header card with gradient */}
+              <div 
+                style={{
+                  background: 'linear-gradient(135deg, #10b981, #047857)',
+                  padding: '20px 16px 16px 16px',
+                  color: '#fff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div className="drv-avatar-large" style={{ width: '40px', height: '40px', fontSize: '18px', backgroundColor: '#fff', color: '#000', borderRadius: '50%', display: 'flex', alignItems: 'center', justify: 'center', fontWeight: 'bold' }}>
+                    {currentDriver.avatar}
+                  </div>
+                  <div>
+                    <h4 style={{ fontSize: '13px', margin: 0, fontWeight: '800' }}>{currentDriver.name}</h4>
+                    <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.8)', display: 'flex', alignItems: 'center', gap: '2px' }}>
+                      4.6 ★
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowProfile(true);
+                    setShowSidebar(false);
+                  }}
+                  className="bg-white/20 hover:bg-white/30 border-none rounded-full px-3 py-1 text-[9px] font-black text-white cursor-pointer uppercase transition-colors"
+                >
+                  Profile &gt;
+                </button>
+              </div>
+
+              {/* Sidebar Menu Items */}
+              <div className="flex flex-col p-2 gap-1 mt-2">
+                {[
+                  { icon: '📁', label: 'Earnings', desc: 'Transfer Money to Bank, History', action: () => { setTab('earnings'); setShowSidebar(false); } },
+                  { icon: '💵', label: 'Incentives and More', desc: 'Know how you get paid', action: () => { setShowIncentives(true); setShowSidebar(false); } },
+                  { icon: '🎁', label: 'Rewards', desc: 'Insurance and Discounts', action: () => { alert("🛡️ Captain Rewards: You have active accident insurance cover of ₹2,00,000 & 10% discount on partner fuel refuels."); } },
+                  { icon: '🎛️', label: 'Service Manager', desc: 'Auto, Cab & Courier status', action: () => { alert("⚙️ Service Setup: Bookings enabled for " + getVehicleLabel(currentDriver.vehicleType) + "."); } },
+                  { icon: '🗺️', label: 'Demand Planner', desc: 'High Demand Areas & Hotspots', action: () => { alert("🗺️ Demand Hotspots highlighted in red rings on your standby screen."); } },
+                  { icon: '🎧', label: 'Help', desc: 'Get support, Accident Insurance', action: () => { alert("🎧 Emergency Helpline: Call 100 or tap the SOS button to alert local command center operators."); } },
+                ].map((item, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={item.action}
+                    className="flex items-center gap-3 p-2.5 rounded-lg bg-transparent hover:bg-white/5 border-none text-left cursor-pointer transition-colors"
+                    style={{ width: '100%' }}
+                  >
+                    <span style={{ fontSize: '15px' }}>{item.icon}</span>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#fff' }}>{item.label}</span>
+                      <span style={{ fontSize: '9px', color: '#777' }}>{item.desc}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Bottom Footer switch toggle */}
+            <div className="p-3 border-t border-white/5 flex flex-col gap-3">
+              {/* Refer friends card */}
+              <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-2 flex justify-between items-center">
+                <div className="flex flex-col text-left">
+                  <span className="text-[8px] text-emerald-400 font-bold uppercase">Refer Friends</span>
+                  <span className="text-[9px] text-gray-300">Earn ₹100 per driver approval</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => alert(`📋 Referral link copied! Share with prospective driver partners.`)}
+                  className="bg-emerald-500 hover:bg-emerald-400 text-black font-black text-[9px] px-2 py-0.5 rounded cursor-pointer border-none"
+                >
+                  Refer Now
+                </button>
+              </div>
+
+              {/* On-Ride Booking switch */}
+              <div className="flex justify-between items-center py-1">
+                <span className="text-[10px] font-black text-white uppercase tracking-wider">On-Ride Booking</span>
+                <label className="switch-toggle-label relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={isOnRideBookingActive}
+                    onChange={() => setIsOnRideBookingActive(!isOnRideBookingActive)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-7 h-4 bg-gray-600 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-emerald-500"></div>
+                </label>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowSidebar(false)}
+                className="w-full bg-white/5 hover:bg-white/10 text-white font-bold text-[10px] py-1.5 rounded cursor-pointer border-none uppercase"
+              >
+                Close Menu
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* DRIVER MY PROFILE FULLSCREEN OVERLAY */}
+        {showProfile && (
+          <div 
+            style={{
+              position: 'absolute',
+              top: 0,
+              bottom: 0,
+              left: 0,
+              right: 0,
+              backgroundColor: '#0c0e12',
+              zIndex: 10005,
+              display: 'flex',
+              flexDirection: 'column'
+            }}
+            className="animate-slide-up"
+          >
+            {/* Header */}
+            <div className="flex justify-between items-center p-3 border-b border-white/5 bg-black/40">
+              <button
+                type="button"
+                onClick={() => setShowProfile(false)}
+                style={{ background: 'none', border: 'none', color: '#fff', fontSize: '18px', cursor: 'pointer' }}
+              >
+                ←
+              </button>
+              <span className="text-xs font-black text-white uppercase tracking-wider">My Profile</span>
+              <button
+                type="button"
+                onClick={() => alert("Helpline: Dial 100 or check JoldiGo Help menu in sidebar.")}
+                className="bg-white/5 border border-white/10 rounded px-2.5 py-1 text-[9px] font-black text-white hover:bg-white/10 cursor-pointer"
+              >
+                Help
+              </button>
+            </div>
+
+            {/* Profile Content */}
+            <div style={{ flex: 1, overflowY: 'auto' }} className="text-center">
+              
+              {/* Orange Sunset Landscape Banner Card */}
+              <div 
+                style={{
+                  height: '140px',
+                  background: 'linear-gradient(to bottom, #d97706, #f59e0b, #fffbeb)',
+                  position: 'relative',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'flex-end',
+                  paddingBottom: '20px'
+                }}
+              >
+                {/* Silhouette graphics inside CSS */}
+                <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '40px', opacity: 0.1, background: 'radial-gradient(circle, #000 20%, transparent 80%)' }}></div>
+                
+                {/* Big Avatar */}
+                <div 
+                  style={{
+                    width: '64px',
+                    height: '64px',
+                    borderRadius: '50%',
+                    backgroundColor: '#fff',
+                    border: '3px solid #0c0e12',
+                    boxShadow: '0 4px 10px rgba(0,0,0,0.3)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '28px',
+                    fontWeight: 'bold',
+                    color: '#000',
+                    zIndex: 2,
+                    marginBottom: '-32px'
+                  }}
+                >
+                  {currentDriver.avatar}
+                </div>
+              </div>
+
+              {/* Name & Rating spacer */}
+              <div style={{ marginTop: '40px', padding: '0 16px' }}>
+                <h3 className="text-sm font-black text-white mb-1">{currentDriver.name}</h3>
+                <span className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Verified Partner</span>
+              </div>
+
+              {/* Stats Row */}
+              <div className="flex gap-4 justify-around py-4 px-6 mt-2 border-y border-white/5 bg-black/20">
+                <div className="flex flex-col items-center">
+                  <span className="text-[14px] font-black text-white flex items-center gap-1">4.6 ⭐</span>
+                  <span className="text-[8px] text-gray-500 uppercase tracking-wider font-bold">Rating</span>
+                </div>
+                <div className="flex flex-col items-center">
+                  <span className="text-[14px] font-black text-white">382</span>
+                  <span className="text-[8px] text-gray-500 uppercase tracking-wider font-bold">Orders</span>
+                </div>
+                <div className="flex flex-col items-center">
+                  <span className="text-[14px] font-black text-white">2.7 Yrs</span>
+                  <span className="text-[8px] text-gray-500 uppercase tracking-wider font-bold">Experience</span>
+                </div>
+              </div>
+
+              {/* Submenu Options List */}
+              <div className="p-3 flex flex-col gap-2 mt-2">
+                {[
+                  { icon: '👤', label: 'Profile Info', action: () => alert(`Name: ${currentDriver.name}\nVehicle: ${getVehicleLabel(currentDriver.vehicleType)} (${currentDriver.vehicleNumber})\nPhone: ${currentDriver.phone}`) },
+                  { icon: '🪪', label: 'JoldiGo ID Card', action: () => setShowIdCard(true) },
+                  { icon: '📁', label: 'Documents (RC, DL, PAN)', action: () => { setShowProfile(false); setTab('garage'); } },
+                  { icon: '🌐', label: 'Language Settings', action: () => alert("Language preference: Bengali & English quick messaging enabled.") },
+                ].map((option, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={option.action}
+                    className="flex justify-between items-center p-3 rounded-lg bg-black/40 border border-white/5 hover:border-white/10 cursor-pointer text-left transition-all"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm">{option.icon}</span>
+                      <span className="text-xs font-bold text-gray-300">{option.label}</span>
+                    </div>
+                    <span className="text-xs text-gray-600 font-bold">&gt;</span>
+                  </button>
+                ))}
+
+                {/* Logout Button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowProfile(false);
+                    alert("Logging out from active simulator session...");
+                  }}
+                  className="w-full bg-transparent hover:bg-white/5 border border-white/15 rounded-lg py-2.5 font-extrabold text-[10px] text-white uppercase tracking-wider mt-4 cursor-pointer transition-colors"
+                >
+                  Logout
+                </button>
+
+                {/* Delete Account */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (confirm("Are you sure you want to delete this simulated driver profile? This action will reset driver logs.")) {
+                      setShowProfile(false);
+                    }
+                  }}
+                  className="w-full bg-red-950/20 hover:bg-red-900/30 border border-red-500/20 rounded-lg py-2.5 font-black text-[10px] text-red-400 uppercase tracking-wider cursor-pointer transition-colors"
+                >
+                  Delete Account
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* JOLDIGO DIGITAL ID CARD MODAL */}
+        {showIdCard && (
+          <div className="admin-modal-overlay flex items-center justify-center p-4" style={{ zIndex: 11010 }}>
+            <div className="card-glow animate-bounce-in w-full max-w-[280px] rounded-2xl bg-[#0e1116] border border-white/10 p-5 text-center flex flex-col items-center gap-4">
+              <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest block">JoldiGo verified captain</span>
+              
+              <div 
+                style={{
+                  width: '100%',
+                  height: '150px',
+                  backgroundColor: '#1b1f26',
+                  borderRadius: '12px',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  position: 'relative'
+                }}
+              >
+                {/* ID badge circle */}
+                <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: '#fff', color: '#000', display: 'flex', alignItems: 'center', justify: 'center', fontSize: '20px', fontWeight: 'bold' }}>
+                  {currentDriver.avatar}
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[12px] font-extrabold text-white">{currentDriver.name}</span>
+                  <span className="text-[9px] text-gray-500 font-mono mt-0.5">{currentDriver.vehicleNumber}</span>
+                </div>
+                <div className="bg-emerald-500/10 text-emerald-400 text-[8px] font-bold px-2 py-0.5 rounded-full border border-emerald-500/20 uppercase tracking-wider absolute top-3 right-3">
+                  ✓ Verified
+                </div>
+              </div>
+
+              {/* Barcode representation */}
+              <div className="flex flex-col gap-1 w-full items-center">
+                <div style={{ height: '24px', width: '120px', background: 'repeating-linear-gradient(90deg, #fff 0px, #fff 2px, transparent 2px, transparent 6px, #fff 6px, #fff 7px)', opacity: 0.8 }}></div>
+                <span className="text-[8px] text-gray-500 font-mono">UID: {currentDriver.id.toUpperCase()}</span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowIdCard(false)}
+                className="bg-white/5 hover:bg-white/10 text-white font-bold text-[10px] px-4 py-1.5 rounded cursor-pointer border border-white/10 uppercase"
+              >
+                Close ID Card
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* INCENTIVES STRUCTURE TABLE MODAL */}
+        {showIncentives && (
+          <div className="admin-modal-overlay flex items-center justify-center p-4" style={{ zIndex: 11010 }}>
+            <div className="card-glow animate-bounce-in w-full max-w-[280px] rounded-2xl bg-[#0e1116] border border-white/10 p-5 text-center flex flex-col gap-3">
+              <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest block">💵 Incentives & Target Pay</span>
+              
+              <div className="flex flex-col gap-2 mt-2">
+                <div className="flex justify-between items-center text-xs border-b border-white/5 pb-1">
+                  <span className="text-gray-400">Target</span>
+                  <span className="text-white font-bold">Payout Bonus</span>
+                </div>
+                {[
+                  { target: '5 completed rides', bonus: '₹120' },
+                  { target: '10 completed rides', bonus: '₹300' },
+                  { target: '15 completed rides', bonus: '₹550' },
+                ].map((tier, idx) => (
+                  <div key={idx} className="flex justify-between items-center text-[10px] py-1 border-b border-white/5 text-left">
+                    <span className="text-gray-300">{tier.target}</span>
+                    <span className="text-emerald-400 font-bold">{tier.bonus}</span>
+                  </div>
+                ))}
+              </div>
+
+              <span className="text-[8px] text-gray-500 italic text-left block leading-snug mt-1">
+                * Note: Targets reset daily at midnight. Bonuses are credited instantly upon target match confirmation.
+              </span>
+
+              <button
+                type="button"
+                onClick={() => setShowIncentives(false)}
+                className="bg-white/5 hover:bg-white/10 text-white font-bold text-[10px] py-1.5 rounded cursor-pointer border border-white/10 uppercase mt-2"
+              >
+                Close
+              </button>
             </div>
           </div>
         )}
