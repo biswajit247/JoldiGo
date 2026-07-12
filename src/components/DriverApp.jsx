@@ -142,6 +142,10 @@ export default function DriverApp({ isStandalone }) {
   const [goMode, setGoMode] = useState('stay_in');
   const [showIdCard, setShowIdCard] = useState(false);
   const [showIncentives, setShowIncentives] = useState(false);
+  const [customAlert, setCustomAlert] = useState(null);
+  const alert = (msg) => {
+    setCustomAlert({ message: msg });
+  };
 
   useEffect(() => {
     const currentDrv = drivers.find(d => d.id === selectedDriverId);
@@ -3665,6 +3669,25 @@ export default function DriverApp({ isStandalone }) {
 
       {/* Dynamic Calling Simulator Overlay */}
       {renderCallOverlay()}
+
+      {/* Custom Alert Overlay */}
+      {customAlert && (
+        <div className="admin-modal-overlay flex items-center justify-center p-4" style={{ zIndex: 11050 }}>
+          <div className="card-glow animate-bounce-in w-full max-w-[260px] rounded-2xl bg-[#0c0e12] border border-white/10 p-5 text-center flex flex-col items-center gap-3">
+            <div className="w-10 h-10 bg-amber-500/20 text-amber-400 rounded-full flex items-center justify-center text-base border border-amber-500/30">
+              🔔
+            </div>
+            <p className="text-[11px] text-gray-200 leading-snug font-medium whitespace-pre-line">{customAlert.message}</p>
+            <button
+              type="button"
+              onClick={() => setCustomAlert(null)}
+              className="w-full bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-[10px] py-1.5 rounded cursor-pointer border-none uppercase transition-colors mt-1"
+            >
+              Okay
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="phone-home-bar"></div>
     </div>
