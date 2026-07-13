@@ -29,13 +29,21 @@ export default function TutorialTour({ onClose }) {
     if (step < steps.length) {
       setStep(step + 1);
     } else {
-      localStorage.setItem('joldigo_tutorial_completed', 'true');
+      try {
+        localStorage.setItem('joldigo_tutorial_completed', 'true');
+      } catch (e) {
+        console.warn("Storage write blocked:", e);
+      }
       if (onClose) onClose();
     }
   };
 
   const handleSkip = () => {
-    localStorage.setItem('joldigo_tutorial_completed', 'true');
+    try {
+      localStorage.setItem('joldigo_tutorial_completed', 'true');
+    } catch (e) {
+      console.warn("Storage write blocked:", e);
+    }
     if (onClose) onClose();
   };
 

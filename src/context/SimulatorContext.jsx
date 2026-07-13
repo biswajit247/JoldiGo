@@ -42,14 +42,18 @@ const CHAT_TRANSLATIONS = {
 export const getServerEndpoints = () => {
   let api = 'https://joldigo-backend.onrender.com';
   if (typeof window !== 'undefined') {
-    let saved = localStorage.getItem('joldigo_server_url');
-    if (saved) {
-      api = saved;
-    } else {
-      const isCapacitor = typeof window !== 'undefined' && !!window.Capacitor;
-      if (!isCapacitor && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
-        api = 'http://localhost:5001';
+    try {
+      let saved = localStorage.getItem('joldigo_server_url');
+      if (saved) {
+        api = saved;
+      } else {
+        const isCapacitor = typeof window !== 'undefined' && !!window.Capacitor;
+        if (!isCapacitor && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+          api = 'http://localhost:5001';
+        }
       }
+    } catch (e) {
+      console.warn("Storage access blocked:", e);
     }
   }
   

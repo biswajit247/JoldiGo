@@ -292,7 +292,12 @@ export default function PassengerApp({ isStandalone }) {
   const [showTariffGuide, setShowTariffGuide] = useState(false); 
   const [showTutorial, setShowTutorial] = useState(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('joldigo_tutorial_completed') !== 'true';
+      try {
+        return localStorage.getItem('joldigo_tutorial_completed') !== 'true';
+      } catch (e) {
+        console.warn("Storage access blocked:", e);
+        return false;
+      }
     }
     return false;
   }); 

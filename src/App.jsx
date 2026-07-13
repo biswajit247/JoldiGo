@@ -83,10 +83,12 @@ function App() {
   const [showNativeSelector, setShowNativeSelector] = useState(false);
   const [serverUrlInput, setServerUrlInput] = useState(() => {
     if (typeof window !== 'undefined') {
-      let saved = localStorage.getItem('joldigo_server_url');
-      if (saved) {
-        return saved;
-      }
+      try {
+        let saved = localStorage.getItem('joldigo_server_url');
+        if (saved) {
+          return saved;
+        }
+      } catch (e) {}
       const isCapacitor = !!window.Capacitor;
       if (!isCapacitor && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
         return 'http://localhost:5001';
@@ -116,7 +118,10 @@ function App() {
           setViewMode(path);
         } else if (isNative) {
           // If native, check if app persona is locked in localStorage
-          const savedMode = localStorage.getItem('joldigo_app_mode');
+          let savedMode = null;
+          try {
+            savedMode = localStorage.getItem('joldigo_app_mode');
+          } catch (e) {}
           if (savedMode && ['passenger', 'driver', 'admin'].includes(savedMode)) {
             setIsStandalone(true);
             setViewMode(savedMode);
@@ -153,15 +158,19 @@ function App() {
   }, [viewMode, isStandalone]);
 
   const selectNativePersona = (mode) => {
-    localStorage.setItem('joldigo_app_mode', mode);
-    localStorage.setItem('joldigo_server_url', serverUrlInput);
+    try {
+      localStorage.setItem('joldigo_app_mode', mode);
+      localStorage.setItem('joldigo_server_url', serverUrlInput);
+    } catch (e) {}
     setIsStandalone(true);
     setViewMode(mode);
     setShowNativeSelector(false);
   };
 
   const resetNativePersona = () => {
-    localStorage.removeItem('joldigo_app_mode');
+    try {
+      localStorage.removeItem('joldigo_app_mode');
+    } catch (e) {}
     window.location.reload();
   };
 
@@ -300,7 +309,9 @@ function App() {
                   value={serverUrlInput} 
                   onChange={(e) => {
                     setServerUrlInput(e.target.value);
-                    localStorage.setItem('joldigo_server_url', e.target.value);
+                    try {
+                      localStorage.setItem('joldigo_server_url', e.target.value);
+                    } catch (err) {}
                   }} 
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
@@ -309,7 +320,10 @@ function App() {
                   }}
                   onBlur={() => {
                     // Automatically reload and apply if changed
-                    const saved = localStorage.getItem('joldigo_server_url') || '';
+                    let saved = '';
+                    try {
+                      saved = localStorage.getItem('joldigo_server_url') || '';
+                    } catch (err) {}
                     if (saved.trim() !== '') {
                       window.location.reload();
                     }

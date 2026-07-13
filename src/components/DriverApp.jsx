@@ -929,10 +929,15 @@ export default function DriverApp({ isStandalone }) {
         
         <button
           onClick={() => {
-            const currentUrl = localStorage.getItem('joldigo_server_url') || 'https://joldigo-backend.onrender.com';
+            let currentUrl = 'https://joldigo-backend.onrender.com';
+            try {
+              currentUrl = localStorage.getItem('joldigo_server_url') || 'https://joldigo-backend.onrender.com';
+            } catch (e) {}
             const newUrl = window.prompt("Enter JoldiGo Server URL:", currentUrl);
             if (newUrl !== null) {
-              localStorage.setItem('joldigo_server_url', newUrl.trim());
+              try {
+                localStorage.setItem('joldigo_server_url', newUrl.trim());
+              } catch (e) {}
               window.location.reload();
             }
           }}
