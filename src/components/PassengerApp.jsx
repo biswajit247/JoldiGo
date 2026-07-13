@@ -1106,7 +1106,7 @@ export default function PassengerApp({ isStandalone }) {
   const renderPanelOverlay = () => {
     if (!activeRide) {
       return (
-        <div className="passenger-booking-panel card-glow animate-slide-up" style={{ maxHeight: '520px', overflowY: 'auto' }}>
+        <div className="passenger-booking-panel card-glow animate-slide-up" style={{ maxHeight: '82vh', display: 'flex', flexDirection: 'column', paddingBottom: '16px' }}>
           <div className="panel-handle"></div>
           
           <h3 className="panel-title">Where to?</h3>
@@ -1217,8 +1217,11 @@ export default function PassengerApp({ isStandalone }) {
 
           <div className="divider-h mt-3"></div>
 
-          {/* Vehicle Selection Cards */}
-          <div className="vehicle-selector">
+          {/* Start Scrollable middle body container */}
+          <div style={{ flex: 1, overflowY: 'auto', paddingRight: '2px', marginTop: '4px', WebkitOverflowScrolling: 'touch' }} className="custom-scroll">
+            
+            {/* Vehicle Selection Cards */}
+            <div className="vehicle-selector">
             {/* 1. Bike */}
             <button 
               className={`vehicle-card ${vehicleType === 'bike' ? 'selected' : ''} ${bikeMetrics.totalFare === 0 ? 'opacity-40 cursor-not-allowed' : ''}`}
@@ -1471,9 +1474,11 @@ export default function PassengerApp({ isStandalone }) {
               </button>
             </div>
           )}
+          </div>
+          {/* End Scrollable middle body container */}
 
           <button 
-            className="btn-primary full-width mt-4 animate-pulse-btn" 
+            className="btn-primary full-width mt-3 animate-pulse-btn" 
             onClick={handleBook}
             disabled={paymentMethod === 'wallet' && passengerWalletBalance < Math.max(20, metrics.totalFare - discount)}
             style={{ opacity: (paymentMethod === 'wallet' && passengerWalletBalance < Math.max(20, metrics.totalFare - discount)) ? 0.5 : 1 }}
