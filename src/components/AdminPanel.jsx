@@ -258,12 +258,13 @@ export default function AdminPanel() {
       google_roadmap: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
       google_satellite: 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
       voyager: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-      dark_navigation: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+      dark_navigation: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+      openstreetmap: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
     };
 
-    const tileLayer = L.tileLayer(MAP_TILE_URLS[mapStyle] || MAP_TILE_URLS.dark_navigation, {
+    const tileLayer = L.tileLayer(MAP_TILE_URLS[mapStyle] || MAP_TILE_URLS.openstreetmap, {
       maxZoom: 19,
-      attribution: mapStyle.startsWith('google') ? '&copy; Google Maps' : '&copy; CartoDB/Mapbox'
+      attribution: (mapStyle || '').startsWith('google') ? '&copy; Google Maps' : '&copy; OpenStreetMap'
     }).addTo(map);
 
     tileLayerRef.current = tileLayer;
@@ -354,13 +355,15 @@ export default function AdminPanel() {
       google_roadmap: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
       google_satellite: 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
       voyager: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-      dark_navigation: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+      dark_navigation: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+      openstreetmap: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
     };
+    const targetUrl = MAP_TILE_URLS[mapStyle] || MAP_TILE_URLS.openstreetmap;
     if (tileLayerRef.current) {
-      tileLayerRef.current.setUrl(MAP_TILE_URLS[mapStyle]);
+      tileLayerRef.current.setUrl(targetUrl);
     }
     if (geofenceTileLayerRef.current) {
-      geofenceTileLayerRef.current.setUrl(MAP_TILE_URLS[mapStyle]);
+      geofenceTileLayerRef.current.setUrl(targetUrl);
     }
   }, [mapStyle]);
 
@@ -378,12 +381,13 @@ export default function AdminPanel() {
       google_roadmap: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
       google_satellite: 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
       voyager: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-      dark_navigation: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+      dark_navigation: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+      openstreetmap: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
     };
 
-    const tileLayer = L.tileLayer(MAP_TILE_URLS[mapStyle] || MAP_TILE_URLS.dark_navigation, {
+    const tileLayer = L.tileLayer(MAP_TILE_URLS[mapStyle] || MAP_TILE_URLS.openstreetmap, {
       maxZoom: 19,
-      attribution: mapStyle.startsWith('google') ? '&copy; Google Maps' : '&copy; CartoDB/Mapbox'
+      attribution: (mapStyle || '').startsWith('google') ? '&copy; Google Maps' : '&copy; OpenStreetMap'
     }).addTo(map);
 
     geofenceTileLayerRef.current = tileLayer;
