@@ -18,7 +18,9 @@ import {
   Volume2,
   FileSpreadsheet,
   MessageSquare,
-  Send
+  Send,
+  Mic,
+  Grid
 } from 'lucide-react';
 import L from 'leaflet';
 
@@ -87,6 +89,7 @@ export default function DriverApp({ isStandalone }) {
     disputes,
     chatMessages,
     sendChatMessage,
+    getChatTranslation,
     toggleDriverStatus,
     uploadDriverDocs,
     payoutDriver,
@@ -105,6 +108,7 @@ export default function DriverApp({ isStandalone }) {
     isGpsActive,
     demandHotspots,
     geofencingZones,
+    blockages,
     mapStyle,
     setMapStyle,
     callState,
@@ -183,6 +187,9 @@ export default function DriverApp({ isStandalone }) {
   // Active Simulated Driver
   const [selectedDriverId, setSelectedDriverId] = useState('drv_1');
   const [tab, setTab] = useState('dashboard');
+  const [callMuted, setCallMuted] = useState(false);
+  const [callSpeaker, setCallSpeaker] = useState(false);
+  const [showCallDialpad, setShowCallDialpad] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [showTariffGuide, setShowTariffGuide] = useState(false);
@@ -218,11 +225,10 @@ export default function DriverApp({ isStandalone }) {
   }, [activeRide, isGoToActive, goToDestination]);
 
   useEffect(() => {
-    const currentDrv = drivers.find(d => d.id === selectedDriverId);
-    if (currentDrv && currentDrv.status === 'online') {
+    if (selectedDriverId) {
       connectDriverSocket(selectedDriverId);
     }
-  }, [selectedDriverId, drivers]);
+  }, [selectedDriverId]);
   
   // 6-Step Onboarding Inputs
   const [isEnrolling, setIsEnrolling] = useState(false);
@@ -459,34 +465,47 @@ export default function DriverApp({ isStandalone }) {
     }
   };
 
-  const currentDriver = drivers.find((d) => d.id === selectedDriverId) || drivers[0];
+  const currentDriver = drivers.find((d) => d.id === selectedDriverId) || drivers[0] || {
+    id: selectedDriverId || 'drv_1',
+    name: 'JoldiGo Driver',
+    phone: '',
+    verificationStatus: 'pending',
+    documentStatuses: {},
+    earnings: { daily: 0, weekly: 0 },
+    location: { lat: 22.5726, lng: 88.3639 },
+    avatar: '👨‍✈️',
+    status: 'offline',
+    vehicleType: 'car',
+    vehicleNumber: 'WB 02 JB 1234',
+    rating: 4.8
+  };
 
   // Chat Panel State
   const [showChat, setShowChat] = useState(false);
   const [chatInputText, setChatInputText] = useState('');
   const [simulatedSpeed, setSimulatedSpeed] = useState(0);
+  const [driverLang, setDriverLang] = useState('bn');
+  const [passengerLang, setPassengerLang] = useState('en');
+
+  // Voice Co-Pilot States
+  const [isCoPilotEnabled, setIsCoPilotEnabled] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [lastTranscript, setLastTranscript] = useState('');
+  const [recognizedCommand, setRecognizedCommand] = useState('');
+  const coPilotActiveRef = useRef(false);
 
   const isNavActive = activeRide && activeRide.driverId === currentDriver.id && (activeRide.status === 'accepted' || activeRide.status === 'arrived' || activeRide.status === 'in_progress');
 
   const lastSpokenSpeedingRef = useRef(false);
 
   useEffect(() => {
-    if (!isNavActive || activeRide?.status === 'arrived') {
+    if (isNavActive && activeRide && activeRide.speed !== undefined) {
+      setSimulatedSpeed(activeRide.speed);
+    } else {
       setSimulatedSpeed(0);
       lastSpokenSpeedingRef.current = false;
-      return;
     }
-    setSimulatedSpeed(Math.floor(35 + Math.random() * 10));
-    const interval = setInterval(() => {
-      // 85% chance of normal speed, 15% chance of speeding spike
-      const isSpeedingSpike = Math.random() < 0.15;
-      const nextSpeed = isSpeedingSpike 
-        ? Math.floor(54 + Math.random() * 8) 
-        : Math.floor(32 + Math.random() * 14);
-      setSimulatedSpeed(nextSpeed);
-    }, 2000);
-    return () => clearInterval(interval);
-  }, [isNavActive, activeRide?.status]);
+  }, [isNavActive, activeRide?.speed]);
 
   useEffect(() => {
     if (simulatedSpeed > 50) {
@@ -501,6 +520,219 @@ export default function DriverApp({ isStandalone }) {
       lastSpokenSpeedingRef.current = false;
     }
   }, [simulatedSpeed, currentDriver, addLog]);
+
+  // Voice Co-Pilot Core Implementation
+  const activeRideRef = useRef(activeRide);
+  const currentDriverRef = useRef(currentDriver);
+  const driverLangRef = useRef(driverLang);
+
+  useEffect(() => {
+    activeRideRef.current = activeRide;
+    currentDriverRef.current = currentDriver;
+    driverLangRef.current = driverLang;
+  }, [activeRide, currentDriver, driverLang]);
+
+  const matchVoiceCommand = (transcript) => {
+    const t = transcript.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g,"").toLowerCase();
+    
+    // 1. ACCEPT commands
+    const acceptWords = [
+      'accept', 'accept ride', 'accept offer', 'yes', 'ok', 'okay',
+      'হ্যাঁ', 'হ্যা', 'হাঁ', 'গ্রহণ করুন', 'মঞ্জুর',
+      'हाँ', 'हा', 'हां', 'स्वीकार', 'ओके'
+    ];
+    if (acceptWords.some(w => t.includes(w))) return 'accept';
+
+    // 2. REJECT/DECLINE commands
+    const rejectWords = [
+      'reject', 'decline', 'no', 'cancel',
+      'না', 'বাতিল', 'প্রত্যাখ্যান',
+      'ना', 'नही', 'अस्वीकार', 'कैंसिल'
+    ];
+    if (rejectWords.some(w => t.includes(w))) return 'reject';
+
+    // 3. ARRIVED commands
+    const arrivedWords = [
+      'arrived', 'reach', 'here',
+      'পৌঁছে গেছি', 'পৌঁছেছি', 'এসেছি',
+      'पहुंच गया', 'आ गया'
+    ];
+    if (arrivedWords.some(w => t.includes(w))) return 'arrived';
+
+    // 4. START RIDE commands
+    const startWords = [
+      'start', 'start ride', 'go', "let's go",
+      'শুরু', 'চলুন', 'যাও',
+      'शुरू', 'स्टार्ट', 'चलो'
+    ];
+    if (startWords.some(w => t.includes(w))) return 'start';
+
+    // 5. SOS commands
+    const sosWords = [
+      'sos', 'danger', 'help', 'emergency',
+      'বাঁচাও', 'জরুরি', 'বিপদ',
+      'मदद', 'बचाओ', 'इमरजेंसी'
+    ];
+    if (sosWords.some(w => t.includes(w))) return 'sos';
+
+    return null;
+  };
+
+  const executeVoiceCommand = (command) => {
+    const drvId = currentDriverRef.current?.id || 'drv_1';
+    const active = activeRideRef.current;
+    
+    if (command === 'accept') {
+      if (active && active.status === 'requested' && active.driverId === drvId) {
+        setRecognizedCommand('ACCEPT OFFER');
+        acceptRide(drvId);
+        
+        const lang = driverLangRef.current;
+        if (lang === 'bn') {
+          speakText("রাইড বুকিং গ্রহণ করা হয়েছে। যাত্রীর ঠিকানায় রওনা হচ্ছি।", 'bn-IN');
+        } else if (lang === 'hi') {
+          speakText("राइड स्वीकार कर ली गई है। यात्री के पास जा रहे हैं।", 'hi-IN');
+        } else {
+          speakText("Ride offer accepted. Routing to customer location.", 'en-IN');
+        }
+      }
+    } else if (command === 'reject') {
+      if (active && active.status === 'requested' && active.driverId === drvId) {
+        setRecognizedCommand('DECLINE OFFER');
+        rejectRide(drvId);
+        
+        const lang = driverLangRef.current;
+        if (lang === 'bn') {
+          speakText("রাইড বুকিং বাতিল করা হয়েছে।", 'bn-IN');
+        } else if (lang === 'hi') {
+          speakText("राइड अस्वीकार कर दी गई है।", 'hi-IN');
+        } else {
+          speakText("Ride request declined.", 'en-IN');
+        }
+      }
+    } else if (command === 'arrived') {
+      if (active && active.status === 'accepted' && active.driverId === drvId) {
+        setRecognizedCommand('ARRIVED');
+        // Let the simulation reach natural arrival or skip there. We trigger TTS feedback.
+        const lang = driverLangRef.current;
+        if (lang === 'bn') {
+          speakText("আপনি পিকআপ লোকেশনে পৌঁছে গেছেন। যাত্রীকে ওটিপি জিজ্ঞেস করুন।", 'bn-IN');
+        } else if (lang === 'hi') {
+          speakText("आप पिकअप स्थान पर पहुंच गए हैं। यात्री से ओटीपी पूछें।", 'hi-IN');
+        } else {
+          speakText("Arrived at pickup point. Please ask passenger for OTP to start.", 'en-IN');
+        }
+      }
+    } else if (command === 'start') {
+      if (active && active.status === 'arrived' && active.driverId === drvId) {
+        setRecognizedCommand('START TRIP');
+        startRide();
+        
+        const lang = driverLangRef.current;
+        if (lang === 'bn') {
+          speakText("ট্রিপ শুরু হয়েছে। সাবধানে গাড়ি চালান।", 'bn-IN');
+        } else if (lang === 'hi') {
+          speakText("यात्रा शुरू हो गई है। सुरक्षित ड्राइव करें।", 'hi-IN');
+        } else {
+          speakText("Trip started. Drive safely.", 'en-IN');
+        }
+      }
+    } else if (command === 'sos') {
+      if (active && active.driverId === drvId && active.status !== 'completed') {
+        setRecognizedCommand('SOS EMERGENCY');
+        triggerSOS(drvId);
+        
+        const lang = driverLangRef.current;
+        if (lang === 'bn') {
+          speakText("জরুরি বিপদ সংকেত পাঠানো হয়েছে। পুলিশ পাঠানো হচ্ছে।", 'bn-IN');
+        } else if (lang === 'hi') {
+          speakText("आपातकालीन अलार्म सक्रिय हो गया है। पुलिस आ रही है।", 'hi-IN');
+        } else {
+          speakText("SOS emergency triggered. dispatching police assistance interceptors.", 'en-IN');
+        }
+      }
+    }
+    
+    setTimeout(() => {
+      setRecognizedCommand('');
+    }, 4000);
+  };
+
+  useEffect(() => {
+    coPilotActiveRef.current = isCoPilotEnabled;
+    if (!isCoPilotEnabled) {
+      setIsListening(false);
+      return;
+    }
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      console.warn("Speech Recognition API is not supported in this browser.");
+      addLog("⚠️ Speech Recognition is not supported in this browser.", "warning");
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = false;
+    
+    const lang = driverLang;
+    if (lang === 'bn') {
+      recognition.lang = 'bn-IN';
+    } else if (lang === 'hi') {
+      recognition.lang = 'hi-IN';
+    } else {
+      recognition.lang = 'en-IN';
+    }
+
+    recognition.onstart = () => {
+      setIsListening(true);
+      console.log(`[Co-Pilot] Speech recognition started for lang ${recognition.lang}`);
+    };
+
+    recognition.onend = () => {
+      if (coPilotActiveRef.current) {
+        try {
+          recognition.start();
+        } catch (err) {
+          console.warn("[Co-Pilot] Auto-restart failed:", err);
+        }
+      } else {
+        setIsListening(false);
+      }
+    };
+
+    recognition.onerror = (e) => {
+      console.warn("[Co-Pilot] Speech recognition error:", e.error);
+      if (e.error === 'not-allowed') {
+        setIsCoPilotEnabled(false);
+        addLog("⚠️ Voice Co-Pilot blocked. Please grant microphone permissions.", "warning");
+      }
+    };
+
+    recognition.onresult = (event) => {
+      const result = event.results[event.results.length - 1];
+      if (result.isFinal) {
+        const transcript = result[0].transcript.trim().toLowerCase();
+        setLastTranscript(transcript);
+        
+        const command = matchVoiceCommand(transcript);
+        if (command) {
+          executeVoiceCommand(command);
+        }
+      }
+    };
+
+    try {
+      recognition.start();
+    } catch (err) {
+      console.error("[Co-Pilot] Failed to start SpeechRecognition:", err);
+    }
+
+    return () => {
+      recognition.stop();
+    };
+  }, [isCoPilotEnabled, driverLang]);
 
   const chatEndRef = useRef(null);
 
@@ -602,7 +834,8 @@ export default function DriverApp({ isStandalone }) {
     dropoff: null,
     routeLine: null,
     heatmapCircles: [],
-    geofencePolygons: []
+    geofencePolygons: [],
+    blockageCircles: []
   });
 
   // Scroll chat drawer to bottom on new messages
@@ -695,6 +928,11 @@ export default function DriverApp({ isStandalone }) {
     if (markersRef.current.geofencePolygons) {
       markersRef.current.geofencePolygons.forEach(p => map.removeLayer(p));
       markersRef.current.geofencePolygons = [];
+    }
+
+    if (markersRef.current.blockageCircles) {
+      markersRef.current.blockageCircles.forEach(c => map.removeLayer(c));
+      markersRef.current.blockageCircles = [];
     }
 
     if (showHeatmap && demandHotspots) {
@@ -865,8 +1103,41 @@ export default function DriverApp({ isStandalone }) {
           }
         }
       }
+
+      // Render dynamic active roadblock blockages on driver map
+      if (blockages && blockages.length > 0) {
+        if (!markersRef.current.blockageCircles) {
+          markersRef.current.blockageCircles = [];
+        }
+        blockages.forEach(b => {
+          const fillCol = b.type === 'accident' ? '#ef4444' : (b.type === 'construction' ? '#f59e0b' : '#3b82f6');
+          
+          const circle = L.circle([b.lat, b.lng], {
+            stroke: true,
+            color: fillCol,
+            weight: 2,
+            fillColor: fillCol,
+            fillOpacity: 0.15,
+            radius: b.radius || 150,
+          }).addTo(map);
+
+          const markerIcon = L.divIcon({
+            className: 'blockage-icon-marker',
+            html: `<div class="bg-black/80 border border-white/20 text-white rounded-full flex items-center justify-center font-bold" style="width: 20px; height: 20px; font-size: 10px; border-color: ${fillCol}; box-shadow: 0 0 8px ${fillCol};">⚠️</div>`,
+            iconSize: [20, 20],
+            iconAnchor: [10, 10]
+          });
+
+          const marker = L.marker([b.lat, b.lng], { icon: markerIcon })
+            .addTo(map)
+            .bindPopup(`<b>${b.type.toUpperCase()}: Roadblock Alert</b><br/>${b.description}`);
+
+          markersRef.current.blockageCircles.push(circle);
+          markersRef.current.blockageCircles.push(marker);
+        });
+      }
     }
-  }, [activeRide, currentDriver, selectedDriverId, showHeatmap, demandHotspots, geofencingZones, sosAlerts]);
+  }, [activeRide, currentDriver, selectedDriverId, showHeatmap, demandHotspots, geofencingZones, sosAlerts, blockages]);
 
 
 
@@ -874,19 +1145,39 @@ export default function DriverApp({ isStandalone }) {
   const handleSendChat = (e) => {
     e.preventDefault();
     if (!chatInputText.trim()) return;
-    sendChatMessage('driver', chatInputText.trim());
+    sendChatMessage('driver', chatInputText.trim(), driverLang, passengerLang);
     setChatInputText('');
   };
 
-  // Driver Bengali quick replies templates
-  const DRIVER_QUICK_REPLIES = [
-    "আমি লোকেশনে পৌঁছে গেছি", // I have arrived at the location
-    "ভীষণ জ্যাম আছে, একটু দেরি হবে", // Traffic is heavy, will be late
-    "আমি আসছি", // I am coming
-    "কোন রুট দিয়ে যাব?", // Which route should I take?
-    "আমার কাছে খুচরো আছে", // I have cash change
-    "আপনার ওটিপি টা বলুন" // Please tell me your OTP
-  ];
+  // Driver quick replies templates
+  const LOCALIZED_DRIVER_QUICK_REPLIES = {
+    'bn': [
+      "আমি লোকেশনে পৌঁছে গেছি",
+      "ভীষণ জ্যাম আছে, একটু দেরি হবে",
+      "আমি আসছি",
+      "কোন রুট দিয়ে যাব?",
+      "আমার কাছে খুচরো আছে",
+      "আপনার ওটিপি টা বলুন"
+    ],
+    'en': [
+      "I have arrived at the location.",
+      "Traffic is heavy, will be late.",
+      "I am coming.",
+      "Which route should I take?",
+      "I have cash change.",
+      "Please tell me your OTP."
+    ],
+    'hi': [
+      "मैं लोकेशन पर पहुँच गया हूँ।",
+      "बहुत भारी ट्रैफिक है, देरी होगी।",
+      "मैं आ रहा हूँ।",
+      "किस रास्ते से जाना है?",
+      "मेरे पास छुट्टे पैसे हैं।",
+      "कृपया अपना ओटीपी बताएं।"
+    ]
+  };
+
+  const driverQuickReplies = LOCALIZED_DRIVER_QUICK_REPLIES[driverLang] || LOCALIZED_DRIVER_QUICK_REPLIES['bn'];
 
   // Determine current active navigation details
   const getNavText = () => {
@@ -1011,35 +1302,63 @@ export default function DriverApp({ isStandalone }) {
           <div style={{ fontSize: '12px', color: '#718096', marginTop: '4px' }}>{partnerRoleLabel}</div>
         </div>
 
-        <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '40px 0' }}>
-          <div 
-            className="pulse-circle animate-pulse"
-            style={{
-              width: '120px',
-              height: '120px',
-              borderRadius: '50%',
-              backgroundColor: 'rgba(255, 221, 0, 0.05)',
-              border: '2px solid rgba(255, 221, 0, 0.2)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}
-          >
+        <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '40px 0', minHeight: '120px' }}>
+          {showCallDialpad ? (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', width: '100%', maxWidth: '180px' }} className="animate-fade-in">
+              {['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#'].map(num => (
+                <button 
+                  key={num}
+                  style={{
+                    width: '44px',
+                    height: '44px',
+                    borderRadius: '50%',
+                    border: '1px solid rgba(255,255,255,0.15)',
+                    backgroundColor: 'rgba(255,255,255,0.05)',
+                    color: '#fff',
+                    fontSize: '14px',
+                    fontWeight: 'bold',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer'
+                  }}
+                  onMouseDown={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.2)'}
+                  onMouseUp={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'}
+                >
+                  {num}
+                </button>
+              ))}
+            </div>
+          ) : (
             <div 
+              className="pulse-circle animate-pulse"
               style={{
-                width: '90px',
-                height: '90px',
+                width: '120px',
+                height: '120px',
                 borderRadius: '50%',
-                backgroundColor: 'rgba(255, 221, 0, 0.1)',
+                backgroundColor: 'rgba(255, 221, 0, 0.05)',
+                border: '2px solid rgba(255, 221, 0, 0.2)',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '36px'
+                justifyContent: 'center'
               }}
             >
-              👤
+              <div 
+                style={{
+                  width: '90px',
+                  height: '90px',
+                  borderRadius: '50%',
+                  backgroundColor: 'rgba(255, 221, 0, 0.1)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '36px'
+                }}
+              >
+                👤
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         <div style={{ textAlign: 'center', marginBottom: '40px' }}>
@@ -1104,18 +1423,69 @@ export default function DriverApp({ isStandalone }) {
               </button>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px', width: '100%' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', maxWidth: '200px', opacity: 0.6 }}>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', fontSize: '9px', gap: '4px' }}>
-                  <button style={{ width: '40px', height: '40px', borderRadius: '50%', border: '1px solid rgba(255,255,255,0.2)', backgroundColor: 'transparent', color: '#fff', display: 'flex', alignItems: 'center', justify: 'center' }}>🎤</button>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '32px', width: '100%' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', maxWidth: '240px', opacity: 0.95 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', fontSize: '10px', color: '#a0aec0', gap: '6px' }}>
+                  <button 
+                    onClick={() => setCallMuted(!callMuted)}
+                    style={{ 
+                      width: '48px', 
+                      height: '48px', 
+                      borderRadius: '50%', 
+                      border: callMuted ? 'none' : '1px solid rgba(255,255,255,0.15)', 
+                      backgroundColor: callMuted ? '#ffdd00' : 'rgba(255,255,255,0.06)', 
+                      color: callMuted ? '#000' : '#fff', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center', 
+                      transition: 'all 0.2s', 
+                      cursor: 'pointer' 
+                    }}
+                  >
+                    <Mic size={18} color={callMuted ? '#000' : '#fff'} />
+                  </button>
                   Mute
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', fontSize: '9px', gap: '4px' }}>
-                  <button style={{ width: '40px', height: '40px', borderRadius: '50%', border: '1px solid rgba(255,255,255,0.2)', backgroundColor: 'transparent', color: '#fff', display: 'flex', alignItems: 'center', justify: 'center' }}>🔢</button>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', fontSize: '10px', color: '#a0aec0', gap: '6px' }}>
+                  <button 
+                    onClick={() => setShowCallDialpad(!showCallDialpad)}
+                    style={{ 
+                      width: '48px', 
+                      height: '48px', 
+                      borderRadius: '50%', 
+                      border: showCallDialpad ? 'none' : '1px solid rgba(255,255,255,0.15)', 
+                      backgroundColor: showCallDialpad ? '#ffdd00' : 'rgba(255,255,255,0.06)', 
+                      color: showCallDialpad ? '#000' : '#fff', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center', 
+                      transition: 'all 0.2s', 
+                      cursor: 'pointer' 
+                    }}
+                  >
+                    <Grid size={18} color={showCallDialpad ? '#000' : '#fff'} />
+                  </button>
                   Keypad
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', fontSize: '9px', gap: '4px' }}>
-                  <button style={{ width: '40px', height: '40px', borderRadius: '50%', border: '1px solid rgba(255,255,255,0.2)', backgroundColor: 'transparent', color: '#fff', display: 'flex', alignItems: 'center', justify: 'center' }}>🔊</button>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', fontSize: '10px', color: '#a0aec0', gap: '6px' }}>
+                  <button 
+                    onClick={() => setCallSpeaker(!callSpeaker)}
+                    style={{ 
+                      width: '48px', 
+                      height: '48px', 
+                      borderRadius: '50%', 
+                      border: callSpeaker ? 'none' : '1px solid rgba(255,255,255,0.15)', 
+                      backgroundColor: callSpeaker ? '#ffdd00' : 'rgba(255,255,255,0.06)', 
+                      color: callSpeaker ? '#000' : '#fff', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center', 
+                      transition: 'all 0.2s', 
+                      cursor: 'pointer' 
+                    }}
+                  >
+                    <Volume2 size={18} color={callSpeaker ? '#000' : '#fff'} />
+                  </button>
                   Speaker
                 </div>
               </div>
@@ -2329,6 +2699,27 @@ export default function DriverApp({ isStandalone }) {
                   
                   <button
                     type="button"
+                    onClick={() => setIsCoPilotEnabled(!isCoPilotEnabled)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      fontSize: '18px',
+                      cursor: 'pointer',
+                      padding: '4px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: isCoPilotEnabled ? '#10b981' : 'inherit',
+                      opacity: isCoPilotEnabled ? 1 : 0.45,
+                      transition: 'all 0.2s'
+                    }}
+                    title="Toggle Voice Co-Pilot"
+                  >
+                    🎙️
+                  </button>
+
+                  <button
+                    type="button"
                     onClick={() => setShowSettingsDrawer(true)}
                     style={{
                       background: 'none',
@@ -2351,6 +2742,77 @@ export default function DriverApp({ isStandalone }) {
             {tab === 'dashboard' && (
               <div style={{ position: 'relative', flex: 1, minHeight: '0', display: 'flex', flexDirection: 'column' }}>
                 <div ref={mapContainerRef} className="map-view-container driver-map"></div>
+
+                {/* Voice Co-Pilot HUD Status Overlay */}
+                {isCoPilotEnabled && (
+                  <div 
+                    style={{
+                      position: 'absolute',
+                      top: isNavActive ? '80px' : '16px',
+                      left: '12px',
+                      right: '12px',
+                      zIndex: 999,
+                      backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      borderRadius: '12px',
+                      padding: '10px 14px',
+                      boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+                      backdropFilter: 'blur(8px)',
+                      color: '#ffffff',
+                      fontFamily: 'monospace',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '4px',
+                      pointerEvents: 'auto'
+                    }}
+                    className="animate-slide-down"
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span 
+                          style={{ 
+                            display: 'inline-block', 
+                            width: '8px', 
+                            height: '8px', 
+                            backgroundColor: isListening ? '#10b981' : '#f59e0b', 
+                            borderRadius: '50%',
+                            boxShadow: isListening ? '0 0 10px #10b981' : 'none'
+                          }}
+                          className={isListening ? 'animate-pulse' : ''}
+                        ></span>
+                        <span style={{ fontSize: '10px', fontWeight: 'bold', letterSpacing: '0.05em', color: '#10b981' }}>
+                          🎙️ VOICE CO-PILOT: {isListening ? 'LISTENING' : 'STANDBY'}
+                        </span>
+                      </div>
+                      <span style={{ fontSize: '8px', color: '#9ca3af', backgroundColor: 'rgba(255,255,255,0.05)', padding: '2px 5px', borderRadius: '4px' }}>
+                        {driverLang === 'bn' ? 'বাংলা' : (driverLang === 'hi' ? 'हिंदी' : 'English')}
+                      </span>
+                    </div>
+
+                    {lastTranscript && (
+                      <div style={{ fontSize: '11px', color: '#e5e7eb', marginTop: '4px', borderLeft: '2px solid #3b82f6', paddingLeft: '6px' }}>
+                        <span style={{ color: '#9ca3af', fontSize: '9px' }}>Heard:</span> "{lastTranscript}"
+                      </div>
+                    )}
+
+                    {recognizedCommand && (
+                      <div 
+                        style={{ 
+                          fontSize: '10px', 
+                          fontWeight: 'bold', 
+                          color: '#10b981', 
+                          marginTop: '2px', 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: '4px',
+                          animation: 'pulse 1s infinite'
+                        }}
+                      >
+                        ✅ Triggered: <span style={{ textDecoration: 'underline' }}>{recognizedCommand}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* GOOGLE MAPS NAVIGATION TOP HUD BAR */}
                 {isNavActive && (
@@ -2411,19 +2873,23 @@ export default function DriverApp({ isStandalone }) {
                     </div>
                     
                     <button 
+                      type="button"
+                      onClick={() => setIsCoPilotEnabled(!isCoPilotEnabled)}
                       style={{
                         width: '30px',
                         height: '30px',
                         borderRadius: '50%',
-                        backgroundColor: 'rgba(255,255,255,0.15)',
+                        backgroundColor: isCoPilotEnabled ? '#10b981' : 'rgba(255,255,255,0.15)',
                         border: 'none',
                         color: '#fff',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        cursor: 'pointer'
+                        cursor: 'pointer',
+                        boxShadow: isCoPilotEnabled ? '0 0 10px #10b981' : 'none',
+                        transition: 'all 0.2s'
                       }}
-                      title="Google Voice Input"
+                      title="Toggle Voice Co-Pilot"
                     >
                       🎙️
                     </button>
@@ -2665,6 +3131,80 @@ export default function DriverApp({ isStandalone }) {
                         </div>
                       </div>
 
+                      {/* Telemetry HUD Speedometer and Alarm System */}
+                      <div className="telemetry-dashboard mt-3 p-3 rounded-xl border border-white/5 bg-black/40 flex flex-col gap-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] text-gray-400 font-medium">CAPTAIN TELEMETRY HUD</span>
+                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 animate-pulse font-mono">GPS SYNCED</span>
+                        </div>
+                        
+                        <div className="flex items-center gap-4 justify-around py-1">
+                          {/* Radial Speedometer */}
+                          <div style={{ position: 'relative', width: '80px', height: '80px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                            {/* SVG Arc for Speedometer */}
+                            <svg width="80" height="80" viewBox="0 0 80 80" style={{ transform: 'rotate(-90deg)' }}>
+                              {/* Background track */}
+                              <circle cx="40" cy="40" r="32" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="6" />
+                              {/* Active speed progress arc */}
+                              <circle 
+                                cx="40" 
+                                cy="40" 
+                                r="32" 
+                                fill="none" 
+                                stroke={activeRide.speed > 50 ? '#ef4444' : (activeRide.speed > 35 ? '#f59e0b' : 'var(--color-primary)')} 
+                                strokeWidth="6" 
+                                strokeDasharray={2 * Math.PI * 32}
+                                strokeDashoffset={2 * Math.PI * 32 * (1 - Math.min(100, activeRide.speed || 0) / 100)}
+                                strokeLinecap="round"
+                                style={{ transition: 'stroke-dashoffset 0.4s ease, stroke 0.4s ease' }}
+                              />
+                            </svg>
+                            {/* Central Speed Text */}
+                            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                              <span style={{ fontSize: '20px', fontWeight: '900', color: activeRide.speed > 50 ? '#ef4444' : '#fff', fontFamily: 'monospace' }}>{activeRide.speed || 0}</span>
+                              <span style={{ fontSize: '7px', color: '#888', fontWeight: 'bold', marginTop: '-2px' }}>KM/H</span>
+                            </div>
+                          </div>
+
+                          {/* Telemetry Status Items */}
+                          <div className="flex-1 flex flex-col gap-1.5 justify-center">
+                            <div className="flex items-center justify-between text-[9px]">
+                              <span className="text-gray-500">Route Deviation</span>
+                              <span className={`font-bold ${activeRide.isDeviated ? 'text-rose-500 animate-pulse' : 'text-emerald-400'}`}>
+                                {activeRide.isDeviated ? '⚠️ OUT OF PATH' : '✅ ON TRACK'}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between text-[9px]">
+                              <span className="text-gray-500">G-Force Warning</span>
+                              <span className={`font-bold ${activeRide.abruptBraking ? 'text-amber-500 animate-pulse' : 'text-gray-400'}`}>
+                                {activeRide.abruptBraking ? '⚠️ G-FORCE EXCEEDED' : 'Normal (1.0G)'}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between text-[9px]">
+                              <span className="text-gray-500">Max Limit</span>
+                              <span className="text-gray-300 font-mono">50 km/h</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Overspeeding / Abrupt Braking Flashing Warnings */}
+                        {activeRide.speed > 50 && (
+                          <div className="text-[9px] py-1.5 px-3 rounded-lg border border-red-500/20 bg-red-500/10 text-red-400 font-bold flex items-center gap-1.5 animate-pulse justify-center">
+                            <span>🚨 OVERSPEED LIMIT EXCEEDED - SLOW DOWN</span>
+                          </div>
+                        )}
+                        {activeRide.abruptBraking && (
+                          <div className="text-[9px] py-1.5 px-3 rounded-lg border border-amber-500/20 bg-amber-500/10 text-amber-400 font-bold flex items-center gap-1.5 animate-pulse justify-center">
+                            <span>⚠️ ABRUPT BRAKING DETECTED - WATCH DISTANCE</span>
+                          </div>
+                        )}
+                        {activeRide.isDeviated && (
+                          <div className="text-[9px] py-1.5 px-3 rounded-lg border border-rose-500/20 bg-rose-500/10 text-rose-400 font-bold flex items-center gap-1.5 animate-pulse justify-center">
+                            <span>📡 DEVIATION Telemetry Triggered - Recalculating...</span>
+                          </div>
+                        )}
+                      </div>
+
                       {activeRide.status === 'accepted' && (
                         <div className="alert alert-success mt-2 text-xs py-1.5 text-center text-green-400">
                           🚘 Driving towards pickup coordinates (Animated)
@@ -2690,8 +3230,7 @@ export default function DriverApp({ isStandalone }) {
                       )}
                     </>
                   )}
-
-                  {/* DRIVER BILINGUAL SLIDE CHAT DRAWER */}
+                        {/* DRIVER BILINGUAL SLIDE CHAT DRAWER */}
                   {showChat && (
                     <div className="chat-slide-drawer card-glow animate-slide-up" style={{ bottom: '100%', top: 'auto', maxHeight: '310px' }}>
                       <div className="chat-header">
@@ -2702,13 +3241,41 @@ export default function DriverApp({ isStandalone }) {
                         <button style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', fontSize: '18px', fontWeight: 'bold' }} onClick={() => setShowChat(false)}>×</button>
                       </div>
 
+                      {/* Language Selectors Row */}
+                      <div style={{ display: 'flex', gap: '8px', padding: '8px 12px', backgroundColor: 'rgba(255,255,255,0.03)', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '10px', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                          <span style={{ color: '#888' }}>My Lang:</span>
+                          <select 
+                            value={driverLang} 
+                            onChange={(e) => setDriverLang(e.target.value)} 
+                            style={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: '10px', borderRadius: '4px', padding: '2px 4px', outline: 'none' }}
+                          >
+                            <option value="bn">বাংলা (Bengali)</option>
+                            <option value="en">English</option>
+                            <option value="hi">हिंदी (Hindi)</option>
+                          </select>
+                        </div>
+                        <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                          <span style={{ color: '#888' }}>Passenger prefers:</span>
+                          <select 
+                            value={passengerLang} 
+                            onChange={(e) => setPassengerLang(e.target.value)} 
+                            style={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: '10px', borderRadius: '4px', padding: '2px 4px', outline: 'none' }}
+                          >
+                            <option value="en">English</option>
+                            <option value="bn">বাংলা (Bengali)</option>
+                            <option value="hi">हिंदी (Hindi)</option>
+                          </select>
+                        </div>
+                      </div>
+
                       <div style={{ backgroundColor: 'rgba(245,158,11,0.08)', borderBottom: '1px solid rgba(245,158,11,0.12)', padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '9px', color: '#f59e0b', fontFamily: 'Outfit, sans-serif' }}>
                         <span className="animate-pulse" style={{ fontSize: '10px' }}>🛡️</span>
-                        <span><b>নিরাপদ ড্রাইভিং মুড:</b> ওয়ান-ট্যাপ কুইক রিপ্লাই ব্যবহার করুন। এটি স্বয়ংক্রিয়ভাবে ইংরেজিতে অনুবাদ হবে।</span>
+                        <span><b>Safe Driving Mode:</b> One-tap quick replies auto-translate to Passenger's selected layout.</span>
                       </div>
 
                       {/* Messages list */}
-                      <div className="chat-messages-container" style={{ height: '120px' }}>
+                      <div className="chat-messages-container" style={{ height: '110px' }}>
                         {chatMessages.length === 0 ? (
                           <div style={{ textAlign: 'center', fontSize: '10px', color: '#555', marginTop: '24px', fontStyle: 'italic' }}>
                             Tap a quick reply or type to begin bilingual translation chat.
@@ -2749,13 +3316,13 @@ export default function DriverApp({ isStandalone }) {
                         <div ref={chatEndRef} />
                       </div>
 
-                      {/* Bengali Driver Quick-Replies Grid */}
+                      {/* Localized Driver Quick-Replies Grid */}
                       <div className="chat-quick-replies-grid">
-                        {DRIVER_QUICK_REPLIES.map((reply, idx) => (
+                        {driverQuickReplies.map((reply, idx) => (
                           <button 
                             key={idx}
                             className="quick-reply-btn"
-                            onClick={() => sendChatMessage('driver', reply)}
+                            onClick={() => sendChatMessage('driver', reply, driverLang, passengerLang)}
                           >
                             {reply}
                           </button>
@@ -2766,7 +3333,7 @@ export default function DriverApp({ isStandalone }) {
                       <form onSubmit={handleSendChat} className="chat-input-form">
                         <input 
                           type="text" 
-                          placeholder="বাংলা বা ইংরেজিতে লিখুন..." 
+                          placeholder={`Type in ${driverLang === 'bn' ? 'Bengali' : (driverLang === 'hi' ? 'Hindi' : 'English')}...`}
                           style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '6px 10px', fontSize: '12px', color: '#fff', outline: 'none' }}
                           value={chatInputText}
                           onChange={(e) => setChatInputText(e.target.value)}
@@ -4398,6 +4965,26 @@ export default function DriverApp({ isStandalone }) {
               </button>
 
             </div>
+
+            {/* Voice Co-Pilot Controls */}
+            <div className="mt-4 pt-3 border-t border-white/5 flex flex-col gap-2">
+              <div className="flex justify-between items-center px-1">
+                <span className="text-[11px] font-bold text-gray-300">🎙️ Voice Command Co-Pilot</span>
+                <label className="relative inline-flex items-center cursor-pointer select-none">
+                  <input 
+                    type="checkbox" 
+                    checked={isCoPilotEnabled}
+                    onChange={(e) => setIsCoPilotEnabled(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-8 h-4 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-emerald-600"></div>
+                </label>
+              </div>
+              <p className="text-[9px] text-gray-500 leading-normal px-1">
+                Enable hands-free dispatcher controls. Say <b className="text-gray-400">"Accept"</b>, <b className="text-gray-400">"Decline"</b>, <b className="text-gray-400">"Start"</b>, or <b className="text-gray-400">"SOS"</b> to command the JoldiGo application.
+              </p>
+            </div>
+
           </div>
         )}
 

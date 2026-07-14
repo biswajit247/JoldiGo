@@ -73,6 +73,30 @@ const loadPersistedSettings = async () => {
     await query("ALTER TABLE rides ADD COLUMN IF NOT EXISTS passenger_comment TEXT DEFAULT NULL");
     await query("ALTER TABLE passengers ADD COLUMN IF NOT EXISTS name VARCHAR(100) DEFAULT NULL");
 
+    // Dynamic Promos Table Auto-Creation
+    await query(`
+      CREATE TABLE IF NOT EXISTS promos (
+        code VARCHAR(50) PRIMARY KEY,
+        discount_value NUMERIC(10, 2) NOT NULL,
+        discount_type VARCHAR(20) NOT NULL DEFAULT 'flat',
+        max_discount NUMERIC(10, 2),
+        weather_restriction VARCHAR(20),
+        status VARCHAR(20) NOT NULL DEFAULT 'active',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    const promosCheck = await query("SELECT COUNT(*) FROM promos");
+    if (parseInt(promosCheck.rows[0].count || 0) === 0) {
+      await query(`
+        INSERT INTO promos (code, discount_value, discount_type, max_discount, weather_restriction, status) VALUES
+        ('JOLDIGO50', 50.00, 'flat', 50.00, NULL, 'active'),
+        ('MONSOONFREE', 100.00, 'flat', 100.00, 'rain', 'active'),
+        ('JOLDISAVE', 25.00, 'flat', 25.00, NULL, 'active'),
+        ('FIRSTGO', 75.00, 'flat', 75.00, NULL, 'active')
+      `);
+      console.log("[Db Init] Seeded default promo campaigns into database.");
+    }
+
     const res = await query("SELECT * FROM system_settings");
     res.rows.forEach(row => {
       if (row.value) {
@@ -225,6 +249,11 @@ app.post('/api/otp/send', async (req, res) => {
     
     console.log(`[OTP Engine] Generated code ${otp} for phone ${phone}. Sent SMS: ${sentRealSms}`);
     
+    // Log in database
+    const sender = '💬 JoldiGo OTP Gateway';
+    const message = `Your JoldiGo Secure OTP is: ${otp}. Valid for 5 minutes. Do not share this code.`;
+    await query('INSERT INTO sms_logs (sender, target, message) VALUES ($1, $2, $3)', [sender, phone, message]);
+
     res.json({ success: true, sentRealSms, otpFallback: otp });
   } catch (err) {
     res.status(500).json({ error: 'Failed to deliver OTP.', details: err.message });
@@ -574,6 +603,143 @@ const formatDriverRecord = (drv) => ({
     insurance: drv.insurance_status || 'pending',
     puc: drv.puc_status || 'pending',
     identity: drv.identity_status || 'pending'
+  }
+});
+
+// Get All Promos
+app.get('/api/promos', async (req, res) => {
+  try {
+    const promosRes = await query('SELECT * FROM promos ORDER BY created_at DESC');
+    const promos = promosRes.rows.map(p => ({
+      code: p.code,
+      discountValue: parseFloat(p.discount_value),
+      discountType: p.discount_type,
+      maxDiscount: p.max_discount ? parseFloat(p.max_discount) : null,
+      weatherRestriction: p.weather_restriction,
+      status: p.status
+    }));
+    res.json(promos);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to retrieve promos.' });
+  }
+});
+
+// Create Admin Promo Code
+app.post('/api/admin/promos', async (req, res) => {
+  const { code, discountValue, discountType, maxDiscount, weatherRestriction, status } = req.body;
+  if (!code || !discountValue) {
+    return res.status(400).json({ error: 'Promo code and discount value are required.' });
+  }
+  try {
+    const codeUpper = code.trim().toUpperCase();
+    await query(`
+      INSERT INTO promos (code, discount_value, discount_type, max_discount, weather_restriction, status)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      ON CONFLICT (code) DO UPDATE
+      SET discount_value = $2, discount_type = $3, max_discount = $4, weather_restriction = $5, status = $6
+    `, [
+      codeUpper,
+      parseFloat(discountValue),
+      discountType || 'flat',
+      maxDiscount ? parseFloat(maxDiscount) : null,
+      weatherRestriction || null,
+      status || 'active'
+    ]);
+    res.json({ success: true, message: `Promo code ${codeUpper} registered successfully.` });
+  } catch (err) {
+    console.error("Failed to create promo:", err);
+    res.status(500).json({ error: 'Failed to create promo code.' });
+  }
+});
+
+// Delete Admin Promo Code
+app.delete('/api/admin/promos/:code', async (req, res) => {
+  const { code } = req.params;
+  if (!code) return res.status(400).json({ error: 'Promo code is required.' });
+  try {
+    const codeUpper = code.trim().toUpperCase();
+    await query('DELETE FROM promos WHERE code = $1', [codeUpper]);
+    res.json({ success: true, message: `Promo code ${codeUpper} deleted successfully.` });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete promo code.' });
+  }
+});
+
+// Get All Active Blockages
+app.get('/api/blockages', async (req, res) => {
+  try {
+    const dbRes = await query('SELECT * FROM blockages ORDER BY created_at DESC');
+    const blockages = dbRes.rows.map(b => ({
+      id: b.id,
+      lat: parseFloat(b.lat),
+      lng: parseFloat(b.lng),
+      type: b.type,
+      radius: parseInt(b.radius),
+      description: b.description
+    }));
+    res.json({ success: true, blockages });
+  } catch (err) {
+    console.error("Failed to get blockages:", err);
+    res.status(500).json({ error: 'Failed to retrieve blockages.' });
+  }
+});
+
+// Helper to broadcast blockages update
+async function broadcastBlockagesUpdate() {
+  try {
+    const res = await query('SELECT * FROM blockages ORDER BY created_at DESC');
+    const list = res.rows.map(b => ({
+      id: b.id,
+      lat: parseFloat(b.lat),
+      lng: parseFloat(b.lng),
+      type: b.type,
+      radius: parseInt(b.radius),
+      description: b.description
+    }));
+    broadcastToAll({ type: 'blockages_updated', blockages: list });
+    return list;
+  } catch (err) {
+    console.error("Failed to broadcast blockages update:", err);
+  }
+}
+
+// Create Blockage
+app.post('/api/blockages', async (req, res) => {
+  const { lat, lng, type, radius, description } = req.body;
+  if (!lat || !lng) {
+    return res.status(400).json({ error: 'Latitude and longitude are required.' });
+  }
+  try {
+    const insertRes = await query(`
+      INSERT INTO blockages (lat, lng, type, radius, description)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING id
+    `, [
+      parseFloat(lat),
+      parseFloat(lng),
+      type || 'accident',
+      parseInt(radius || 150),
+      description || 'Road blockage obstacle'
+    ]);
+    
+    const blockages = await broadcastBlockagesUpdate();
+    res.json({ success: true, id: insertRes.rows[0].id, blockages });
+  } catch (err) {
+    console.error("Failed to create blockage:", err);
+    res.status(500).json({ error: 'Failed to create blockage.' });
+  }
+});
+
+// Delete Blockage
+app.delete('/api/blockages/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    await query('DELETE FROM blockages WHERE id = $1', [parseInt(id)]);
+    const blockages = await broadcastBlockagesUpdate();
+    res.json({ success: true, blockages });
+  } catch (err) {
+    console.error("Failed to delete blockage:", err);
+    res.status(500).json({ error: 'Failed to delete blockage.' });
   }
 });
 
@@ -1492,19 +1658,42 @@ app.post('/api/admin/driver/payout', async (req, res) => {
 });
 
 // Broadcast custom SMS/Push alert to all active simulators
-app.post('/api/admin/broadcast-notification', (req, res) => {
+app.post('/api/admin/broadcast-notification', async (req, res) => {
   const { target, message } = req.body;
   if (!message) return res.status(400).json({ error: 'Message content is required.' });
 
-  broadcastToAll({
-    type: 'system_broadcast',
-    target: target || 'all',
-    message,
-    timestamp: new Date().toLocaleTimeString()
-  });
+  try {
+    const sender = '⚠️ JoldiGo Control Room';
+    await query('INSERT INTO sms_logs (sender, target, message) VALUES ($1, $2, $3)', [sender, target || 'all', message]);
 
-  console.log(`[BROADCAST DEPLOYED] Sent system-wide alert to ${target || 'all'}: "${message}"`);
-  res.json({ success: true, target, message });
+    broadcastToAll({
+      type: 'system_broadcast',
+      target: target || 'all',
+      message,
+      timestamp: new Date().toLocaleTimeString()
+    });
+
+    console.log(`[BROADCAST DEPLOYED] Sent system-wide alert to ${target || 'all'}: "${message}"`);
+    res.json({ success: true, target, message });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to deploy broadcast notification.', details: err.message });
+  }
+});
+
+// Retrieve all SMS Logs
+app.get('/api/admin/sms-logs', async (req, res) => {
+  try {
+    const logsRes = await query('SELECT * FROM sms_logs ORDER BY timestamp DESC LIMIT 50');
+    const formattedLogs = logsRes.rows.map(row => ({
+      id: row.id,
+      sender: row.sender,
+      message: row.message,
+      timestamp: new Date(row.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    }));
+    res.json({ success: true, logs: formattedLogs });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to retrieve SMS logs.', details: err.message });
+  }
 });
 
 // Get all claims (Pending & History)
@@ -1695,6 +1884,98 @@ app.post('/api/admin/weather', (req, res) => {
   res.json({ success: true, weather: globalSettings.weather });
 });
 
+// Trigger simulation preset scenarios
+app.post('/api/admin/presets', async (req, res) => {
+  const { preset } = req.body;
+  if (!['monsoon', 'peak', 'normal'].includes(preset)) {
+    return res.status(400).json({ error: 'Invalid preset name.' });
+  }
+
+  try {
+    if (preset === 'monsoon') {
+      globalSettings.weather = 'flooding';
+      globalSettings.surgeMultiplier = 1.6;
+
+      globalCongestionZones = {
+        HOWRAH_BRIDGE: 'heavy',
+        PARK_STREET: 'heavy',
+        SALT_LAKE_SEC5: 'heavy'
+      };
+
+      await query('DELETE FROM blockages');
+      await query(`
+        INSERT INTO blockages (lat, lng, type, radius, description) VALUES 
+        (22.5735, 88.4331, 'accident', 250, '🚨 FLOODING ALERT: Salt Lake Sec V Waterlogged. Detours active.'),
+        (22.5851, 88.3468, 'construction', 200, '🚨 SEVERE WATERLOGGING: Howrah Bridge Approach Flooded.')
+      `);
+
+      const sender = '⚠️ JoldiGo Control Room';
+      const logMessage = '🌧️ Monsoon preset activated: severe storm weather, 1.6x surge, and bridge approach blockages deployed.';
+      await query('INSERT INTO sms_logs (sender, target, message) VALUES ($1, $2, $3)', [sender, 'all', logMessage]);
+
+    } else if (preset === 'peak') {
+      globalSettings.weather = 'clear';
+      globalSettings.surgeMultiplier = 1.3;
+
+      globalCongestionZones = {
+        HOWRAH_BRIDGE: 'heavy',
+        PARK_STREET: 'heavy',
+        SALT_LAKE_SEC5: 'medium'
+      };
+
+      await query('DELETE FROM blockages');
+
+      // Clear hotspots variable if it's declared with let/var on top, otherwise assign it.
+      // Let's verify how globalCustomHotspots is declared: typically it is a global array.
+      globalCustomHotspots = [
+        { lat: 22.5834, lng: 88.3421, weight: 1.8 },
+        { lat: 22.5675, lng: 88.3712, weight: 1.7 }
+      ];
+
+      const sender = '⚠️ JoldiGo Control Room';
+      const logMessage = '🚦 Peak traffic preset activated: 1.3x surge, heavy bridge congestion, and station demand hotspots enabled.';
+      await query('INSERT INTO sms_logs (sender, target, message) VALUES ($1, $2, $3)', [sender, 'all', logMessage]);
+
+    } else if (preset === 'normal') {
+      globalSettings.weather = 'clear';
+      globalSettings.surgeMultiplier = 1.0;
+
+      await query('DELETE FROM blockages');
+
+      globalCustomHotspots = [];
+
+      globalCongestionZones = {
+        HOWRAH_BRIDGE: 'medium',
+        PARK_STREET: 'medium',
+        SALT_LAKE_SEC5: 'medium'
+      };
+
+      const sender = '⚠️ JoldiGo Control Room';
+      const logMessage = '🔄 Normal preset restored: cleared roadblocks, emptied demand hotspots, and reset base traffic metrics.';
+      await query('INSERT INTO sms_logs (sender, target, message) VALUES ($1, $2, $3)', [sender, 'all', logMessage]);
+    }
+
+    const blockagesRes = await query('SELECT * FROM blockages');
+    broadcastToAll({
+      type: 'settings_updated',
+      settings: globalSettings,
+      fuelPrices: globalFuelPrices,
+      congestionZones: globalCongestionZones
+    });
+
+    broadcastToAll({
+      type: 'blockages_updated',
+      blockages: blockagesRes.rows
+    });
+
+    broadcastToAll({ type: 'ledger_update' });
+
+    res.json({ success: true, preset, settings: globalSettings, congestionZones: globalCongestionZones });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to deploy simulation preset.', details: err.message });
+  }
+});
+
 // --- HTTP SERVER SETUP ---
 const server = createServer(app);
 
@@ -1766,6 +2047,20 @@ wss.on('connection', (ws) => {
           });
           break;
 
+        case 'webrtc_signal':
+          // Forward WebRTC signals (offer, answer, candidate) to the target client
+          socketClients.forEach((meta, clientWs) => {
+            if (meta.role === data.payload.targetRole && meta.id === data.payload.targetId && clientWs.readyState === WebSocket.OPEN) {
+              clientWs.send(JSON.stringify({
+                type: 'webrtc_signal',
+                signal: data.payload.signal,
+                fromRole: clientMeta.role,
+                fromId: clientMeta.id
+              }));
+            }
+          });
+          break;
+
         case 'send_chat_message':
           // Route chat message packet to target matching client
           socketClients.forEach((meta, clientWs) => {
@@ -1791,7 +2086,10 @@ wss.on('connection', (ws) => {
           broadcastToAll({
             type: 'driver_location_broadcast',
             driverId: clientMeta.id,
-            location: data.location
+            location: data.location,
+            speed: data.speed || 0,
+            abruptBraking: !!data.abruptBraking,
+            isDeviated: !!data.isDeviated
           });
           break;
 

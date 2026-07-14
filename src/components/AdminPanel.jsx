@@ -19,7 +19,8 @@ import {
   ToggleRight,
   Key,
   BarChart2,
-  MessageSquare
+  MessageSquare,
+  Gift
 } from 'lucide-react';
 import L from 'leaflet';
 
@@ -78,7 +79,12 @@ export default function AdminPanel() {
     setUseAiSurgeEngine,
     dynamicSurgeMultiplier,
     dispatchQueueLog,
-    setDispatchQueueLog
+    setDispatchQueueLog,
+    promos,
+    setPromos,
+    blockages,
+    setBlockages,
+    fetchInitialData
   } = useSimulator();
 
   useEffect(() => {
@@ -100,6 +106,15 @@ export default function AdminPanel() {
   const [clickToAddSurgeZone, setClickToAddSurgeZone] = useState(false);
   const clickToAddSurgeZoneRef = useRef(clickToAddSurgeZone);
 
+  const [clickToAddBlockage, setClickToAddBlockage] = useState(false);
+  const clickToAddBlockageRef = useRef(clickToAddBlockage);
+  const [blockageType, setBlockageType] = useState('accident');
+  const [blockageDescription, setBlockageDescription] = useState('Major accident blockage');
+
+  useEffect(() => {
+    clickToAddBlockageRef.current = clickToAddBlockage;
+  }, [clickToAddBlockage]);
+
   useEffect(() => {
     clickToAddHotspotsRef.current = clickToAddHotspots;
   }, [clickToAddHotspots]);
@@ -107,6 +122,25 @@ export default function AdminPanel() {
   useEffect(() => {
     clickToAddSurgeZoneRef.current = clickToAddSurgeZone;
   }, [clickToAddSurgeZone]);
+
+  useEffect(() => {
+    window._deleteBlockage = async (id) => {
+      if (confirm("Delete this road obstacle?")) {
+        try {
+          const { api } = getServerEndpoints();
+          const res = await fetch(`${api}/api/blockages/${id}`, { method: 'DELETE' });
+          if (res.ok) {
+            fetchInitialData();
+          }
+        } catch (err) {
+          console.error(err);
+        }
+      }
+    };
+    return () => {
+      delete window._deleteBlockage;
+    };
+  }, []);
 
   // Cleanup expired predictive guides periodically to auto-fade routes
   useEffect(() => {
@@ -178,6 +212,7 @@ export default function AdminPanel() {
     sosElements: [], 
     trafficCircles: [], // Keep track of traffic overlays
     demandCircles: [], // Keep track of heatmap circles
+    blockageCircles: [], // Keep track of roadblock circles
   });
 
   // Geofence map elements
@@ -274,6 +309,35 @@ export default function AdminPanel() {
         
         await updateGeofencingZones([...geofencingZones, newZone]);
         setClickToAddSurgeZone(false);
+      } else if (clickToAddBlockageRef.current) {
+        const { lat, lng } = e.latlng;
+        const description = prompt("Enter description for this roadblock:", blockageDescription);
+        if (description === null) return; 
+        
+        const type = prompt("Enter type of roadblock (accident, construction, roadblock):", blockageType);
+        if (!type) return;
+
+        const radiusStr = prompt("Enter blockage radius (meters):", "150");
+        const radius = parseInt(radiusStr) || 150;
+
+        try {
+          const { api } = getServerEndpoints();
+          const res = await fetch(`${api}/api/blockages`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ lat, lng, type, radius, description })
+          });
+          const data = await res.json();
+          if (data.success) {
+            alert(`Road blockage "${description}" added successfully!`);
+          } else {
+            alert("Failed to save blockage: " + (data.error || "Unknown error"));
+          }
+        } catch (err) {
+          console.error(err);
+          alert("Error saving blockage to server.");
+        }
+        setClickToAddBlockage(false);
       }
     });
 
@@ -388,6 +452,12 @@ export default function AdminPanel() {
       markersRef.current.demandCircles.forEach(c => map.removeLayer(c));
     }
     markersRef.current.demandCircles = [];
+
+    // Clear old blockages
+    if (markersRef.current.blockageCircles) {
+      markersRef.current.blockageCircles.forEach(c => map.removeLayer(c));
+    }
+    markersRef.current.blockageCircles = [];
 
     // Clear old predictive lines
     if (markersRef.current.predictiveLines) {
@@ -585,8 +655,52 @@ export default function AdminPanel() {
         }
       });
     }
+    // Render dynamic active roadblock blockages
+    if (blockages && blockages.length > 0) {
+      blockages.forEach(b => {
+        const fillCol = b.type === 'accident' ? '#ef4444' : (b.type === 'construction' ? '#f59e0b' : '#3b82f6');
+        
+        // Circular hazard area overlay
+        const circle = L.circle([b.lat, b.lng], {
+          stroke: true,
+          color: fillCol,
+          weight: 2,
+          fillColor: fillCol,
+          fillOpacity: 0.18,
+          radius: b.radius || 150,
+          className: 'animated-hazard-zone'
+        }).addTo(map);
 
-  }, [drivers, activeRide, sosAlerts, activeTab, congestionZones, showDemandHeatmap, demandHotspots, predictiveGuides]);
+        // Center warning icon / delete popup
+        const markerIcon = L.divIcon({
+          className: 'blockage-icon-marker',
+          html: `<div class="bg-black/80 border border-white/20 text-white rounded-full flex items-center justify-center font-bold" style="width: 20px; height: 20px; font-size: 10px; border-color: ${fillCol}; box-shadow: 0 0 8px ${fillCol};">⚠️</div>`,
+          iconSize: [20, 20],
+          iconAnchor: [10, 10]
+        });
+
+        const marker = L.marker([b.lat, b.lng], { icon: markerIcon })
+          .addTo(map)
+          .bindPopup(`
+            <div style="font-family:sans-serif;font-size:11px;color:#fff;background:#0c0e12;padding:4px;border-radius:4px;width:140px;">
+              <b style="font-size:12px;color:${fillCol}">${b.type.toUpperCase()}</b><br/>
+              <span>${b.description}</span><br/>
+              Radius: <b>${b.radius}m</b><br/>
+              <button 
+                onclick="window._deleteBlockage(${b.id})" 
+                style="background:rgba(239,68,68,0.2);border:1px solid rgba(239,68,68,0.3);color:#f87171;padding:2px 6px;font-size:9px;border-radius:3px;margin-top:6px;cursor:pointer;width:100%;"
+              >
+                Delete Obstacle
+              </button>
+            </div>
+          `);
+
+        markersRef.current.blockageCircles.push(circle);
+        markersRef.current.blockageCircles.push(marker);
+      });
+    }
+
+  }, [drivers, activeRide, sosAlerts, activeTab, congestionZones, showDemandHeatmap, demandHotspots, predictiveGuides, blockages]);
 
   const exportSmsJson = () => {
     if (smsLogs.length === 0) return alert("No logs to export.");
@@ -851,6 +965,14 @@ export default function AdminPanel() {
             </button>
 
             <button 
+              className={`nav-item ${activeTab === 'promos' ? 'active' : ''}`}
+              onClick={() => setActiveTab('promos')}
+            >
+              <Gift size={18} className="text-pink-400" />
+              <span>Promo Campaigns</span>
+            </button>
+
+            <button 
               className={`nav-item ${activeTab === 'env' ? 'active' : ''}`}
               onClick={() => setActiveTab('env')}
             >
@@ -902,6 +1024,106 @@ export default function AdminPanel() {
                     {sosAlerts.filter(a => a.status === 'dispatch' || a.status === 'secured').length}
                   </span>
                   <span className="kpi-sub text-gray-400">24/7 Control room log</span>
+                </div>
+              </div>
+
+              {/* SIMULATION PRESETS & SCENARIO CONTROL CENTER */}
+              <div className="card-glow p-4 bg-rose-950/5 border border-rose-500/10 rounded-xl mt-4">
+                <h4 className="text-xs font-bold text-rose-400 flex items-center gap-1.5 font-mono uppercase tracking-wider">🎮 JoldiGo Simulation Preset Control Center</h4>
+                <p className="text-[11px] text-gray-400 mt-1">Deploy pre-configured emergency scenarios across Kolkata, dynamically shifting weather, surge multipliers, roadblock obstructions, and transit hotspots.</p>
+                
+                <div className="flex gap-4 mt-3 flex-wrap md:flex-nowrap">
+                  
+                  {/* Preset 1: Monsoon Storm */}
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        const { api } = getServerEndpoints();
+                        const res = await fetch(`${api}/api/admin/presets`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ preset: 'monsoon' })
+                        });
+                        const data = await res.json();
+                        if (data.success) {
+                          addLog("🌧️ PRESET DEPLOYED: Monsoon Flooding Active! Surge set to 1.6x.", "warning");
+                          fetchInitialData();
+                        }
+                      } catch (err) {
+                        console.error(err);
+                      }
+                    }}
+                    className="flex-1 bg-blue-950/20 hover:bg-blue-950/40 border border-blue-500/40 text-blue-400 p-3 rounded-lg flex items-center justify-between transition-all cursor-pointer text-left"
+                    style={{ minHeight: '60px' }}
+                  >
+                    <div>
+                      <span className="text-xs font-bold text-white block">🌧️ Monsoon Flood Alert</span>
+                      <span className="text-[9px] text-gray-400 block mt-0.5">Weather: Flooding | Surge: 1.6x | Roadblocks: Active</span>
+                    </div>
+                    <span className="text-lg">➔</span>
+                  </button>
+
+                  {/* Preset 2: Peak Hour Traffic */}
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        const { api } = getServerEndpoints();
+                        const res = await fetch(`${api}/api/admin/presets`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ preset: 'peak' })
+                        });
+                        const data = await res.json();
+                        if (data.success) {
+                          addLog("🚦 PRESET DEPLOYED: Peak Hour Transit Active! High-demand hotspots triggered.", "info");
+                          fetchInitialData();
+                        }
+                      } catch (err) {
+                        console.error(err);
+                      }
+                    }}
+                    className="flex-1 bg-amber-950/20 hover:bg-amber-950/40 border border-amber-500/40 text-amber-400 p-3 rounded-lg flex items-center justify-between transition-all cursor-pointer text-left"
+                    style={{ minHeight: '60px' }}
+                  >
+                    <div>
+                      <span className="text-xs font-bold text-white block">🚦 Peak Hour Traffic</span>
+                      <span className="text-[9px] text-gray-400 block mt-0.5">Surge: 1.3x | Congestion: Heavy | Hotspots: Enabled</span>
+                    </div>
+                    <span className="text-lg">➔</span>
+                  </button>
+
+                  {/* Preset 3: Normal Reset */}
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        const { api } = getServerEndpoints();
+                        const res = await fetch(`${api}/api/admin/presets`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ preset: 'normal' })
+                        });
+                        const data = await res.json();
+                        if (data.success) {
+                          addLog("🔄 PRESET RESTORED: Reset to base normal conditions.", "success");
+                          fetchInitialData();
+                        }
+                      } catch (err) {
+                        console.error(err);
+                      }
+                    }}
+                    className="flex-1 bg-slate-900/40 hover:bg-slate-900/60 border border-white/10 text-gray-300 p-3 rounded-lg flex items-center justify-between transition-all cursor-pointer text-left"
+                    style={{ minHeight: '60px' }}
+                  >
+                    <div>
+                      <span className="text-xs font-bold text-white block">🔄 Reset to Normal</span>
+                      <span className="text-[9px] text-gray-400 block mt-0.5">Surge: 1.0x | Weather: Clear | Hotspots/Roadblocks: Cleared</span>
+                    </div>
+                    <span className="text-lg">➔</span>
+                  </button>
+
                 </div>
               </div>
 
@@ -990,6 +1212,7 @@ export default function AdminPanel() {
                         onClick={() => {
                           setClickToAddHotspots(!clickToAddHotspots);
                           if (clickToAddSurgeZone) setClickToAddSurgeZone(false);
+                          if (clickToAddBlockage) setClickToAddBlockage(false);
                           if (!showDemandHeatmap) setShowDemandHeatmap(true);
                         }}
                         className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
@@ -1006,6 +1229,7 @@ export default function AdminPanel() {
                         onClick={() => {
                           setClickToAddSurgeZone(!clickToAddSurgeZone);
                           if (clickToAddHotspots) setClickToAddHotspots(false);
+                          if (clickToAddBlockage) setClickToAddBlockage(false);
                         }}
                         className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
                           clickToAddSurgeZone 
@@ -1015,6 +1239,22 @@ export default function AdminPanel() {
                         title="Click anywhere on the map to define a geofenced surge hub"
                       >
                         ⚡ Draw Surge Geofence: {clickToAddSurgeZone ? 'ACTIVE (Click Map)' : 'OFF'}
+                      </button>
+
+                      <button 
+                        onClick={() => {
+                          setClickToAddBlockage(!clickToAddBlockage);
+                          if (clickToAddHotspots) setClickToAddHotspots(false);
+                          if (clickToAddSurgeZone) setClickToAddSurgeZone(false);
+                        }}
+                        className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
+                          clickToAddBlockage 
+                            ? 'bg-rose-600 text-white border-rose-500 shadow-[0_0_10px_rgba(225,29,72,0.2)]' 
+                            : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'
+                        }`}
+                        title="Click anywhere on the map to define a road blockage obstacle (e.g. accident, construction)"
+                      >
+                        ⚠️ Place Road Obstacle: {clickToAddBlockage ? 'ACTIVE (Click Map)' : 'OFF'}
                       </button>
 
                       <div className="map-legend">
@@ -3200,6 +3440,192 @@ export default function AdminPanel() {
             </div>
           )}
 
+          {activeTab === 'promos' && (
+            <div className="admin-tab-content animate-fade-in" style={{ gap: '16px', maxHeight: '100%', overflowY: 'auto', padding: '24px' }}>
+              <div className="section-title-flex">
+                <h3>Promo Campaign Builder</h3>
+                <p className="text-gray-400 text-sm">Create and manage dynamic discount codes that synchronize instantly across passenger interfaces.</p>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Form to Add Promo */}
+                <div className="lg:col-span-1 card-glow p-5 flex flex-col gap-4">
+                  <h4 className="text-sm font-bold text-pink-400 uppercase tracking-wider">
+                    🎉 Create New Campaign
+                  </h4>
+
+                  <form onSubmit={async (e) => {
+                    e.preventDefault();
+                    const form = e.target;
+                    const code = form.code.value.trim().toUpperCase();
+                    const discountValue = parseFloat(form.discountValue.value);
+                    const weatherRestriction = form.weatherRestriction.value || null;
+
+                    if (!code || isNaN(discountValue)) {
+                      alert("Please fill out the code and discount fields.");
+                      return;
+                    }
+
+                    try {
+                      const res = await fetch('/api/promos', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ code, discountValue, weatherRestriction })
+                      });
+                      const data = await res.json();
+                      if (data.success) {
+                        form.reset();
+                        fetchInitialData(); // Sync context
+                      } else {
+                        alert("Error: " + (data.error || "Failed to create promo"));
+                      }
+                    } catch (err) {
+                      console.error("Failed to post promo:", err);
+                    }
+                  }} className="flex flex-col gap-3">
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[10px] text-gray-400 font-bold uppercase">Promo Coupon Code</label>
+                      <input 
+                        type="text" 
+                        name="code" 
+                        placeholder="e.g. MONSOON75" 
+                        required
+                        style={{ background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: '12px', borderRadius: '6px', padding: '8px 10px', outline: 'none' }}
+                      />
+                    </div>
+
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[10px] text-gray-400 font-bold uppercase">Discount Amount (₹)</label>
+                      <input 
+                        type="number" 
+                        name="discountValue" 
+                        placeholder="e.g. 75" 
+                        required
+                        min="5"
+                        max="500"
+                        style={{ background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: '12px', borderRadius: '6px', padding: '8px 10px', outline: 'none' }}
+                      />
+                    </div>
+
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[10px] text-gray-400 font-bold uppercase">Weather Restriction</label>
+                      <select 
+                        name="weatherRestriction"
+                        style={{ background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: '12px', borderRadius: '6px', padding: '8px 10px', outline: 'none' }}
+                      >
+                        <option value="">None (Available Always)</option>
+                        <option value="rain">Monsoon/Rain Only</option>
+                      </select>
+                    </div>
+
+                    <button 
+                      type="submit" 
+                      style={{ background: 'linear-gradient(135deg, #ec4899, #db2777)', color: '#fff', border: 'none', borderRadius: '6px', padding: '10px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer', marginTop: '8px' }}
+                    >
+                      Launch Campaign
+                    </button>
+                  </form>
+                </div>
+
+                {/* List of Active & Inactive Promos */}
+                <div className="lg:col-span-2 card-glow p-5 flex flex-col gap-3">
+                  <h4 className="text-sm font-bold text-gray-300 uppercase tracking-wider flex items-center justify-between">
+                    <span>📜 Live Promo Code Records</span>
+                    <span className="text-xs text-pink-400 font-mono">({promos.length} Campaign(s))</span>
+                  </h4>
+
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', textAlign: 'left' }}>
+                      <thead>
+                        <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', color: '#888' }}>
+                          <th style={{ padding: '8px' }}>CODE</th>
+                          <th style={{ padding: '8px' }}>DISCOUNT</th>
+                          <th style={{ padding: '8px' }}>RESTRICTIONS</th>
+                          <th style={{ padding: '8px' }}>STATUS</th>
+                          <th style={{ padding: '8px', textAlign: 'right' }}>ACTIONS</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {promos.length === 0 ? (
+                          <tr>
+                            <td colSpan="5" style={{ padding: '16px', fontStyle: 'italic', textAlign: 'center', color: '#555' }}>
+                              No promo campaigns constructed yet. Create one on the left panel!
+                            </td>
+                          </tr>
+                        ) : (
+                          promos.map(promo => (
+                            <tr key={promo.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)', color: '#ddd' }}>
+                              <td style={{ padding: '8px', fontWeight: 'bold', fontFamily: 'monospace', color: '#fff' }}>{promo.code}</td>
+                              <td style={{ padding: '8px', color: '#10b981', fontWeight: 'bold' }}>₹{promo.discountValue}</td>
+                              <td style={{ padding: '8px' }}>
+                                {promo.weatherRestriction ? (
+                                  <span style={{ fontSize: '9px', backgroundColor: 'rgba(59,130,246,0.15)', color: '#60a5fa', padding: '2px 6px', borderRadius: '4px', border: '1px solid rgba(59,130,246,0.2)' }}>
+                                    🌧️ Rain Alert Only
+                                  </span>
+                                ) : (
+                                  <span style={{ color: '#666' }}>None</span>
+                                )}
+                              </td>
+                              <td style={{ padding: '8px' }}>
+                                <span style={{ 
+                                  fontSize: '9px', 
+                                  backgroundColor: promo.status === 'active' ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)',
+                                  color: promo.status === 'active' ? '#10b981' : '#ef4444',
+                                  padding: '2px 6px',
+                                  borderRadius: '4px',
+                                  border: promo.status === 'active' ? '1px solid rgba(16,185,129,0.2)' : '1px solid rgba(239,68,68,0.2)',
+                                  fontWeight: 'bold'
+                                }}>
+                                  {promo.status.toUpperCase()}
+                                </span>
+                              </td>
+                              <td style={{ padding: '8px', textAlign: 'right' }}>
+                                <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                                  <button 
+                                    onClick={async () => {
+                                      try {
+                                        const res = await fetch('/api/promos/toggle', {
+                                          method: 'POST',
+                                          headers: { 'Content-Type': 'application/json' },
+                                          body: JSON.stringify({ id: promo.id })
+                                        });
+                                        if (res.ok) fetchInitialData();
+                                      } catch (err) {
+                                        console.error(err);
+                                      }
+                                    }}
+                                    style={{ background: 'none', border: '1px solid rgba(255,255,255,0.15)', color: '#ccc', padding: '2px 6px', borderRadius: '4px', fontSize: '9px', cursor: 'pointer' }}
+                                  >
+                                    Toggle
+                                  </button>
+                                  <button 
+                                    onClick={async () => {
+                                      if (confirm(`Delete coupon code ${promo.code}?`)) {
+                                        try {
+                                          const res = await fetch(`/api/promos/${promo.id}`, { method: 'DELETE' });
+                                          if (res.ok) fetchInitialData();
+                                        } catch (err) {
+                                          console.error(err);
+                                        }
+                                      }
+                                    }}
+                                    style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#f87171', padding: '2px 6px', borderRadius: '4px', fontSize: '9px', cursor: 'pointer' }}
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {activeTab === 'env' && (
             <EnvSettingsPanel fetchEnvKeys={fetchEnvKeys} updateEnvKeys={updateEnvKeys} />
           )}
@@ -3211,58 +3637,154 @@ export default function AdminPanel() {
                 <p className="text-gray-400 text-sm">Real-time tracking of OTP verifications, dispatch notifications, and panic alerts.</p>
               </div>
 
-              <div className="card-glow p-5">
-                <div className="flex justify-between items-center mb-4">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '20px' }}>
+                
+                {/* LEFT: SMS Broadcast Composer Panel */}
+                <div className="card-glow p-5 flex flex-col gap-4" style={{ alignSelf: 'start' }}>
                   <h4 className="text-sm font-bold text-amber-500 uppercase tracking-wider flex items-center gap-2">
-                    💬 Live SMS Gateway Logs ({smsLogs.length} Active Records)
+                    📢 SMS Broadcast Composer
                   </h4>
-                  <div className="flex items-center gap-2">
-                    {smsLogs.length > 0 && (
-                      <>
-                        <button 
-                          onClick={exportSmsJson}
-                          className="bg-[#1e1b4b] text-[#c7d2fe] hover:bg-[#312e81] border border-[#4338ca]/30 px-2.5 py-1 rounded text-[10px] font-bold cursor-pointer transition-all"
-                        >
-                          📄 Export JSON
-                        </button>
-                        <button 
-                          onClick={exportSmsCsv}
-                          className="bg-[#451a03] text-[#fef3c7] hover:bg-[#78350f] border border-[#b45309]/30 px-2.5 py-1 rounded text-[10px] font-bold cursor-pointer transition-all"
-                        >
-                          📊 Export CSV
-                        </button>
-                      </>
-                    )}
-                    <span className="text-[10px] text-emerald-400 font-bold bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-500/20">
-                      🟢 SIMULATED TWILIO GATEWAY: ONLINE
+                  
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] text-gray-500 font-bold uppercase">Target Recipients</label>
+                    <select 
+                      value={broadcastTarget} 
+                      onChange={(e) => setBroadcastTarget(e.target.value)}
+                      className="bg-black/40 border border-white/10 rounded px-3 py-1.5 text-xs text-white outline-none w-full cursor-pointer"
+                    >
+                      <option value="all">All Devices (all)</option>
+                      <option value="passenger">Passengers Only</option>
+                      <option value="driver">Drivers Only</option>
+                    </select>
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] text-gray-500 font-bold uppercase">Alert Message Text</label>
+                    <textarea 
+                      rows={4}
+                      placeholder="e.g. 🌧️ Monsoon alert: Heavy waterlogging expected in Kolkata. Travel safely."
+                      value={broadcastMsgInput}
+                      onChange={(e) => setBroadcastMsgInput(e.target.value)}
+                      className="bg-black/40 border border-white/10 rounded px-3 py-1.5 text-xs text-white outline-none w-full resize-none font-sans"
+                      style={{ minHeight: '80px' }}
+                    />
+                    <div className="text-[9px] text-gray-500 text-right mt-1 font-mono">
+                      Length: {broadcastMsgInput.length} chars
+                    </div>
+                  </div>
+
+                  <button 
+                    onClick={async () => {
+                      if (!broadcastMsgInput.trim()) {
+                        alert("Please specify notification message text!");
+                        return;
+                      }
+                      setBroadcastStatus('Sending...');
+                      await broadcastNotification(broadcastTarget, broadcastMsgInput.trim());
+                      setBroadcastMsgInput('');
+                      setBroadcastStatus('Broadcast successfully deployed!');
+                      
+                      // Refresh logs list from backend
+                      try {
+                        const { api } = getServerEndpoints();
+                        const smsRes = await fetch(`${api}/api/admin/sms-logs`);
+                        const smsData = await smsRes.json();
+                        if (smsData.success && Array.isArray(smsData.logs)) {
+                          setSmsLogs(smsData.logs);
+                        }
+                      } catch (err) {
+                        console.error(err);
+                      }
+                      
+                      setTimeout(() => setBroadcastStatus(''), 4000);
+                    }}
+                    className="bg-red-600 hover:bg-red-500 text-white font-bold px-4 py-2 rounded text-xs uppercase tracking-wide transition-all w-full cursor-pointer border-none"
+                  >
+                    Send Broadcast SMS
+                  </button>
+
+                  {broadcastStatus && (
+                    <span className="text-[10px] text-green-400 animate-pulse font-semibold text-center mt-1">
+                      {broadcastStatus}
                     </span>
+                  )}
+
+                  <div className="flex flex-col gap-2 mt-2">
+                    <span className="text-[10px] text-gray-500 font-bold uppercase">Quick Preset Templates</span>
+                    <div className="flex flex-col gap-1.5">
+                      {[
+                        { label: '🌧️ Heavy Rain Flood Alert', text: '🌧️ Heavy rains & flooding reported in Salt Lake. Travel carefully.' },
+                        { label: '🚧 Howrah Bridge Closure', text: '🚧 Howrah Bridge closed temporarily due to congestion checks.' },
+                        { label: '⚡ Promo surcharge active', text: '⚡ Surcharge active! Apply code JOLDISURGE for 15% off next ride.' }
+                      ].map((preset, i) => (
+                        <button 
+                          key={i}
+                          type="button"
+                          onClick={() => setBroadcastMsgInput(preset.text)}
+                          className="text-[9px] text-left bg-white/5 border border-white/10 hover:bg-white/10 text-gray-300 px-3 py-2 rounded transition-all cursor-pointer truncate"
+                        >
+                          {preset.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
 
-                {smsLogs.length === 0 ? (
-                  <div className="text-center py-10 text-gray-500 italic text-xs">
-                    No SMS dispatches registered in this session. Book a ride or request an OTP to trigger gateway payloads.
+                {/* RIGHT: SMS Telemetry Records Logs List */}
+                <div className="card-glow p-5" style={{ alignSelf: 'start' }}>
+                  <div className="flex justify-between items-center mb-4">
+                    <h4 className="text-sm font-bold text-amber-500 uppercase tracking-wider flex items-center gap-2">
+                      💬 Live SMS Gateway Logs ({smsLogs.length} Active Records)
+                    </h4>
+                    <div className="flex items-center gap-2">
+                      {smsLogs.length > 0 && (
+                        <>
+                          <button 
+                            onClick={exportSmsJson}
+                            className="bg-[#1e1b4b] text-[#c7d2fe] hover:bg-[#312e81] border border-[#4338ca]/30 px-2.5 py-1 rounded text-[10px] font-bold cursor-pointer transition-all"
+                          >
+                            📄 Export JSON
+                          </button>
+                          <button 
+                            onClick={exportSmsCsv}
+                            className="bg-[#451a03] text-[#fef3c7] hover:bg-[#78350f] border border-[#b45309]/30 px-2.5 py-1 rounded text-[10px] font-bold cursor-pointer transition-all"
+                          >
+                            📊 Export CSV
+                          </button>
+                        </>
+                      )}
+                      <span className="text-[10px] text-emerald-400 font-bold bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-500/20">
+                        🟢 SIMULATED TWILIO GATEWAY: ONLINE
+                      </span>
+                    </div>
                   </div>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {smsLogs.map(log => (
-                      <div 
-                        key={log.id} 
-                        className="p-3 bg-black/25 rounded-lg border border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs"
-                      >
-                        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                          <span className="font-mono text-[10px] text-indigo-400 font-bold bg-indigo-950 px-2 py-0.5 rounded">
-                            {log.sender}
+
+                  {smsLogs.length === 0 ? (
+                    <div className="text-center py-10 text-gray-500 italic text-xs">
+                      No SMS dispatches registered in this session. Book a ride or request an OTP to trigger gateway payloads.
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '480px', overflowY: 'auto' }} className="custom-scrollbar">
+                      {smsLogs.map(log => (
+                        <div 
+                          key={log.id} 
+                          className="p-3 bg-black/25 rounded-lg border border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs"
+                        >
+                          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                            <span className="font-mono text-[10px] text-indigo-400 font-bold bg-indigo-950 px-2 py-0.5 rounded">
+                              {log.sender}
+                            </span>
+                            <span className="text-gray-300">{log.message}</span>
+                          </div>
+                          <span className="font-mono text-[10px] text-gray-500 whitespace-nowrap">
+                            {log.timestamp}
                           </span>
-                          <span className="text-gray-300">{log.message}</span>
                         </div>
-                        <span className="font-mono text-[10px] text-gray-500 whitespace-nowrap">
-                          {log.timestamp}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                      ))}
+                    </div>
+                  )}
+                </div>
+
               </div>
             </div>
           )}

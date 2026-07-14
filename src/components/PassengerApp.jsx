@@ -20,7 +20,9 @@ import {
   Wallet,
   MessageSquare,
   Send,
-  Volume2
+  Volume2,
+  Mic,
+  Grid
 } from 'lucide-react';
 import L from 'leaflet';
 
@@ -74,6 +76,9 @@ export default function PassengerApp({ isStandalone }) {
     fileDispute,
     calculateDetailedFare,
     getFuelSurchargePercentage,
+    getChatTranslation,
+    promos,
+    blockages,
     congestionZones,
     activeSmsToast,
     triggerSmsToast,
@@ -273,6 +278,9 @@ export default function PassengerApp({ isStandalone }) {
   const [otpError, setOtpError] = useState('');
   const [nameInput, setNameInput] = useState('');
   const [selectedRideForInvoice, setSelectedRideForInvoice] = useState(null);
+  const [callMuted, setCallMuted] = useState(false);
+  const [callSpeaker, setCallSpeaker] = useState(false);
+  const [showCallDialpad, setShowCallDialpad] = useState(false);
 
   // Location inputs
   const [pickupKey, setPickupKey] = useState('PARK_STREET');
@@ -316,6 +324,8 @@ export default function PassengerApp({ isStandalone }) {
   const [showChat, setShowChat] = useState(false);
   const [chatInputText, setChatInputText] = useState('');
   const chatEndRef = useRef(null);
+  const [passengerLang, setPassengerLang] = useState('en');
+  const [driverLang, setDriverLang] = useState('bn');
   
   // AI Support chatbot states
   const [showAiSupport, setShowAiSupport] = useState(false);
@@ -357,31 +367,27 @@ export default function PassengerApp({ isStandalone }) {
   const applySpecificPromoCode = (code) => {
     setPromoError('');
     setPromoSuccess('');
-    const codeVal = code.toUpperCase();
     
-    if (codeVal === 'JOLDIGO50') {
-      setAppliedPromo('JOLDIGO50');
-      setDiscount(50);
-      setPromoSuccess('🎉 Promo applied: ₹50 discount matched!');
-    } else if (codeVal === 'MONSOONFREE') {
-      if (settings.weather === 'rain' || settings.weather === 'waterlogged' || settings.weather === 'flooding') {
-        setAppliedPromo('MONSOONFREE');
-        setDiscount(100);
-        setPromoSuccess('🌧️ Monsoon Promo applied: ₹100 safety discount matched!');
-      } else {
-        setPromoError('❌ Valid only during active monsoon/flooding alerts.');
-      }
-    } else if (codeVal === 'JOLDISAVE') {
-      setAppliedPromo('JOLDISAVE');
-      setDiscount(25);
-      setPromoSuccess('🎉 JoldiSave applied: ₹25 discount matched!');
-    } else if (codeVal === 'FIRSTGO') {
-      setAppliedPromo('FIRSTGO');
-      setDiscount(75);
-      setPromoSuccess('🚀 FIRSTGO applied: ₹75 discount matched!');
-    } else {
-      setPromoError('❌ Invalid promo code.');
+    const codeVal = code.toUpperCase();
+    const foundPromo = promos.find(p => p.code === codeVal && p.status === 'active');
+    
+    if (!foundPromo) {
+      setPromoError('❌ Invalid or expired promo code.');
+      return;
     }
+    
+    // Check weather restriction if any
+    if (foundPromo.weatherRestriction) {
+      const activeWeather = settings.weather;
+      if (foundPromo.weatherRestriction === 'rain' && activeWeather !== 'rain' && activeWeather !== 'waterlogged' && activeWeather !== 'flooding') {
+        setPromoError('❌ Valid only during active rain/monsoon alerts.');
+        return;
+      }
+    }
+    
+    setAppliedPromo(foundPromo.code);
+    setDiscount(foundPromo.discountValue);
+    setPromoSuccess(`🎉 Promo applied: ₹${foundPromo.discountValue} discount matched!`);
   };
 
   const handleApplyPromo = (e) => {
@@ -403,6 +409,7 @@ export default function PassengerApp({ isStandalone }) {
     geofencePolygons: [],
     trafficCircles: [], 
     otherDrivers: [],
+    blockageCircles: [],
   });
 
   // Handle auto login for demo convenience
@@ -592,6 +599,11 @@ export default function PassengerApp({ isStandalone }) {
       markersRef.current.trafficCircles.forEach(c => map.removeLayer(c));
     }
     markersRef.current.trafficCircles = [];
+
+    if (markersRef.current.blockageCircles) {
+      markersRef.current.blockageCircles.forEach(c => map.removeLayer(c));
+    }
+    markersRef.current.blockageCircles = [];
 
     // Draw Traffic Geofence Circles
     const zones = [
@@ -802,8 +814,38 @@ export default function PassengerApp({ isStandalone }) {
           markersRef.current.otherDrivers.push(m);
         }
       });
+
+      // Render dynamic active roadblock blockages on passenger map
+      if (blockages && blockages.length > 0) {
+        blockages.forEach(b => {
+          const fillCol = b.type === 'accident' ? '#ef4444' : (b.type === 'construction' ? '#f59e0b' : '#3b82f6');
+          
+          const circle = L.circle([b.lat, b.lng], {
+            stroke: true,
+            color: fillCol,
+            weight: 2,
+            fillColor: fillCol,
+            fillOpacity: 0.15,
+            radius: b.radius || 150,
+          }).addTo(map);
+
+          const markerIcon = L.divIcon({
+            className: 'blockage-icon-marker',
+            html: `<div class="bg-black/80 border border-white/20 text-white rounded-full flex items-center justify-center font-bold" style="width: 20px; height: 20px; font-size: 10px; border-color: ${fillCol}; box-shadow: 0 0 8px ${fillCol};">⚠️</div>`,
+            iconSize: [20, 20],
+            iconAnchor: [10, 10]
+          });
+
+          const marker = L.marker([b.lat, b.lng], { icon: markerIcon })
+            .addTo(map)
+            .bindPopup(`<b>${b.type.toUpperCase()}: Roadblock Alert</b><br/>${b.description}`);
+
+          markersRef.current.blockageCircles.push(circle);
+          markersRef.current.blockageCircles.push(marker);
+        });
+      }
     }
-  }, [activeRide, drivers, pickupKey, dropoffKey, waypointKey, tab, congestionZones, geofencingZones, sosAlerts]);
+  }, [activeRide, drivers, pickupKey, dropoffKey, waypointKey, tab, congestionZones, geofencingZones, sosAlerts, blockages]);
 
   // Login handlers
   const handleSendOtp = async (e) => {
@@ -943,7 +985,7 @@ export default function PassengerApp({ isStandalone }) {
   const handleSendChat = (e) => {
     e.preventDefault();
     if (!chatInputText.trim()) return;
-    sendChatMessage('passenger', chatInputText.trim());
+    sendChatMessage('passenger', chatInputText.trim(), passengerLang, driverLang);
     setChatInputText('');
   };
 
@@ -1069,13 +1111,34 @@ export default function PassengerApp({ isStandalone }) {
     recognition.start();
   };
 
-  const PASSENGER_QUICK_REPLIES = [
-    "Where are you?",
-    "Please wait, I'm coming.",
-    "I'm at the main gate.",
-    "Are you carrying change?",
-    "Coming in 2 minutes."
-  ];
+  const LOCALIZED_QUICK_REPLIES = {
+    'en': [
+      "Where are you?",
+      "Please wait, I'm coming.",
+      "I'm at the main gate.",
+      "I am waiting at the pickup location.",
+      "Heavy traffic, reaching in 5 minutes.",
+      "Ok"
+    ],
+    'bn': [
+      "আপনি কোথায় আছেন?",
+      "দয়া করে একটু অপেক্ষা করুন, আমি আসছি।",
+      "আমি মেইন গেটে আছি।",
+      "আমি পিকআপ লোকেশনে অপেক্ষা করছি।",
+      "প্রচুর ট্রাফিক, ৫ মিনিটে পৌঁছাচ্ছি।",
+      "ঠিক আছে"
+    ],
+    'hi': [
+      "आप कहाँ हैं?",
+      "कृपया थोड़ा इंतजार करें, मैं आ रहा हूँ।",
+      "मैं मेन गेट पर हूँ।",
+      "मैं पिकअप लोकेशन पर इंतजार कर रहा हूँ।",
+      "बहुत भारी ट्रैफिक है, ५ मिनट में पहुँच रहा हूँ।",
+      "ठीक है"
+    ]
+  };
+
+  const passengerQuickReplies = LOCALIZED_QUICK_REPLIES[passengerLang] || LOCALIZED_QUICK_REPLIES['en'];
 
   const getPreviewMetrics = (vType = vehicleType) => {
     const pick = KOLKATA_LOCATIONS[pickupKey];
@@ -1639,13 +1702,41 @@ export default function PassengerApp({ isStandalone }) {
                 <button style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', fontSize: '18px', fontWeight: 'bold' }} onClick={() => setShowChat(false)}>×</button>
               </div>
 
+              {/* Language Selectors Row */}
+              <div style={{ display: 'flex', gap: '8px', padding: '8px 12px', backgroundColor: 'rgba(255,255,255,0.03)', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '10px', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                  <span style={{ color: '#888' }}>My Lang:</span>
+                  <select 
+                    value={passengerLang} 
+                    onChange={(e) => setPassengerLang(e.target.value)} 
+                    style={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: '10px', borderRadius: '4px', padding: '2px 4px', outline: 'none' }}
+                  >
+                    <option value="en">English</option>
+                    <option value="bn">বাংলা (Bengali)</option>
+                    <option value="hi">हिंदी (Hindi)</option>
+                  </select>
+                </div>
+                <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                  <span style={{ color: '#888' }}>Driver prefers:</span>
+                  <select 
+                    value={driverLang} 
+                    onChange={(e) => setDriverLang(e.target.value)} 
+                    style={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: '10px', borderRadius: '4px', padding: '2px 4px', outline: 'none' }}
+                  >
+                    <option value="bn">বাংলা (Bengali)</option>
+                    <option value="en">English</option>
+                    <option value="hi">हिंदी (Hindi)</option>
+                  </select>
+                </div>
+              </div>
+
               <div style={{ backgroundColor: 'rgba(16,185,129,0.08)', borderBottom: '1px solid rgba(16,185,129,0.12)', padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '9px', color: '#10b981', fontFamily: 'Outfit, sans-serif' }}>
                 <span className="animate-pulse" style={{ fontSize: '10px' }}>🛡️</span>
-                <span><b>Safe Driving Mode:</b> One-tap quick replies are recommended. Auto-translates to driver's Bengali.</span>
+                <span><b>Safe Driving Mode:</b> Quick replies adapt to your language. Auto-translates to driver's layout.</span>
               </div>
 
               {/* Message bubbles */}
-              <div className="chat-messages-container" style={{ height: '180px' }}>
+              <div className="chat-messages-container" style={{ height: '170px' }}>
                 {chatMessages.length === 0 ? (
                   <div style={{ textAlign: 'center', fontSize: '10px', color: '#555', marginTop: '32px', fontStyle: 'italic' }}>
                     Tap a quick reply or type to begin bilingual translation chat.
@@ -1686,13 +1777,13 @@ export default function PassengerApp({ isStandalone }) {
                 <div ref={chatEndRef} />
               </div>
 
-              {/* English Passenger Quick-Replies Grid */}
+              {/* Localized Passenger Quick-Replies Grid */}
               <div className="chat-quick-replies-grid">
-                {PASSENGER_QUICK_REPLIES.map((reply, idx) => (
+                {passengerQuickReplies.map((reply, idx) => (
                   <button 
                     key={idx}
                     className="quick-reply-btn"
-                    onClick={() => sendChatMessage('passenger', reply)}
+                    onClick={() => sendChatMessage('passenger', reply, passengerLang, driverLang)}
                   >
                     {reply}
                   </button>
@@ -1703,12 +1794,12 @@ export default function PassengerApp({ isStandalone }) {
               <form onSubmit={handleSendChat} className="chat-input-form">
                 <input 
                   type="text" 
-                  placeholder="Type message in English..." 
+                  placeholder={`Type in ${passengerLang === 'bn' ? 'Bengali' : (passengerLang === 'hi' ? 'Hindi' : 'English')}...`}
                   style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '6px 10px', fontSize: '12px', color: '#fff', outline: 'none' }}
                   value={chatInputText}
                   onChange={(e) => setChatInputText(e.target.value)}
                 />
-                <button type="submit" style={{ border: 'none', borderRadius: '8px', backgroundColor: 'var(--color-primary)', color: '#000', padding: '6px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <button type="submit" style={{ border: 'none', borderRadius: '8px', backgroundColor: 'var(--color-primary)', color: '#000', padding: '6px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justify: 'center' }}>
                   <Send size={12} fill="#000" />
                 </button>
               </form>
@@ -2090,35 +2181,63 @@ export default function PassengerApp({ isStandalone }) {
           <div style={{ fontSize: '12px', color: '#718096', marginTop: '4px' }}>{partnerRoleLabel}</div>
         </div>
 
-        <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '40px 0' }}>
-          <div 
-            className="pulse-circle animate-pulse"
-            style={{
-              width: '120px',
-              height: '120px',
-              borderRadius: '50%',
-              backgroundColor: 'rgba(255, 221, 0, 0.05)',
-              border: '2px solid rgba(255, 221, 0, 0.2)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}
-          >
+        <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '40px 0', minHeight: '120px' }}>
+          {showCallDialpad ? (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', width: '100%', maxWidth: '180px' }} className="animate-fade-in">
+              {['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#'].map(num => (
+                <button 
+                  key={num}
+                  style={{
+                    width: '44px',
+                    height: '44px',
+                    borderRadius: '50%',
+                    border: '1px solid rgba(255,255,255,0.15)',
+                    backgroundColor: 'rgba(255,255,255,0.05)',
+                    color: '#fff',
+                    fontSize: '14px',
+                    fontWeight: 'bold',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer'
+                  }}
+                  onMouseDown={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.2)'}
+                  onMouseUp={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'}
+                >
+                  {num}
+                </button>
+              ))}
+            </div>
+          ) : (
             <div 
+              className="pulse-circle animate-pulse"
               style={{
-                width: '90px',
-                height: '90px',
+                width: '120px',
+                height: '120px',
                 borderRadius: '50%',
-                backgroundColor: 'rgba(255, 221, 0, 0.1)',
+                backgroundColor: 'rgba(255, 221, 0, 0.05)',
+                border: '2px solid rgba(255, 221, 0, 0.2)',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '36px'
+                justifyContent: 'center'
               }}
             >
-              👨‍✈️
+              <div 
+                style={{
+                  width: '90px',
+                  height: '90px',
+                  borderRadius: '50%',
+                  backgroundColor: 'rgba(255, 221, 0, 0.1)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '36px'
+                }}
+              >
+                👨‍✈️
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         <div style={{ textAlign: 'center', marginBottom: '40px' }}>
@@ -2183,18 +2302,69 @@ export default function PassengerApp({ isStandalone }) {
               </button>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px', width: '100%' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', maxWidth: '200px', opacity: 0.6 }}>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', fontSize: '9px', gap: '4px' }}>
-                  <button style={{ width: '40px', height: '40px', borderRadius: '50%', border: '1px solid rgba(255,255,255,0.2)', backgroundColor: 'transparent', color: '#fff', display: 'flex', alignItems: 'center', justify: 'center' }}>🎤</button>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '32px', width: '100%' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', maxWidth: '240px', opacity: 0.95 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', fontSize: '10px', color: '#a0aec0', gap: '6px' }}>
+                  <button 
+                    onClick={() => setCallMuted(!callMuted)}
+                    style={{ 
+                      width: '48px', 
+                      height: '48px', 
+                      borderRadius: '50%', 
+                      border: callMuted ? 'none' : '1px solid rgba(255,255,255,0.15)', 
+                      backgroundColor: callMuted ? '#ffdd00' : 'rgba(255,255,255,0.06)', 
+                      color: callMuted ? '#000' : '#fff', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center', 
+                      transition: 'all 0.2s', 
+                      cursor: 'pointer' 
+                    }}
+                  >
+                    <Mic size={18} color={callMuted ? '#000' : '#fff'} />
+                  </button>
                   Mute
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', fontSize: '9px', gap: '4px' }}>
-                  <button style={{ width: '40px', height: '40px', borderRadius: '50%', border: '1px solid rgba(255,255,255,0.2)', backgroundColor: 'transparent', color: '#fff', display: 'flex', alignItems: 'center', justify: 'center' }}>🔢</button>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', fontSize: '10px', color: '#a0aec0', gap: '6px' }}>
+                  <button 
+                    onClick={() => setShowCallDialpad(!showCallDialpad)}
+                    style={{ 
+                      width: '48px', 
+                      height: '48px', 
+                      borderRadius: '50%', 
+                      border: showCallDialpad ? 'none' : '1px solid rgba(255,255,255,0.15)', 
+                      backgroundColor: showCallDialpad ? '#ffdd00' : 'rgba(255,255,255,0.06)', 
+                      color: showCallDialpad ? '#000' : '#fff', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center', 
+                      transition: 'all 0.2s', 
+                      cursor: 'pointer' 
+                    }}
+                  >
+                    <Grid size={18} color={showCallDialpad ? '#000' : '#fff'} />
+                  </button>
                   Keypad
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', fontSize: '9px', gap: '4px' }}>
-                  <button style={{ width: '40px', height: '40px', borderRadius: '50%', border: '1px solid rgba(255,255,255,0.2)', backgroundColor: 'transparent', color: '#fff', display: 'flex', alignItems: 'center', justify: 'center' }}>🔊</button>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', fontSize: '10px', color: '#a0aec0', gap: '6px' }}>
+                  <button 
+                    onClick={() => setCallSpeaker(!callSpeaker)}
+                    style={{ 
+                      width: '48px', 
+                      height: '48px', 
+                      borderRadius: '50%', 
+                      border: callSpeaker ? 'none' : '1px solid rgba(255,255,255,0.15)', 
+                      backgroundColor: callSpeaker ? '#ffdd00' : 'rgba(255,255,255,0.06)', 
+                      color: callSpeaker ? '#000' : '#fff', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center', 
+                      transition: 'all 0.2s', 
+                      cursor: 'pointer' 
+                    }}
+                  >
+                    <Volume2 size={18} color={callSpeaker ? '#000' : '#fff'} />
+                  </button>
                   Speaker
                 </div>
               </div>

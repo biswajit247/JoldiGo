@@ -8,6 +8,9 @@ DROP TABLE IF EXISTS rides CASCADE;
 DROP TABLE IF EXISTS drivers CASCADE;
 DROP TABLE IF EXISTS passengers CASCADE;
 DROP TABLE IF EXISTS fraud_alerts CASCADE;
+DROP TABLE IF EXISTS promos CASCADE;
+DROP TABLE IF EXISTS blockages CASCADE;
+DROP TABLE IF EXISTS sms_logs CASCADE;
 
 -- 1. Create passengers table
 CREATE TABLE passengers (
@@ -97,6 +100,37 @@ CREATE TABLE fraud_alerts (
   status VARCHAR(50) DEFAULT 'pending',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- 7. Create promos table
+CREATE TABLE promos (
+  code VARCHAR(50) PRIMARY KEY,
+  discount_value NUMERIC(10, 2) NOT NULL,
+  discount_type VARCHAR(20) NOT NULL DEFAULT 'flat',
+  max_discount NUMERIC(10, 2),
+  weather_restriction VARCHAR(20),
+  status VARCHAR(20) NOT NULL DEFAULT 'active',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 8. Create blockages table
+CREATE TABLE blockages (
+  id SERIAL PRIMARY KEY,
+  lat NUMERIC(9, 6) NOT NULL,
+  lng NUMERIC(9, 6) NOT NULL,
+  type VARCHAR(50) DEFAULT 'accident',
+  radius INTEGER DEFAULT 150,
+  description VARCHAR(255),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 9. Create sms_logs table
+CREATE TABLE sms_logs (
+  id SERIAL PRIMARY KEY,
+  sender VARCHAR(100) NOT NULL,
+  target VARCHAR(50) NOT NULL DEFAULT 'all',
+  message TEXT NOT NULL,
+  timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 `;
 
 const seedDataSql = `
@@ -141,6 +175,18 @@ INSERT INTO fraud_alerts (id, passenger_phone, driver_id, alert_type, severity, 
   'alert_init_1', '+91 99030 99030', 'drv_1', 'co_location', 'high', 'pending'
 )
 ON CONFLICT (id) DO NOTHING;
+
+-- Seed Promos
+INSERT INTO promos (code, discount_value, discount_type, max_discount, weather_restriction, status) VALUES
+('JOLDIGO50', 50.00, 'flat', 50.00, NULL, 'active'),
+('MONSOONFREE', 100.00, 'flat', 100.00, 'rain', 'active'),
+('JOLDISAVE', 25.00, 'flat', 25.00, NULL, 'active'),
+('FIRSTGO', 75.00, 'flat', 75.00, NULL, 'active')
+ON CONFLICT (code) DO NOTHING;
+
+-- Seed default blockage
+INSERT INTO blockages (lat, lng, type, radius, description) VALUES
+(22.5485, 88.3585, 'accident', 200, 'Car pile-up near Park Street intersection');
 `;
 
 const migrate = async () => {

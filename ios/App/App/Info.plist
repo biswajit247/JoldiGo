@@ -59,6 +59,8 @@
 	</array>
 	<key>NSCameraUsageDescription</key>
 	<string>Jaldi Go requires camera access to allow Driver partners to capture and upload verification documents like Driver's License and RC Books.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>JoldiGo requires microphone access to enable VoIP voice calling between riders and drivers.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Jaldi Go requires photo library access to allow uploading verification documents from your gallery.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>

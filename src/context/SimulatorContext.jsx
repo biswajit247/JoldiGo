@@ -23,20 +23,7 @@ const INITIAL_GEOFENCE = [
   { lat: 22.4900, lng: 88.3200 }, 
 ];
 
-const CHAT_TRANSLATIONS = {
-  "Where are you?": "আপনি কোথায়?",
-  "Please wait, I'm coming.": "দয়া করে অপেক্ষা করুন, আমি আসছি।",
-  "I'm at the main gate.": "আমি মেইন গেটে আছি।",
-  "Is there any toll?": "কোনো টোল ট্যাক্স আছে কি?",
-  "Are you carrying change?": "আপনার কাছে খুচরো টাকা আছে?",
-  "Coming in 2 minutes.": "২ মিনিটের মধ্যে আসছি।",
-  "আমি লোকেশনে পৌঁছে গেছি": "I have arrived at the location.",
-  "ভীষণ জ্যাম আছে, একটু দেরি হবে": "Traffic is heavy, will be late.",
-  "আমি আসছি": "I am coming.",
-  "কোন রুট দিয়ে যাব?": "Which route should I take?",
-  "আমার কাছে খুচরো আছে": "I have cash change.",
-  "আপনার ওটিপি টা বলুন": "Please tell me your OTP."
-};
+
 
 // Dynamic URL parser for tunnels / local IP / production hosts
 export const getServerEndpoints = () => {
@@ -47,8 +34,10 @@ export const getServerEndpoints = () => {
       if (saved) {
         api = saved;
       } else {
-        const isCapacitor = typeof window !== 'undefined' && !!window.Capacitor;
-        if (!isCapacitor && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+        const isCapacitor = typeof window !== 'undefined' && (!!window.Capacitor || window.location.protocol === 'capacitor:');
+        if (isCapacitor) {
+          api = 'https://joldigo-backend.onrender.com';
+        } else if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
           api = 'http://localhost:5001';
         }
       }
@@ -140,6 +129,125 @@ const getRouteCoordinates = async (start, end, isWaterlogged = false) => {
   return points;
 };
 
+const getDetourCoordinates = async (start, end, detourPoint) => {
+  let points = [];
+  try {
+    const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${start.lng},${start.lat};${detourPoint.lng},${detourPoint.lat};${end.lng},${end.lat}?overview=full&geometries=geojson`);
+    const data = await res.json();
+    if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
+      const coords = data.routes[0].geometry.coordinates;
+      points = coords.map(coord => ({ lat: coord[1], lng: coord[0] }));
+    }
+  } catch (err) {
+    console.warn("Detour routing API failed, falling back to straight line segments.", err);
+  }
+  if (points.length === 0) {
+    points = [
+      ...generateRoutePoints(start, detourPoint, 15),
+      ...generateRoutePoints(detourPoint, end, 15)
+    ];
+  }
+  return points;
+};
+
+const CHAT_TRANSLATIONS = {
+  'en-bn': {
+    'i am waiting at the pickup location': 'আমি পিকআপ লোকেশনে অপেক্ষা করছি।',
+    'where are you': 'আপনি কোথায় আছেন?',
+    'heavy traffic reaching in 5 minutes': 'প্রচুর ট্রাফিক, ৫ মিনিটে পৌঁছাচ্ছি।',
+    'please cancel the ride': 'দয়া করে ট্রিপটি বাতিল করুন।',
+    'i have arrived': 'আমি এসে গেছি।',
+    'hello': 'নমস্কার।',
+    'okay understood': 'ঠিক আছে, বুঝতে পেরেছি।',
+    'yes': 'হ্যাঁ',
+    'no': 'না',
+    'ok': 'ঠিক আছে'
+  },
+  'en-hi': {
+    'i am waiting at the pickup location': 'मैं पिकअप लोकेशन पर इंतजार कर रहा हूँ।',
+    'where are you': 'आप कहाँ हैं?',
+    'heavy traffic reaching in 5 minutes': 'बहुत भारी ट्रैफिक है, ५ मिनट में पहुँच रहा हूँ।',
+    'please cancel the ride': 'कृपया राइड कैंसिल कर दीजिए।',
+    'i have arrived': 'मैं आ गया हूँ।',
+    'hello': 'नमस्ते।',
+    'okay understood': 'ठीक है, समझ गया।',
+    'yes': 'हाँ',
+    'no': 'नहीं',
+    'ok': 'ठीक है'
+  },
+  'bn-en': {
+    'আমি পিকআপ লোকেশনে অপেক্ষা করছি।': 'I am waiting at the pickup location.',
+    'আপনি কোথায় আছেন?': 'Where are you?',
+    'প্রচুর ট্রাফিক, ৫ মিনিটে পৌঁছাচ্ছি।': 'Heavy traffic, reaching in 5 minutes.',
+    'দয়া করে ট্রিপটি বাতিল করুন।': 'Please cancel the ride.',
+    'আমি এসে গেছি।': 'I have arrived.',
+    'নমস্কার।': 'Hello.',
+    'ঠিক আছে, বুঝতে পেরেছি।': 'Okay, understood.',
+    'হ্যাঁ': 'Yes',
+    'না': 'No',
+    'ঠিক আছে': 'Ok'
+  },
+  'bn-hi': {
+    'আমি পিকআপ লোকেশনে অপেক্ষা করছি।': 'मैं पिकअप लोकेशन पर इंतजार कर रहा हूँ।',
+    'আপনি কোথায় আছেন?': 'आप कहाँ हैं?',
+    'প্রচুর ট্রাফিক, ৫ মিনিটে পৌঁছাচ্ছি।': 'बहुत भारी ट्रैफिक है, ५ मिनट में पहुँच रहा हूँ।',
+    'দয়া করে ট্রিপটি বাতিল করুন।': 'कृपया राइड कैंसिल कर दीजिए।',
+    'আমি এসে গেছি।': 'मैं आ गया हूँ।',
+    'নমস্কার।': 'नमस्ते।',
+    'ঠিক আছে, বুঝতে পেরেছি।': 'ठीक है, समझ गया।',
+    'হ্যাঁ': 'हाँ',
+    'না': 'नहीं',
+    'ঠিক আছে': 'ठीक है'
+  },
+  'hi-en': {
+    'मैं पिकअप लोकेशन पर इंतजार कर रहा हूँ।': 'I am waiting at the pickup location.',
+    'आप कहाँ हैं?': 'Where are you?',
+    'बहुत भारी ट्रैफिक है, ५ मिनट में पहुँच रहा हूँ।': 'Heavy traffic, reaching in 5 minutes.',
+    'कृपया राइड कैंसिल कर दीजिए।': 'Please cancel the ride.',
+    'मैं आ गया हूँ।': 'I have arrived.',
+    'नमस्ते।': 'Hello.',
+    'ठीक है, समझ गया।': 'Okay, understood.',
+    'हाँ': 'Yes',
+    'नहीं': 'No',
+    'ठीक है': 'Ok'
+  },
+  'hi-bn': {
+    'मैं पिकअप लोकेशन पर इंतजार कर रहा हूँ।': 'আমি পিকআপ লোকেশনে অপেক্ষা করছি।',
+    'आप कहाँ हैं?': 'আপনি কোথায় আছেন?',
+    'बहुत भारी ट्रैफिक है, ५ मिनट में पहुँच रहा हूँ।': 'প্রচুর ট্রাফিক, ৫ মিনিটে পৌঁছাচ্ছি।',
+    'कृपया राइड कैंसिल कर दीजिए।': 'দয়া করে ট্রিপটি বাতিল করুন।',
+    'मैं आ गया हूँ।': 'আমি এসে গেছি।',
+    'नमस्ते।': 'নমস্কার।',
+    'ठीक है, समझ गया।': 'ঠিক আছে, বুঝতে পেরেছি।',
+    'हाँ': 'হ্যাঁ',
+    'नहीं': 'না',
+    'ठीक আছে': 'ঠিক আছে'
+  }
+};
+
+export const getChatTranslation = (text, sourceLang = 'en', targetLang = 'bn') => {
+  if (!text) return '';
+  const s = sourceLang.toLowerCase().split('-')[0];
+  const t = targetLang.toLowerCase().split('-')[0];
+  if (s === t) return text;
+  
+  const key = `${s}-${t}`;
+  const dict = CHAT_TRANSLATIONS[key];
+  
+  const normalizedText = text.trim().toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g,"");
+  if (dict && dict[normalizedText]) {
+    return dict[normalizedText];
+  }
+  
+  // Dynamic fallback translations
+  if (t === 'bn') {
+    return `[অনূদিত] ${text} (দাদা)`;
+  } else if (t === 'hi') {
+    return `[अनुवादित] ${text} (भैया)`;
+  }
+  return `[Translated] ${text}`;
+};
+
 export const SimulatorProvider = ({ children }) => {
   const [drivers, setDrivers] = useState([]);
   const [geofence, setGeofence] = useState(INITIAL_GEOFENCE);
@@ -163,6 +271,15 @@ export const SimulatorProvider = ({ children }) => {
   const [useAiSurgeEngine, setUseAiSurgeEngine] = useState(false);
   const [dynamicSurgeMultiplier, setDynamicSurgeMultiplier] = useState(1.0);
   const [dispatchQueueLog, setDispatchQueueLog] = useState([]);
+  const [promos, setPromos] = useState([
+    { code: 'JOLDIGO50', discountValue: 50, discountType: 'flat', maxDiscount: 50, weatherRestriction: null, status: 'active' },
+    { code: 'MONSOONFREE', discountValue: 100, discountType: 'flat', maxDiscount: 100, weatherRestriction: 'rain', status: 'active' },
+    { code: 'JOLDISAVE', discountValue: 25, discountType: 'flat', maxDiscount: 25, weatherRestriction: null, status: 'active' },
+    { code: 'FIRSTGO', discountValue: 75, discountType: 'flat', maxDiscount: 75, weatherRestriction: null, status: 'active' }
+  ]);
+  const [blockages, setBlockages] = useState([
+    { id: 'b_default', lat: 22.5485, lng: 88.3585, type: 'accident', radius: 200, description: 'Car pile-up near Park Street intersection' }
+  ]);
 
   // Server state parameters
   const [fuelPrices, setFuelPrices] = useState({ cng: 95.50, petrol: 104.50, diesel: 92.75 });
@@ -212,6 +329,39 @@ export const SimulatorProvider = ({ children }) => {
     }, 1000);
   };
 
+  const peerConnectionRef = useRef(null);
+  const localStreamRef = useRef(null);
+  const remoteAudioRef = useRef(null);
+
+  // Initialize a hidden audio element on boot to play incoming stream
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const audio = document.createElement('audio');
+      audio.autoplay = true;
+      remoteAudioRef.current = audio;
+    }
+    return () => {
+      if (remoteAudioRef.current) {
+        remoteAudioRef.current.srcObject = null;
+      }
+    };
+  }, []);
+
+  const closeWebrtcConnection = () => {
+    console.log('[WebRTC] Closing peer connection.');
+    if (peerConnectionRef.current) {
+      peerConnectionRef.current.close();
+      peerConnectionRef.current = null;
+    }
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach(track => track.stop());
+      localStreamRef.current = null;
+    }
+    if (remoteAudioRef.current) {
+      remoteAudioRef.current.srcObject = null;
+    }
+  };
+
   const cleanupCall = () => {
     if (callTimerRef.current) {
       clearInterval(callTimerRef.current);
@@ -221,6 +371,118 @@ export const SimulatorProvider = ({ children }) => {
     setCallFrom(null);
     setCallPartner(null);
     setCallDuration(0);
+    closeWebrtcConnection();
+  };
+
+  const sendWebrtcSignal = (targetRole, targetId, signal) => {
+    const msg = JSON.stringify({
+      type: 'webrtc_signal',
+      payload: { targetRole, targetId, signal }
+    });
+    
+    const driverId = activeRide?.driverId;
+    if (passengerSocketRef.current && passengerSocketRef.current.readyState === WebSocket.OPEN) {
+      passengerSocketRef.current.send(msg);
+    } else if (driverId && driverSocketsRef.current[driverId] && driverSocketsRef.current[driverId].readyState === WebSocket.OPEN) {
+      driverSocketsRef.current[driverId].send(msg);
+    }
+  };
+
+  const setupPeerConnection = async (targetRole, targetId, isInitiator) => {
+    try {
+      console.log(`[WebRTC] Setting up PeerConnection. isInitiator: ${isInitiator}`);
+      
+      closeWebrtcConnection();
+
+      const pc = new RTCPeerConnection({
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' }
+        ]
+      });
+
+      peerConnectionRef.current = pc;
+
+      pc.onicecandidate = (event) => {
+        if (event.candidate) {
+          sendWebrtcSignal(targetRole, targetId, {
+            type: 'candidate',
+            candidate: event.candidate
+          });
+        }
+      };
+
+      pc.ontrack = (event) => {
+        console.log('[WebRTC] Received remote track!', event.streams[0]);
+        if (remoteAudioRef.current) {
+          remoteAudioRef.current.srcObject = event.streams[0];
+          remoteAudioRef.current.play().catch(err => {
+            console.error('[WebRTC] Failed to play remote audio:', err);
+          });
+        }
+      };
+
+      let localStream;
+      try {
+        localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        localStreamRef.current = localStream;
+        console.log('[WebRTC] Local microphone captured successfully.');
+      } catch (micErr) {
+        console.warn('[WebRTC] Failed to capture microphone. Continuing in silent mode.', micErr);
+        addLog('⚠️ Microphone access denied. Simulated call will be silent.', 'warning');
+      }
+
+      if (localStream) {
+        localStream.getTracks().forEach((track) => {
+          pc.addTrack(track, localStream);
+        });
+      }
+
+      if (isInitiator) {
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        sendWebrtcSignal(targetRole, targetId, {
+          type: 'offer',
+          sdp: pc.localDescription
+        });
+      }
+
+    } catch (err) {
+      console.error('[WebRTC] Error setting up PeerConnection:', err);
+    }
+  };
+
+  const handleIncomingWebrtcSignal = async (data) => {
+    const { signal, fromRole, fromId } = data;
+    const pc = peerConnectionRef.current;
+
+    try {
+      if (signal.type === 'offer') {
+        if (!pc) {
+          await setupPeerConnection(fromRole, fromId, false);
+        }
+        const currentPc = peerConnectionRef.current;
+        if (currentPc) {
+          await currentPc.setRemoteDescription(new RTCSessionDescription(signal.sdp));
+          const answer = await currentPc.createAnswer();
+          await currentPc.setLocalDescription(answer);
+          sendWebrtcSignal(fromRole, fromId, {
+            type: 'answer',
+            sdp: currentPc.localDescription
+          });
+        }
+      } else if (signal.type === 'answer') {
+        if (pc) {
+          await pc.setRemoteDescription(new RTCSessionDescription(signal.sdp));
+        }
+      } else if (signal.type === 'candidate') {
+        if (pc && signal.candidate) {
+          await pc.addIceCandidate(new RTCIceCandidate(signal.candidate));
+        }
+      }
+    } catch (err) {
+      console.error('[WebRTC] Error handling incoming WebRTC signal:', err);
+    }
   };
 
   const initiateCall = (targetRole, targetId, fromName) => {
@@ -259,6 +521,9 @@ export const SimulatorProvider = ({ children }) => {
   const acceptCall = (targetRole, targetId) => {
     setCallState('connected');
     startCallTimer();
+    
+    // WebRTC connection: setup peer connection as responder
+    setupPeerConnection(targetRole, targetId, false);
 
     const msg = JSON.stringify({
       type: 'accept_call',
@@ -358,6 +623,39 @@ export const SimulatorProvider = ({ children }) => {
       const hotspotsData = await hotspotsRes.json();
       if (hotspotsData.success) {
         setDemandHotspots(hotspotsData.hotspots);
+      }
+
+      // Fetch dynamic promo codes
+      try {
+        const promosRes = await fetch(`${api}/api/promos`);
+        const promosData = await promosRes.json();
+        if (Array.isArray(promosData)) {
+          setPromos(promosData);
+        }
+      } catch (e) {
+        console.warn("Failed to fetch promos list from backend.", e);
+      }
+
+      // Fetch dynamic blockages
+      try {
+        const blockagesRes = await fetch(`${api}/api/blockages`);
+        const blockagesData = await blockagesRes.json();
+        if (blockagesData.success && Array.isArray(blockagesData.blockages)) {
+          setBlockages(blockagesData.blockages);
+        }
+      } catch (e) {
+        console.warn("Failed to fetch blockages list from backend.", e);
+      }
+
+      // Fetch persistent SMS logs
+      try {
+        const smsRes = await fetch(`${api}/api/admin/sms-logs`);
+        const smsData = await smsRes.json();
+        if (smsData.success && Array.isArray(smsData.logs)) {
+          setSmsLogs(smsData.logs);
+        }
+      } catch (e) {
+        console.warn("Failed to fetch sms logs list from backend.", e);
       }
     } catch (err) {
       console.warn("Failed to connect to backend server. Operating in offline simulated mode.", err);
@@ -597,6 +895,10 @@ export const SimulatorProvider = ({ children }) => {
         case 'call_accepted':
           setCallState('connected');
           startCallTimer();
+          setupPeerConnection('driver', data.fromId, true);
+          break;
+        case 'webrtc_signal':
+          handleIncomingWebrtcSignal(data);
           break;
         case 'call_ended':
           cleanupCall();
@@ -641,6 +943,9 @@ export const SimulatorProvider = ({ children }) => {
         case 'drivers_updated':
           setDrivers(data.drivers);
           break;
+        case 'blockages_updated':
+          setBlockages(data.blockages);
+          break;
       }
     };
     passengerSocketRef.current = ws;
@@ -667,6 +972,10 @@ export const SimulatorProvider = ({ children }) => {
         case 'call_accepted':
           setCallState('connected');
           startCallTimer();
+          setupPeerConnection('passenger', data.fromId, true);
+          break;
+        case 'webrtc_signal':
+          handleIncomingWebrtcSignal(data);
           break;
         case 'call_ended':
           cleanupCall();
@@ -708,6 +1017,9 @@ export const SimulatorProvider = ({ children }) => {
         case 'drivers_updated':
           setDrivers(data.drivers);
           break;
+        case 'blockages_updated':
+          setBlockages(data.blockages);
+          break;
       }
     };
     driverSocketsRef.current[driverId] = ws;
@@ -745,6 +1057,9 @@ export const SimulatorProvider = ({ children }) => {
         case 'fraud_alerts_updated':
           setFraudAlerts(data.alerts);
           playSound('sos');
+          break;
+        case 'blockages_updated':
+          setBlockages(data.blockages);
           break;
         case 'predictive_guide_line':
           setPredictiveGuides(prev => [...prev, {
@@ -1338,6 +1653,7 @@ export const SimulatorProvider = ({ children }) => {
   const animateDriverMovement = (driverId, pathCoords, stage) => {
     if (simulationIntervalRef.current) clearInterval(simulationIntervalRef.current);
     let idx = 0;
+    const encounteredBlockages = new Set();
     simulationIntervalRef.current = setInterval(() => {
       idx++;
       if (idx >= pathCoords.length) {
@@ -1347,7 +1663,13 @@ export const SimulatorProvider = ({ children }) => {
         // Push final GPS update via WebSockets to synchronize DB
         const ws = driverSocketsRef.current[driverId];
         if (ws && ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({ type: 'driver_location_update', location: finalLoc }));
+          ws.send(JSON.stringify({ 
+            type: 'driver_location_update', 
+            location: finalLoc,
+            speed: 0,
+            abruptBraking: false,
+            isDeviated: false
+          }));
         }
 
         if (stage === 'pickup') {
@@ -1356,7 +1678,7 @@ export const SimulatorProvider = ({ children }) => {
             if (ws && ws.readyState === WebSocket.OPEN) {
               ws.send(JSON.stringify({ type: 'update_ride_status', rideId: prev.id, status: 'arrived', passengerPhone: prev.passengerPhone }));
             }
-            return { ...prev, status: 'arrived', location: finalLoc };
+            return { ...prev, status: 'arrived', location: finalLoc, speed: 0, abruptBraking: false, isDeviated: false };
           });
         } else if (stage === 'trip') {
           setActiveRide(prev => {
@@ -1364,20 +1686,88 @@ export const SimulatorProvider = ({ children }) => {
             if (ws && ws.readyState === WebSocket.OPEN) {
               ws.send(JSON.stringify({ type: 'update_ride_status', rideId: prev.id, status: 'completed', passengerPhone: prev.passengerPhone }));
             }
-            return { ...prev, status: 'completed', location: finalLoc };
+            return { ...prev, status: 'completed', location: finalLoc, speed: 0, abruptBraking: false, isDeviated: false };
           });
         }
       } else {
         const nextLoc = pathCoords[idx];
         setDrivers(prev => prev.map(d => d.id === driverId ? { ...d, location: nextLoc } : d));
         
+        // Check if approaching any active road blockages / hazards
+        const activeBlockage = blockages.find(b => {
+          if (encounteredBlockages.has(b.id)) return false;
+          const distKm = calculateDistance(nextLoc.lat, nextLoc.lng, b.lat, b.lng);
+          return distKm * 1000 <= b.radius;
+        });
+
+        let blockageBraking = false;
+        let blockageDeviated = false;
+
+        if (activeBlockage) {
+          encounteredBlockages.add(activeBlockage.id);
+          playSound('filter');
+          addLog(`⚠️ [Telemetry Alert] Captain Rajesh Kumar encountered a roadblock (${activeBlockage.description || 'Hazard'}) near [${activeBlockage.lat.toFixed(4)}, ${activeBlockage.lng.toFixed(4)}]! Initiating emergency detour recalculation.`, 'warning');
+          
+          blockageBraking = true;
+          blockageDeviated = true;
+
+          // Detour offset: shifts slightly north-east to bypass blockage
+          const detourWaypoint = { lat: activeBlockage.lat + 0.0035, lng: activeBlockage.lng + 0.0035 };
+          const endLoc = pathCoords[pathCoords.length - 1];
+          getDetourCoordinates(nextLoc, endLoc, detourWaypoint).then(newRoute => {
+            if (newRoute && newRoute.length > 0) {
+              // Replace remaining pathCoords starting from idx + 1
+              pathCoords.splice(idx + 1, pathCoords.length - (idx + 1), ...newRoute);
+              addLog(`📡 Detour coordinates calculated. Path updated to bypass hazard zone.`, 'success');
+            }
+          });
+        }
+
+        // Calculate telemetry speed (km/h)
+        const prevLoc = idx > 0 ? pathCoords[idx - 1] : nextLoc;
+        const tickDist = calculateDistance(prevLoc.lat, prevLoc.lng, nextLoc.lat, nextLoc.lng); // in km
+        const timeHours = (simulationSpeed / 1000) / 3600; // time in hours
+        let currentSpeed = timeHours > 0 ? Math.round(tickDist / timeHours) : 0;
+        
+        const trafficLvl = congestionZones.SALT_LAKE_SEC5 || 'medium';
+        const maxSpeed = trafficLvl === 'heavy' ? 25 : (trafficLvl === 'medium' ? 45 : 68);
+        
+        if (currentSpeed > maxSpeed) currentSpeed = maxSpeed;
+        if (currentSpeed === 0 && idx > 0) {
+          currentSpeed = Math.floor(Math.random() * 10) + (trafficLvl === 'heavy' ? 12 : 36);
+        }
+        
+        // Randomly simulate abrupt braking or deviation for testing telemetry
+        const normalBraking = idx > 0 && idx % 7 === 0 && currentSpeed > 32;
+        const normalDeviated = idx > 8 && idx < 13 && (driverId === 'drv_1');
+
+        const abruptBraking = normalBraking || blockageBraking;
+        const isDeviated = normalDeviated || blockageDeviated;
+
+        if (abruptBraking) {
+          currentSpeed = Math.max(5, currentSpeed - 24);
+        }
+
         // Push coordinate tick via WebSockets
         const ws = driverSocketsRef.current[driverId];
         if (ws && ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({ type: 'driver_location_update', location: nextLoc }));
+          ws.send(JSON.stringify({ 
+            type: 'driver_location_update', 
+            location: nextLoc,
+            speed: currentSpeed,
+            abruptBraking,
+            isDeviated
+          }));
         }
 
-        setActiveRide(prev => prev ? { ...prev, routeIndex: idx, location: nextLoc } : null);
+        setActiveRide(prev => prev ? { 
+          ...prev, 
+          routeIndex: idx, 
+          location: nextLoc,
+          speed: currentSpeed,
+          abruptBraking,
+          isDeviated
+        } : null);
       }
     }, simulationSpeed);
   };
@@ -1436,18 +1826,11 @@ export const SimulatorProvider = ({ children }) => {
     setActiveRide(null);
   };
 
-  const sendChatMessage = (sender, text) => {
-    let translation = "Translation unavailable";
-    if (CHAT_TRANSLATIONS[text]) {
-      translation = CHAT_TRANSLATIONS[text];
-    } else {
-      translation = sender === 'passenger' ? `[অনুবাদ]: ${text}` : `[Translated]: ${text}`;
-    }
-
+  const sendChatMessage = (sender, text, sourceLang = 'en', targetLang = 'bn') => {
+    const translation = getChatTranslation(text, sourceLang, targetLang);
     const msgId = 'msg_' + Date.now();
-    const isBengaliOriginal = /[\u0980-\u09FF]/.test(text);
-    const originalLang = isBengaliOriginal ? 'bn-IN' : 'en-US';
-    const translationLang = isBengaliOriginal ? 'en-US' : 'bn-IN';
+    const originalLang = sourceLang === 'bn' ? 'bn-IN' : (sourceLang === 'hi' ? 'hi-IN' : 'en-US');
+    const translationLang = targetLang === 'bn' ? 'bn-IN' : (targetLang === 'hi' ? 'hi-IN' : 'en-US');
 
     const message = {
       id: msgId, 
@@ -1921,6 +2304,7 @@ export const SimulatorProvider = ({ children }) => {
         predictiveGuides,
         setPredictiveGuides,
         getFuelSurchargePercentage,
+        getChatTranslation,
         activeRide,
         sosAlerts,
         settings,
@@ -1969,6 +2353,11 @@ export const SimulatorProvider = ({ children }) => {
         fastForwardDisputeSla: () => {},
         calculateDetailedFare,
         congestionZones,
+        promos,
+        setPromos,
+        blockages,
+        setBlockages,
+        fetchInitialData,
         toggleCongestionZone: (zone, lvl) => {
           setCongestionZones(prev => ({ ...prev, [zone]: lvl }));
         },
