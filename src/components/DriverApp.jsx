@@ -4964,7 +4964,33 @@ export default function DriverApp({ isStandalone }) {
                   {isNightMode && <div className="w-2 h-2 rounded-full bg-amber-400"></div>}
                 </div>
               </button>
+            </div>
 
+            {/* Map Style Selector */}
+            <div className="mt-2 pt-3 border-t border-white/5 flex flex-col gap-2">
+              <span className="text-[11px] font-bold text-gray-300">🗺️ Map Visual Style</span>
+              <div className="flex flex-wrap gap-2 mt-1">
+                {[
+                  { id: 'openstreetmap', name: 'OpenStreetMap' },
+                  { id: 'google_roadmap', name: 'Google Roadmap' },
+                  { id: 'google_satellite', name: 'Google Satellite' },
+                  { id: 'voyager', name: 'Voyager Light' },
+                  { id: 'dark_navigation', name: 'Dark Mode Map' }
+                ].map(style => (
+                  <button
+                    key={style.id}
+                    type="button"
+                    onClick={() => setMapStyle(style.id)}
+                    className={`text-[10px] px-2.5 py-1 rounded-full font-bold border cursor-pointer transition-all ${
+                      mapStyle === style.id 
+                        ? 'bg-amber-400 text-black border-amber-400' 
+                        : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'
+                    }`}
+                  >
+                    {style.name}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Voice Co-Pilot Controls */}
