@@ -46,6 +46,9 @@ export const getServerEndpoints = () => {
     }
   }
   
+  if (!api || typeof api !== 'string') {
+    api = 'https://joldigo-backend.onrender.com';
+  }
   api = api.replace(/\/$/, '');
   let ws = api.replace(/^http/, 'ws');
   

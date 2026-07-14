@@ -533,7 +533,7 @@ export default function DriverApp({ isStandalone }) {
   }, [activeRide, currentDriver, driverLang]);
 
   const matchVoiceCommand = (transcript) => {
-    const t = transcript.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g,"").toLowerCase();
+    const t = (transcript || '').replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g,"").toLowerCase();
     
     // 1. ACCEPT commands
     const acceptWords = [
