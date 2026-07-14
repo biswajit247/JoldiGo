@@ -3253,7 +3253,7 @@ export default function PassengerApp({ isStandalone }) {
                       </div>
                       <div className="hist-details">
                         <div className="hist-top-line">
-                          <span className="hist-vehicle">JoldiGo {ride.vehicleType.toUpperCase().replace('_', ' ')}</span>
+                          <span className="hist-vehicle">JoldiGo {ride?.vehicleType?.toUpperCase()?.replace('_', ' ') || ''}</span>
                           <span className="hist-fare">₹{ride.fare.toFixed(2)}</span>
                         </div>
                         <span className="hist-date">{ride.date} • Pay Method: {ride.paymentMethod.toUpperCase()}</span>

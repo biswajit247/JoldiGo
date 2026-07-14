@@ -1283,7 +1283,7 @@ export default function AdminPanel() {
                     <div className="p-2.5 my-2 rounded border border-gray-800 bg-gray-950/30 text-xs">
                       <div className="flex justify-between">
                         <span className="text-gray-400">Rider: <strong className="text-gray-200">Biswajit Passenger</strong></span>
-                        <span className="text-gray-400">Vehicle: <strong className="text-amber-400 uppercase font-mono">{activeRide.vehicleType.replace('_', ' ')}</strong></span>
+                        <span className="text-gray-400">Vehicle: <strong className="text-amber-400 uppercase font-mono">{activeRide?.vehicleType?.replace('_', ' ') || ''}</strong></span>
                       </div>
                       <div className="text-[10px] text-gray-500 mt-1 truncate">
                         Route: {activeRide.pickupName} ➔ {activeRide.dropoffName}
@@ -2233,7 +2233,7 @@ export default function AdminPanel() {
                                   ? 'bg-red-950/20 text-red-400 border border-red-500/10' 
                                   : 'bg-white/5 text-gray-400 border border-white/5'
                               }`}>
-                                {alert.status.replace('_', ' ')}
+                                {alert?.status?.replace('_', ' ') || ''}
                               </span>
                             )}
                           </div>
