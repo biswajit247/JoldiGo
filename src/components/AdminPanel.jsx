@@ -264,6 +264,7 @@ export default function AdminPanel() {
 
     const tileLayer = L.tileLayer(MAP_TILE_URLS[mapStyle] || MAP_TILE_URLS.openstreetmap, {
       maxZoom: 19,
+      detectRetina: true,
       attribution: (mapStyle || '').startsWith('google') ? '&copy; Google Maps' : '&copy; OpenStreetMap'
     }).addTo(map);
 
@@ -387,6 +388,7 @@ export default function AdminPanel() {
 
     const tileLayer = L.tileLayer(MAP_TILE_URLS[mapStyle] || MAP_TILE_URLS.openstreetmap, {
       maxZoom: 19,
+      detectRetina: true,
       attribution: (mapStyle || '').startsWith('google') ? '&copy; Google Maps' : '&copy; OpenStreetMap'
     }).addTo(map);
 
