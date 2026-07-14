@@ -297,7 +297,7 @@ export const SimulatorProvider = ({ children }) => {
     subscriptionEarnings: 0
   });
   const [isNightMode, setIsNightMode] = useState(true); 
-  const [mapStyle, setMapStyle] = useState('dark_navigation');
+  const [mapStyle, setMapStyle] = useState('openstreetmap');
   const [passengerWalletBalance, setPassengerWalletBalance] = useState(500.00); 
   const [congestionZones, setCongestionZones] = useState({ HOWRAH_BRIDGE: 'heavy', PARK_STREET: 'medium', SALT_LAKE_SEC5: 'medium' });
   const [activeSmsToast, setActiveSmsToast] = useState(null);
