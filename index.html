@@ -4,11 +4,21 @@
     <meta charset="UTF-8" />
     <script>
       window.onerror = function(message, source, lineno, colno, error) {
-        alert("🚨 JoldiGo App Crash:\n\n" + message + "\n\nFile: " + source + "\nLine: " + lineno + ":" + colno + "\n\nStack: " + (error ? error.stack : 'N/A'));
+        var consoleEl = document.getElementById('debug-console');
+        if (consoleEl) {
+          consoleEl.style.display = 'block';
+          consoleEl.innerText += "\n🚨 ERROR: " + message + "\nFile: " + source + "\nLine: " + lineno + ":" + colno + (error ? "\nStack: " + error.stack : "");
+        }
+        alert("🚨 App Crash Alert:\n" + message + "\nLine: " + lineno);
         return false;
       };
       window.addEventListener('unhandledrejection', function(event) {
-        alert("🚨 Unhandled Promise Rejection:\n\n" + event.reason + "\n\nStack: " + (event.reason ? event.reason.stack : 'N/A'));
+        var consoleEl = document.getElementById('debug-console');
+        if (consoleEl) {
+          consoleEl.style.display = 'block';
+          consoleEl.innerText += "\n🚨 REJECTION: " + event.reason;
+        }
+        alert("🚨 Promise Rejection:\n" + event.reason);
       });
     </script>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -25,6 +35,7 @@
   </head>
   <body>
     <div id="root"></div>
+    <div id="debug-console" style="position: fixed; bottom: 0; left: 0; right: 0; max-height: 220px; overflow-y: auto; background: rgba(0,0,0,0.95); color: #ff3333; font-family: monospace; font-size: 11px; padding: 12px; z-index: 999999; border-top: 2px solid #ff3333; display: none; white-space: pre-wrap; word-break: break-all;"><b>[JoldiGo WebView Diagnostics Console]</b></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
