@@ -2,6 +2,15 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <script>
+      window.onerror = function(message, source, lineno, colno, error) {
+        alert("🚨 JoldiGo App Crash:\n\n" + message + "\n\nFile: " + source + "\nLine: " + lineno + ":" + colno + "\n\nStack: " + (error ? error.stack : 'N/A'));
+        return false;
+      };
+      window.addEventListener('unhandledrejection', function(event) {
+        alert("🚨 Unhandled Promise Rejection:\n\n" + event.reason + "\n\nStack: " + (event.reason ? event.reason.stack : 'N/A'));
+      });
+    </script>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>JoldiGo | On-demand Rides in Kolkata</title>
