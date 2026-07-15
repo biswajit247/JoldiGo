@@ -81,6 +81,7 @@ function App() {
   const [isStandalone, setIsStandalone] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [showNativeSelector, setShowNativeSelector] = useState(false);
+  const [showDevMenu, setShowDevMenu] = useState(false);
   const [serverUrlInput, setServerUrlInput] = useState(() => {
     if (typeof window !== 'undefined') {
       try {
@@ -399,6 +400,137 @@ function App() {
             >
               <RefreshCw size={12} />
             </button>
+          )}
+
+          {/* Floating Developer Menu (only on web browser, not inside native app wrapper) */}
+          {!window.Capacitor && (
+            <div style={{ position: 'fixed', bottom: '16px', left: '16px', zIndex: 999999 }}>
+              <button
+                onClick={() => setShowDevMenu(!showDevMenu)}
+                style={{
+                  backgroundColor: '#10b981',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '9999px',
+                  padding: '8px 16px',
+                  fontSize: '11px',
+                  fontWeight: '900',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 14px rgba(16,185,129,0.3)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                🛠️ Dev Menu
+              </button>
+              
+              {showDevMenu && (
+                <div style={{
+                  position: 'absolute',
+                  bottom: '40px',
+                  left: '0',
+                  backgroundColor: '#11141a',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  borderRadius: '12px',
+                  padding: '8px',
+                  width: '180px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '4px',
+                  boxShadow: '0 10px 25px rgba(0,0,0,0.5)'
+                }}>
+                  <button
+                    onClick={() => {
+                      setIsStandalone(false);
+                      setViewMode('split');
+                      setShowDevMenu(false);
+                    }}
+                    style={{
+                      backgroundColor: 'transparent',
+                      border: 'none',
+                      color: '#e2e8f0',
+                      padding: '8px',
+                      borderRadius: '6px',
+                      textAlign: 'left',
+                      fontSize: '11px',
+                      cursor: 'pointer',
+                      fontWeight: '700'
+                    }}
+                    onMouseOver={(e) => e.target.style.backgroundColor = 'rgba(255,255,255,0.05)'}
+                    onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}
+                  >
+                    🖥️ Cockpit Simulator
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsStandalone(true);
+                      setViewMode('passenger');
+                      setShowDevMenu(false);
+                    }}
+                    style={{
+                      backgroundColor: 'transparent',
+                      border: 'none',
+                      color: '#e2e8f0',
+                      padding: '8px',
+                      borderRadius: '6px',
+                      textAlign: 'left',
+                      fontSize: '11px',
+                      cursor: 'pointer',
+                      fontWeight: '700'
+                    }}
+                    onMouseOver={(e) => e.target.style.backgroundColor = 'rgba(255,255,255,0.05)'}
+                    onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}
+                  >
+                    📱 Passenger App
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsStandalone(true);
+                      setViewMode('driver');
+                      setShowDevMenu(false);
+                    }}
+                    style={{
+                      backgroundColor: 'transparent',
+                      border: 'none',
+                      color: '#e2e8f0',
+                      padding: '8px',
+                      borderRadius: '6px',
+                      textAlign: 'left',
+                      fontSize: '11px',
+                      cursor: 'pointer',
+                      fontWeight: '700'
+                    }}
+                    onMouseOver={(e) => e.target.style.backgroundColor = 'rgba(255,255,255,0.05)'}
+                    onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}
+                  >
+                    🚗 Driver App
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsStandalone(true);
+                      setViewMode('admin');
+                      setShowDevMenu(false);
+                    }}
+                    style={{
+                      backgroundColor: 'transparent',
+                      border: 'none',
+                      color: '#e2e8f0',
+                      padding: '8px',
+                      borderRadius: '6px',
+                      textAlign: 'left',
+                      fontSize: '11px',
+                      cursor: 'pointer',
+                      fontWeight: '700'
+                    }}
+                    onMouseOver={(e) => e.target.style.backgroundColor = 'rgba(255,255,255,0.05)'}
+                    onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}
+                  >
+                    💼 Admin Panel
+                  </button>
+                </div>
+              )}
+            </div>
           )}
 
           {/* Floating native-style bottom navigation bar on mobile (hidden in Standalone Mode) */}
