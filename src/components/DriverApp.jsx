@@ -871,7 +871,6 @@ export default function DriverApp({ isStandalone }) {
 
     const tileLayer = L.tileLayer(MAP_TILE_URLS[mapStyle] || MAP_TILE_URLS.openstreetmap, {
       maxZoom: 19,
-      detectRetina: true,
       attribution: (mapStyle || '').startsWith('google') ? '&copy; Google Maps' : '&copy; OpenStreetMap'
     }).addTo(map);
 
@@ -2746,6 +2745,40 @@ export default function DriverApp({ isStandalone }) {
             {tab === 'dashboard' && (
               <div style={{ position: 'relative', flex: 1, minHeight: '0', display: 'flex', flexDirection: 'column' }}>
                 <div ref={mapContainerRef} className="map-view-container driver-map"></div>
+                
+                {/* Locate Me Button */}
+                <button 
+                  type="button"
+                  className="locate-me-btn"
+                  onClick={() => {
+                    const map = mapRef.current;
+                    if (map && currentDriver?.location) {
+                      map.setView([currentDriver.location.lat, currentDriver.location.lng], 14);
+                      if (playSound) playSound();
+                    }
+                  }}
+                  style={{
+                    position: 'absolute',
+                    bottom: '148px',
+                    right: '20px',
+                    width: '42px',
+                    height: '42px',
+                    borderRadius: '50%',
+                    backgroundColor: '#ffffff',
+                    border: '1px solid #e5e7eb',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '18px',
+                    cursor: 'pointer',
+                    zIndex: 900,
+                    color: '#111827'
+                  }}
+                  title="Locate Me"
+                >
+                  🎯
+                </button>
 
                 {/* Voice Co-Pilot HUD Status Overlay */}
                 {isCoPilotEnabled && (

@@ -523,7 +523,6 @@ export default function PassengerApp({ isStandalone }) {
 
     const tileLayer = L.tileLayer(MAP_TILE_URLS[mapStyle] || MAP_TILE_URLS.openstreetmap, {
       maxZoom: 19,
-      detectRetina: true,
       attribution: (mapStyle || '').startsWith('google') ? '&copy; Google Maps' : '&copy; OpenStreetMap'
     }).addTo(map);
 
@@ -2999,6 +2998,43 @@ export default function PassengerApp({ isStandalone }) {
             </div>
             <div style={{ position: 'relative', width: '100%', height: 'calc(100% - 44px)' }}>
               <div ref={mapContainerRef} className="map-view-container" style={{ height: '100%' }}></div>
+              <button 
+                type="button"
+                className="locate-me-btn"
+                onClick={() => {
+                  const map = mapRef.current;
+                  if (map) {
+                    const pickupLoc = KOLKATA_LOCATIONS[pickupKey];
+                    if (pickupLoc) {
+                      map.setView([pickupLoc.lat, pickupLoc.lng], 14);
+                    } else {
+                      map.setView([22.5726, 88.3639], 14);
+                    }
+                    if (playSound) playSound();
+                  }
+                }}
+                style={{
+                  position: 'absolute',
+                  bottom: activeRide ? '180px' : '220px',
+                  right: '16px',
+                  width: '42px',
+                  height: '42px',
+                  borderRadius: '50%',
+                  backgroundColor: '#ffffff',
+                  border: '1px solid #e5e7eb',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '18px',
+                  cursor: 'pointer',
+                  zIndex: 990,
+                  color: '#111827'
+                }}
+                title="Locate Me"
+              >
+                🎯
+              </button>
             </div>
             {renderPanelOverlay()}
 
