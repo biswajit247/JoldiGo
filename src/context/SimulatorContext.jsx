@@ -1053,6 +1053,18 @@ export const SimulatorProvider = ({ children }) => {
           break;
       }
     };
+
+    ws.onclose = () => {
+      console.log(`[Socket] Driver ${driverId} WebSocket closed.`);
+      driverSocketsRef.current[driverId] = null;
+    };
+
+    ws.onerror = (err) => {
+      console.error(`[Socket] Driver ${driverId} WebSocket error:`, err);
+      driverSocketsRef.current[driverId] = null;
+      triggerSmsToast("⚠️ Lost contact with dispatch server. Reconnect to get ride offers.", "Connection Alert");
+    };
+
     driverSocketsRef.current[driverId] = ws;
   };
 
@@ -1406,10 +1418,19 @@ export const SimulatorProvider = ({ children }) => {
         setDrivers(prev => prev.map(d => d.id === driverId ? { ...d, status: data.status } : d));
         if (data.status === 'online') {
           connectDriverSocket(driverId);
+        } else {
+          const ws = driverSocketsRef.current[driverId];
+          if (ws) {
+            ws.close();
+            driverSocketsRef.current[driverId] = null;
+          }
         }
+      } else {
+        alert("Failed to toggle status: " + (data.error || "Unknown response"));
       }
     } catch (err) {
-      setDrivers(prev => prev.map(d => d.id === driverId ? { ...d, status: d.status === 'online' ? 'offline' : 'online' } : d));
+      console.error("[Socket] Failed to toggle driver status:", err);
+      alert("⚠️ Connection Error: Cannot connect to JoldiGo backend. Make sure your internet is active and the backend server is awake!");
     }
   };
 

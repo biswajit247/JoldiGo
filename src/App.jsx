@@ -103,16 +103,47 @@ function App() {
   // Detect standalone app overrides based on URL query parameters or Capacitor native app detection
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
-      if (!!window.Capacitor) {
-        alert("✨ JoldiGo native app starting... isNative: true");
-      }
       const params = new URLSearchParams(window.location.search);
       const appLock = params.get('app');
-
-      // Check if running inside Capacitor native webview
       const isNative = !!window.Capacitor;
-
       const path = window.location.pathname.replace(/^\/|\/$/g, '');
+
+      // Check state combinations before setting them to alert
+      let savedMode = null;
+      try {
+        savedMode = localStorage.getItem('joldigo_app_mode');
+      } catch (e) {}
+
+      let targetMode = 'split';
+      let targetStandalone = false;
+      let targetSelector = false;
+
+      if (appLock === 'simulator' || appLock === 'cockpit' || appLock === 'demo' || 
+          path === 'simulator' || path === 'cockpit' || path === 'demo') {
+        targetStandalone = false;
+        targetMode = (window.innerWidth < 768) ? 'passenger' : 'split';
+      } else if (appLock && ['passenger', 'driver', 'admin'].includes(appLock)) {
+        targetStandalone = true;
+        targetMode = appLock;
+      } else if (['passenger', 'driver', 'admin'].includes(path)) {
+        targetStandalone = true;
+        targetMode = path;
+      } else if (isNative) {
+        if (savedMode && ['passenger', 'driver', 'admin'].includes(savedMode)) {
+          targetStandalone = true;
+          targetMode = savedMode;
+        } else {
+          targetSelector = true;
+        }
+      } else {
+        targetStandalone = true;
+        targetMode = 'passenger';
+      }
+
+      if (isNative) {
+        alert("🔍 DIAGNOSTICS:\nisNative: true\nlocalStorage mode: " + savedMode + "\nResolved to:\n- showNativeSelector: " + targetSelector + "\n- isStandalone: " + targetStandalone + "\n- viewMode: " + targetMode);
+      }
+
 
       if (appLock === 'simulator' || appLock === 'cockpit' || appLock === 'demo' || 
           path === 'simulator' || path === 'cockpit' || path === 'demo') {
