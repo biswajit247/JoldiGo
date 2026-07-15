@@ -500,7 +500,7 @@ body {
 /* PASSENGER MAP SCREEN */
 .phone-header-overlay {
   position: absolute;
-  top: 48px;
+  top: calc(12px + env(safe-area-inset-top, 24px));
   left: 12px;
   right: 12px;
   display: flex;
@@ -701,7 +701,7 @@ body {
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   border-top-left-radius: 28px;
   border-top-right-radius: 28px;
-  padding: 16px 20px 24px 20px;
+  padding: 16px 20px calc(24px + env(safe-area-inset-bottom, 0px)) 20px !important;
   z-index: 990;
   box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.35);
 }
@@ -1094,7 +1094,7 @@ body {
   border-top: 4px solid #1a73e8; /* Razorpay Corporate Blue */
   border-top-left-radius: 20px;
   border-top-right-radius: 20px;
-  padding: 20px;
+  padding: 20px 20px calc(20px + env(safe-area-inset-bottom, 0px)) 20px !important;
   z-index: 1000;
   box-shadow: 0 -12px 35px rgba(0,0,0,0.6);
 }
@@ -1636,7 +1636,7 @@ body {
   border-top: 1px solid var(--border-light);
   border-top-left-radius: 20px;
   border-top-right-radius: 20px;
-  padding: 16px 20px 24px 20px;
+  padding: 16px 20px calc(24px + env(safe-area-inset-bottom, 0px)) 20px !important;
   z-index: 990;
 }
 
@@ -2560,7 +2560,7 @@ body {
   border-top: 1px solid rgba(255, 255, 255, 0.15);
   border-top-left-radius: 20px;
   border-top-right-radius: 20px;
-  padding: 12px;
+  padding: 12px 12px calc(12px + env(safe-area-inset-bottom, 0px)) 12px !important;
   z-index: 1000;
   box-shadow: 0 -12px 36px rgba(0,0,0,0.4);
   display: flex;
@@ -3191,3 +3191,6 @@ body {
   }
 }
 
+.driver-nav-bar {
+  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)) !important;
+}
