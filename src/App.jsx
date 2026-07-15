@@ -103,6 +103,9 @@ function App() {
   // Detect standalone app overrides based on URL query parameters or Capacitor native app detection
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
+      if (!!window.Capacitor) {
+        alert("✨ JoldiGo native app starting... isNative: true");
+      }
       const params = new URLSearchParams(window.location.search);
       const appLock = params.get('app');
 
