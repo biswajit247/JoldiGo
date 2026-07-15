@@ -339,13 +339,22 @@ export const SimulatorProvider = ({ children }) => {
   // Initialize a hidden audio element on boot to play incoming stream
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const audio = document.createElement('audio');
-      audio.autoplay = true;
+      let audio = document.getElementById('webrtc-remote-audio');
+      if (!audio) {
+        audio = document.createElement('audio');
+        audio.id = 'webrtc-remote-audio';
+        audio.autoplay = true;
+        audio.style.display = 'none';
+        document.body.appendChild(audio);
+      }
       remoteAudioRef.current = audio;
     }
     return () => {
       if (remoteAudioRef.current) {
         remoteAudioRef.current.srcObject = null;
+        try {
+          document.body.removeChild(remoteAudioRef.current);
+        } catch (e) {}
       }
     };
   }, []);
@@ -362,6 +371,10 @@ export const SimulatorProvider = ({ children }) => {
     }
     if (remoteAudioRef.current) {
       remoteAudioRef.current.srcObject = null;
+      try {
+        document.body.removeChild(remoteAudioRef.current);
+        remoteAudioRef.current = null;
+      } catch (e) {}
     }
   };
 
@@ -377,17 +390,21 @@ export const SimulatorProvider = ({ children }) => {
     closeWebrtcConnection();
   };
 
-  const sendWebrtcSignal = (targetRole, targetId, signal) => {
+  const sendWebrtcSignal = (senderRole, targetRole, targetId, signal) => {
     const msg = JSON.stringify({
       type: 'webrtc_signal',
       payload: { targetRole, targetId, signal }
     });
     
-    const driverId = activeRide?.driverId;
-    if (passengerSocketRef.current && passengerSocketRef.current.readyState === WebSocket.OPEN) {
-      passengerSocketRef.current.send(msg);
-    } else if (driverId && driverSocketsRef.current[driverId] && driverSocketsRef.current[driverId].readyState === WebSocket.OPEN) {
-      driverSocketsRef.current[driverId].send(msg);
+    if (senderRole === 'passenger') {
+      if (passengerSocketRef.current && passengerSocketRef.current.readyState === WebSocket.OPEN) {
+        passengerSocketRef.current.send(msg);
+      }
+    } else {
+      const driverId = activeRide?.driverId;
+      if (driverId && driverSocketsRef.current[driverId] && driverSocketsRef.current[driverId].readyState === WebSocket.OPEN) {
+        driverSocketsRef.current[driverId].send(msg);
+      }
     }
   };
 
@@ -405,10 +422,11 @@ export const SimulatorProvider = ({ children }) => {
       });
 
       peerConnectionRef.current = pc;
+      const senderRole = targetRole === 'driver' ? 'passenger' : 'driver';
 
       pc.onicecandidate = (event) => {
         if (event.candidate) {
-          sendWebrtcSignal(targetRole, targetId, {
+          sendWebrtcSignal(senderRole, targetRole, targetId, {
             type: 'candidate',
             candidate: event.candidate
           });
@@ -417,6 +435,15 @@ export const SimulatorProvider = ({ children }) => {
 
       pc.ontrack = (event) => {
         console.log('[WebRTC] Received remote track!', event.streams[0]);
+        // Re-create DOM element if removed during a previous connection cleanup
+        if (typeof window !== 'undefined' && !remoteAudioRef.current) {
+          const audio = document.createElement('audio');
+          audio.id = 'webrtc-remote-audio';
+          audio.autoplay = true;
+          audio.style.display = 'none';
+          document.body.appendChild(audio);
+          remoteAudioRef.current = audio;
+        }
         if (remoteAudioRef.current) {
           remoteAudioRef.current.srcObject = event.streams[0];
           remoteAudioRef.current.play().catch(err => {
@@ -444,7 +471,7 @@ export const SimulatorProvider = ({ children }) => {
       if (isInitiator) {
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
-        sendWebrtcSignal(targetRole, targetId, {
+        sendWebrtcSignal(senderRole, targetRole, targetId, {
           type: 'offer',
           sdp: pc.localDescription
         });
@@ -458,6 +485,7 @@ export const SimulatorProvider = ({ children }) => {
   const handleIncomingWebrtcSignal = async (data) => {
     const { signal, fromRole, fromId } = data;
     const pc = peerConnectionRef.current;
+    const senderRole = fromRole === 'driver' ? 'passenger' : 'driver';
 
     try {
       if (signal.type === 'offer') {
@@ -469,7 +497,7 @@ export const SimulatorProvider = ({ children }) => {
           await currentPc.setRemoteDescription(new RTCSessionDescription(signal.sdp));
           const answer = await currentPc.createAnswer();
           await currentPc.setLocalDescription(answer);
-          sendWebrtcSignal(fromRole, fromId, {
+          sendWebrtcSignal(senderRole, fromRole, fromId, {
             type: 'answer',
             sdp: currentPc.localDescription
           });
