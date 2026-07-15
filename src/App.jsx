@@ -108,37 +108,41 @@ function App() {
       // Check if running inside Capacitor native webview
       const isNative = !!window.Capacitor;
 
-      if (appLock && ['passenger', 'driver', 'admin'].includes(appLock)) {
+      const path = window.location.pathname.replace(/^\/|\/$/g, '');
+
+      if (appLock === 'simulator' || appLock === 'cockpit' || appLock === 'demo' || 
+          path === 'simulator' || path === 'cockpit' || path === 'demo') {
+        setIsStandalone(false);
+        const mobile = window.innerWidth < 768;
+        setIsMobile(mobile);
+        if (mobile) {
+          setViewMode('passenger');
+        } else {
+          setViewMode('split');
+        }
+      } else if (appLock && ['passenger', 'driver', 'admin'].includes(appLock)) {
         setIsStandalone(true);
         setViewMode(appLock);
-      } else {
-        const path = window.location.pathname.replace(/^\/|\/$/g, '');
-        if (['passenger', 'driver', 'admin'].includes(path)) {
+      } else if (['passenger', 'driver', 'admin'].includes(path)) {
+        setIsStandalone(true);
+        setViewMode(path);
+      } else if (isNative) {
+        // If native, check if app persona is locked in localStorage
+        let savedMode = null;
+        try {
+          savedMode = localStorage.getItem('joldigo_app_mode');
+        } catch (e) {}
+        if (savedMode && ['passenger', 'driver', 'admin'].includes(savedMode)) {
           setIsStandalone(true);
-          setViewMode(path);
-        } else if (isNative) {
-          // If native, check if app persona is locked in localStorage
-          let savedMode = null;
-          try {
-            savedMode = localStorage.getItem('joldigo_app_mode');
-          } catch (e) {}
-          if (savedMode && ['passenger', 'driver', 'admin'].includes(savedMode)) {
-            setIsStandalone(true);
-            setViewMode(savedMode);
-          } else {
-            // First-boot on native device: show launcher persona selector
-            setShowNativeSelector(true);
-          }
+          setViewMode(savedMode);
         } else {
-          setIsStandalone(false);
-          const mobile = window.innerWidth < 768;
-          setIsMobile(mobile);
-          if (mobile) {
-            setViewMode('passenger');
-          } else {
-            setViewMode('split');
-          }
+          // First-boot on native device: show launcher persona selector
+          setShowNativeSelector(true);
         }
+      } else {
+        // Production Homepage Default: Show standalone Passenger app
+        setIsStandalone(true);
+        setViewMode('passenger');
       }
     }
   }, []);

@@ -267,8 +267,10 @@ app.post('/api/otp/verify', async (req, res) => {
 
   const cachedOtp = otpCache.get(phone);
   
-  // Backdoor developer code: always allow 1234
-  if (otp === '1234' || otp === cachedOtp) {
+  // Backdoor developer code: only allow 1234 in non-production modes
+  const isProd = process.env.NODE_ENV === 'production';
+  const isBackdoorAllowed = !isProd && otp === '1234';
+  if (isBackdoorAllowed || otp === cachedOtp) {
     try {
       let passengerRes = await query('SELECT * FROM passengers WHERE phone = $1', [phone]);
       

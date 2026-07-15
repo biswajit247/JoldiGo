@@ -873,7 +873,8 @@ export default function PassengerApp({ isStandalone }) {
       setOtpInput('');
       setNameInput('');
     } else {
-      setOtpError(res.error || 'Incorrect OTP. Try "1234" for testing.');
+      const isProd = typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+      setOtpError(res.error || (isProd ? 'Incorrect OTP code.' : 'Incorrect OTP. Try "1234" for testing.'));
     }
   };
 

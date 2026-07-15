@@ -1239,7 +1239,11 @@ export const SimulatorProvider = ({ children }) => {
       });
       const data = await res.json();
       if (data.success) {
-        triggerSmsToast(`JoldiGo Secure OTP: ${data.otpFallback}. Valid for 5 minutes. Do not share this code.`);
+        if (data.sentRealSms) {
+          triggerSmsToast(`SMS OTP sent to +91 ${phone}. Please enter verification code.`, '💬 JoldiGo OTP Gateway');
+        } else {
+          triggerSmsToast(`JoldiGo Secure OTP: ${data.otpFallback}. Valid for 5 minutes. Do not share this code.`, '💬 JoldiGo OTP Gateway');
+        }
         return data.otpFallback;
       }
     } catch (err) {
