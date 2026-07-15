@@ -877,6 +877,12 @@ export default function DriverApp({ isStandalone }) {
     tileLayerRef.current = tileLayer;
     mapRef.current = map;
 
+    setTimeout(() => {
+      if (mapRef.current) {
+        mapRef.current.invalidateSize();
+      }
+    }, 200);
+
     return () => {
       if (mapRef.current) {
         mapRef.current.remove();

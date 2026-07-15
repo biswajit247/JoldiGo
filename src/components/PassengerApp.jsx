@@ -529,6 +529,12 @@ export default function PassengerApp({ isStandalone }) {
     tileLayerRef.current = tileLayer;
     mapRef.current = map;
 
+    setTimeout(() => {
+      if (mapRef.current) {
+        mapRef.current.invalidateSize();
+      }
+    }, 200);
+
     const geofenceCoords = geofence.map(c => [c.lat, c.lng]);
     const geofencePolygon = L.polygon(geofenceCoords, {
       color: '#ffdd00',
