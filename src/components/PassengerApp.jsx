@@ -2144,7 +2144,7 @@ export default function PassengerApp({ isStandalone }) {
     if (callState === 'idle') return null;
 
     const isInvolved = (callFrom === 'passenger') || 
-                       (callFrom === 'driver' && callPartner?.role === 'passenger' && callPartner?.id === passenger.phone);
+                       (callFrom === 'driver' && callPartner?.role === 'driver');
                        
     if (!isInvolved) return null;
 

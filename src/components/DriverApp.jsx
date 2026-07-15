@@ -1265,7 +1265,7 @@ export default function DriverApp({ isStandalone }) {
     if (callState === 'idle') return null;
 
     const isInvolved = (callFrom === 'driver') || 
-                       (callFrom === 'passenger' && callPartner?.role === 'driver' && callPartner?.id === currentDriver.id);
+                       (callFrom === 'passenger' && callPartner?.role === 'passenger');
                        
     if (!isInvolved) return null;
 
