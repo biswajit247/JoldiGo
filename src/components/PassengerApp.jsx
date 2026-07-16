@@ -3397,18 +3397,19 @@ export default function PassengerApp({ isStandalone }) {
           justifyContent: 'flex-end',
           fontFamily: 'system-ui, -apple-system, sans-serif'
         }}>
-          <div className="bg-[#0e1b2f] border-t border-white/10 rounded-t-2xl p-4 flex flex-col gap-3 text-left text-xs" style={{ maxHeight: '90%', overflowY: 'auto' }}>
+          <div className="rzp-sandbox-container" style={{ maxHeight: '90%', overflowY: 'auto' }}>
             
             {/* Razorpay branding header */}
-            <div className="flex justify-between items-center border-b border-white/5 pb-2">
-              <div className="flex items-center gap-1.5">
-                <span className="text-[#3395FF] font-black text-sm tracking-wider">Razorpay</span>
-                <span className="bg-[#3395FF]/10 text-[#3395FF] border border-[#3395FF]/20 px-1 py-0.2 rounded text-[7px] font-bold">SECURED</span>
+            <div className="rzp-sandbox-row-flex" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span className="text-[#3395FF]" style={{ fontWeight: '900', fontSize: '14px', letterSpacing: '0.5px' }}>Razorpay</span>
+                <span className="rzp-sandbox-secured-badge">SECURED</span>
               </div>
               <button 
                 type="button" 
                 onClick={() => setShowRazorpaySheet(false)}
                 className="text-gray-400 hover:text-white font-extrabold text-base bg-transparent border-none cursor-pointer"
+                style={{ fontSize: '20px', padding: '0 4px', color: '#a0aec0' }}
               >
                 ×
               </button>
@@ -3417,19 +3418,19 @@ export default function PassengerApp({ isStandalone }) {
             {rzpPaymentStatus === 'idle' && (
               <>
                 {/* Amount details */}
-                <div className="flex justify-between items-center bg-black/40 border border-white/5 p-3 rounded-lg">
+                <div className="rzp-sandbox-amount-box">
                   <div>
-                    <span className="text-[10px] text-gray-400 block uppercase tracking-wide">ORDER ID</span>
-                    <span className="font-mono text-white font-semibold text-[10px]">order_joldi_${activeRide?.id?.substr(4,6)}</span>
+                    <span style={{ fontSize: '9px', color: '#718096', display: 'block', textTransform: 'uppercase', fontWeight: 'bold' }}>ORDER ID</span>
+                    <span className="font-mono text-white font-semibold style={{ fontSize: '10px' }}">order_joldi_${activeRide?.id?.substr(4,6)}</span>
                   </div>
-                  <div className="text-right">
-                    <span className="text-[10px] text-gray-400 block uppercase tracking-wide">AMOUNT</span>
-                    <span className="text-yellow-400 font-extrabold text-sm">₹{activeRide?.totalFare}</span>
+                  <div style={{ textAlign: 'right' }}>
+                    <span style={{ fontSize: '9px', color: '#718096', display: 'block', textTransform: 'uppercase', fontWeight: 'bold' }}>AMOUNT</span>
+                    <span className="text-yellow-400 font-extrabold" style={{ fontSize: '14px' }}>₹{activeRide?.totalFare}</span>
                   </div>
                 </div>
 
                 {/* Method selector tabs */}
-                <div className="flex gap-1 border-b border-white/5">
+                <div className="rzp-sandbox-tabs">
                   {[
                     { key: 'upi', label: 'UPI' },
                     { key: 'card', label: 'Card' },
@@ -3441,9 +3442,9 @@ export default function PassengerApp({ isStandalone }) {
                       onClick={() => setRzpMethod(m.key)}
                       style={{
                         flex: 1,
-                        padding: '6px',
-                        fontSize: '10px',
-                        fontWeight: 'bold',
+                        padding: '8px 0',
+                        fontSize: '10.5px',
+                        fontWeight: '800',
                         color: rzpMethod === m.key ? '#3395FF' : '#718096',
                         borderBottom: rzpMethod === m.key ? '2px solid #3395FF' : 'none',
                         background: 'transparent',
@@ -3458,9 +3459,9 @@ export default function PassengerApp({ isStandalone }) {
 
                 {/* Method rendering */}
                 {rzpMethod === 'upi' && (
-                  <div className="flex flex-col gap-2.5 py-1">
-                    <span className="text-[9px] uppercase tracking-wider text-gray-500 font-extrabold">Select your UPI App</span>
-                    <div className="flex gap-2">
+                  <div className="rzp-sandbox-method-container">
+                    <span style={{ fontSize: '9px', textTransform: 'uppercase', color: '#718096', fontWeight: '800' }}>Select your UPI App</span>
+                    <div style={{ display: 'flex', gap: '8px' }}>
                       {[
                         { key: 'gpay', label: 'GPay', emoji: '📱' },
                         { key: 'phonepe', label: 'PhonePe', emoji: '🪙' },
@@ -3470,14 +3471,10 @@ export default function PassengerApp({ isStandalone }) {
                           key={opt.key}
                           type="button"
                           onClick={() => setRzpUpiOption(opt.key)}
-                          className={`flex-1 p-2 rounded border flex flex-col items-center gap-1 cursor-pointer transition-all ${
-                            rzpUpiOption === opt.key 
-                              ? 'bg-[#3395FF]/10 text-white border-[#3395FF]' 
-                              : 'bg-black/20 text-gray-400 border-white/5'
-                          }`}
+                          className={`rzp-sandbox-option-btn ${rzpUpiOption === opt.key ? 'active' : ''}`}
                         >
-                          <span className="text-base">{opt.emoji}</span>
-                          <span className="text-[9px] font-bold">{opt.label}</span>
+                          <span style={{ fontSize: '16px' }}>{opt.emoji}</span>
+                          <span style={{ fontSize: '9px', fontWeight: 'bold' }}>{opt.label}</span>
                         </button>
                       ))}
                     </div>
@@ -3485,23 +3482,23 @@ export default function PassengerApp({ isStandalone }) {
                 )}
 
                 {rzpMethod === 'card' && (
-                  <div className="flex flex-col gap-2 py-1">
-                    <span className="text-[9px] uppercase tracking-wider text-gray-500 font-extrabold">Card Details (Sandbox Mode)</span>
+                  <div className="rzp-sandbox-method-container">
+                    <span style={{ fontSize: '9px', textTransform: 'uppercase', color: '#718096', fontWeight: '800' }}>Card Details (Sandbox Mode)</span>
                     <input 
                       type="text"
                       placeholder="Card Number (e.g. 4111 2222 3333 4444)"
                       value={rzpCardNumber}
                       onChange={e => setRzpCardNumber(e.target.value.replace(/\s?/g, '').replace(/(\d{4})/g, '$1 ').trim())}
-                      style={{ backgroundColor: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', padding: '6px', fontSize: '11px', color: '#fff', outline: 'none' }}
+                      style={{ backgroundColor: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', padding: '8px', fontSize: '11px', color: '#fff', outline: 'none' }}
                       maxLength={19}
                     />
-                    <div className="flex gap-2">
+                    <div style={{ display: 'flex', gap: '8px' }}>
                       <input 
                         type="text"
                         placeholder="MM/YY"
                         value={rzpCardExpiry}
                         onChange={e => setRzpCardExpiry(e.target.value)}
-                        style={{ backgroundColor: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', padding: '6px', fontSize: '11px', color: '#fff', outline: 'none', flex: 1 }}
+                        style={{ backgroundColor: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', padding: '8px', fontSize: '11px', color: '#fff', outline: 'none', flex: 1 }}
                         maxLength={5}
                       />
                       <input 
@@ -3509,7 +3506,7 @@ export default function PassengerApp({ isStandalone }) {
                         placeholder="CVV"
                         value={rzpCardCvv}
                         onChange={e => setRzpCardCvv(e.target.value)}
-                        style={{ backgroundColor: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', padding: '6px', fontSize: '11px', color: '#fff', outline: 'none', flex: 1 }}
+                        style={{ backgroundColor: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', padding: '8px', fontSize: '11px', color: '#fff', outline: 'none', flex: 1 }}
                         maxLength={3}
                       />
                     </div>
@@ -3517,21 +3514,18 @@ export default function PassengerApp({ isStandalone }) {
                 )}
 
                 {rzpMethod === 'netbanking' && (
-                  <div className="flex flex-col gap-2 py-1">
-                    <span className="text-[9px] uppercase tracking-wider text-gray-500 font-extrabold">Popular Banks</span>
-                    <div className="grid grid-cols-2 gap-1.5">
+                  <div className="rzp-sandbox-method-container">
+                    <span style={{ fontSize: '9px', textTransform: 'uppercase', color: '#718096', fontWeight: '800' }}>Popular Banks</span>
+                    <div className="rzp-sandbox-grid-banks">
                       {['SBI', 'HDFC', 'ICICI', 'AXIS'].map(bank => (
                         <button
                           key={bank}
                           type="button"
                           onClick={() => setRzpSelectedBank(bank)}
-                          className={`p-2 rounded border text-left font-bold text-[9px] cursor-pointer transition-all ${
-                            rzpSelectedBank === bank 
-                              ? 'bg-[#3395FF]/10 text-white border-[#3395FF]' 
-                              : 'bg-black/20 text-gray-400 border-white/5'
-                          }`}
+                          className={`rzp-sandbox-option-btn ${rzpSelectedBank === bank ? 'active' : ''}`}
+                          style={{ flexDirection: 'row', justifyContent: 'center' }}
                         >
-                          🏦 {bank} Bank
+                          <span style={{ fontSize: '9px', fontWeight: 'bold' }}>🏦 {bank} Bank</span>
                         </button>
                       ))}
                     </div>
@@ -3547,7 +3541,8 @@ export default function PassengerApp({ isStandalone }) {
                       setRzpPaymentStatus('otp');
                     }, 1200);
                   }}
-                  className="py-2.5 bg-[#3395FF] hover:bg-[#1d82f5] text-white font-bold text-xs rounded-lg cursor-pointer transition-all flex items-center justify-center gap-1.5"
+                  className="btn-pay-rzp"
+                  style={{ marginTop: '4px', padding: '10px' }}
                 >
                   🔒 Securely Pay ₹{activeRide?.totalFare}
                 </button>

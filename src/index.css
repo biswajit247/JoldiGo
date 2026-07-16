@@ -3235,3 +3235,90 @@ body {
   }
 }
 
+/* Razorpay Sandbox Payment Sheet Modal Overlay */
+.rzp-sandbox-container {
+  background-color: #0e1b2f !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-top-left-radius: 16px !important;
+  border-top-right-radius: 16px !important;
+  padding: 16px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 12px !important;
+  text-align: left !important;
+  font-size: 12px !important;
+  color: #ffffff !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)) !important;
+}
+
+.rzp-sandbox-row-flex {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+}
+
+.rzp-sandbox-secured-badge {
+  background-color: rgba(51, 149, 255, 0.1) !important;
+  color: #3395FF !important;
+  border: 1px solid rgba(51, 149, 255, 0.2) !important;
+  padding: 2px 4px !important;
+  border-radius: 4px !important;
+  font-size: 8px !important;
+  font-weight: bold !important;
+  letter-spacing: 0.5px !important;
+}
+
+.rzp-sandbox-amount-box {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  background-color: rgba(0, 0, 0, 0.4) !important;
+  border: 1px solid rgba(255, 255, 255, 0.05) !important;
+  padding: 12px !important;
+  border-radius: 8px !important;
+}
+
+.rzp-sandbox-tabs {
+  display: flex !important;
+  gap: 4px !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+  margin-bottom: 4px !important;
+}
+
+.rzp-sandbox-method-container {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 10px !important;
+  padding: 4px 0 !important;
+}
+
+.rzp-sandbox-grid-banks {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 8px !important;
+}
+
+.rzp-sandbox-option-btn {
+  flex: 1 !important;
+  padding: 8px !important;
+  border-radius: 6px !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background-color: rgba(0, 0, 0, 0.2) !important;
+  color: #a0aec0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: 4px !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+}
+
+.rzp-sandbox-option-btn.active {
+  background-color: rgba(51, 149, 255, 0.1) !important;
+  color: #ffffff !important;
+  border-color: #3395FF !important;
+}
+
+
