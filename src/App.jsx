@@ -141,9 +141,6 @@ function App() {
         targetMode = 'passenger';
       }
 
-      if (isNative) {
-        alert("🔍 DIAGNOSTICS:\nisNative: true\nlocalStorage mode: " + savedMode + "\nResolved to:\n- showNativeSelector: " + targetSelector + "\n- isStandalone: " + targetStandalone + "\n- viewMode: " + targetMode);
-      }
 
 
       if (appLock === 'simulator' || appLock === 'cockpit' || appLock === 'demo' || 
