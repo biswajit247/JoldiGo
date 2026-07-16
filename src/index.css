@@ -3194,3 +3194,44 @@ body {
 .driver-nav-bar {
   padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)) !important;
 }
+
+/* Responsive Driver Header Safe-Area & Collision Fixes */
+.driver-top-header {
+  box-sizing: border-box !important;
+  transition: all 0.2s ease;
+}
+
+@media (max-width: 767px) {
+  .driver-top-header {
+    height: auto !important;
+    min-height: 64px !important;
+    padding-top: calc(8px + env(safe-area-inset-top, 24px)) !important;
+    padding-bottom: 8px !important;
+    gap: 8px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .driver-top-header {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+  .driver-header-left {
+    gap: 6px !important;
+  }
+  .driver-header-right {
+    gap: 4px !important;
+  }
+  .driver-top-header span {
+    font-size: 13px !important; /* Shrink "0 Orders" text slightly to prevent overlapping */
+  }
+  .driver-top-header button {
+    font-size: 10px !important; /* Scale down buttons slightly on small mobile screens */
+    padding: 4px 10px !important; /* Reduce padding to fit all screen sizes */
+  }
+  .driver-top-header svg {
+    width: 14px !important;
+    height: 14px !important;
+  }
+}
+

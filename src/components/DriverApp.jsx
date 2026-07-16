@@ -2483,6 +2483,7 @@ export default function DriverApp({ isStandalone }) {
             
             {!isNavActive && tab === 'dashboard' && (
               <div 
+                className="driver-top-header"
                 style={{
                   height: '56px',
                   backgroundColor: '#ffffff',
@@ -2492,10 +2493,11 @@ export default function DriverApp({ isStandalone }) {
                   justifyContent: 'space-between',
                   padding: '0 16px',
                   zIndex: 990,
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                  boxSizing: 'border-box'
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div className="driver-header-left" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   {/* Hamburger menu trigger */}
                   <button
                     type="button"
@@ -2519,7 +2521,7 @@ export default function DriverApp({ isStandalone }) {
                 </div>
 
                 {/* Destination Filter button */}
-                <div style={{ position: 'relative' }}>
+                <div className="driver-header-middle" style={{ position: 'relative' }}>
                   <button
                     type="button"
                     onClick={() => setShowGoToPopover(!showGoToPopover)}
@@ -2658,7 +2660,7 @@ export default function DriverApp({ isStandalone }) {
                 </div>
 
                 {/* Quick toggle settings button */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div className="driver-header-right" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   {currentDriver.status === 'online' ? (
                     <button
                       type="button"
