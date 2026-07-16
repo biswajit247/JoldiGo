@@ -3199,7 +3199,23 @@ body {
 .driver-top-header {
   box-sizing: border-box !important;
   transition: all 0.2s ease;
+  background-color: #0f131a !important; /* Premium dark background matching status bar */
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3) !important;
 }
+
+.driver-header-left button {
+  color: #ffffff !important;
+}
+
+.driver-header-left span {
+  color: #ffffff !important;
+}
+
+.driver-header-right button {
+  color: #ffffff !important;
+}
+
 
 @media (max-width: 767px) {
   .driver-top-header {
