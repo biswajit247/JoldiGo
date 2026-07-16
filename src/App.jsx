@@ -82,6 +82,7 @@ function App() {
   const [isMobile, setIsMobile] = useState(false);
   const [showNativeSelector, setShowNativeSelector] = useState(false);
   const [showDevMenu, setShowDevMenu] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
   const [serverUrlInput, setServerUrlInput] = useState(() => {
     if (typeof window !== 'undefined') {
       try {
@@ -179,6 +180,7 @@ function App() {
         setIsStandalone(true);
         setViewMode('passenger');
       }
+      setIsInitialized(true);
     }
   }, []);
 
@@ -212,6 +214,32 @@ function App() {
     } catch (e) {}
     window.location.reload();
   };
+
+  // Render clean startup loader to prevent UI flash/flicker of default cockpit/admin layout before context is resolved
+  if (!isInitialized) {
+    return (
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'center',
+        width: '100vw',
+        height: '100vh',
+        height: '100svh',
+        backgroundColor: '#0c0e12',
+        color: '#ffffff',
+        fontFamily: 'sans-serif'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <div className="radar-pulse" style={{ width: '42px', height: '42px', borderRadius: '50%', backgroundColor: '#ffdd00', margin: '0 auto 16px auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ fontSize: '18px' }}>⚡</span>
+          </div>
+          <h2 style={{ fontSize: '18px', fontWeight: '800', margin: '0 0 4px 0' }}>JoldiGo</h2>
+          <p style={{ fontSize: '11px', color: '#a0aec0', margin: 0 }}>Starting secure dispatch context...</p>
+        </div>
+      </div>
+    );
+  }
 
   // Render first-boot native app welcome persona selector
   if (showNativeSelector) {
