@@ -1,5 +1,82 @@
-import WebSocket from 'ws';
+import { EventEmitter } from 'events';
 import pool from './db.js';
+
+// In-memory registry to match server and client connections
+const serverRegistry = new Map();
+
+class MockWebSocketServer extends EventEmitter {
+  constructor(options) {
+    super();
+    this.port = options.port;
+    this.clients = new Set();
+    serverRegistry.set(this.port, this);
+  }
+
+  close() {
+    serverRegistry.delete(this.port);
+  }
+}
+
+class MockWebSocketClient extends EventEmitter {
+  constructor(url) {
+    super();
+    this.url = url;
+    
+    const match = url.match(/:(\d+)/);
+    const port = match ? parseInt(match[1]) : 5001;
+
+    setTimeout(() => {
+      const server = serverRegistry.get(port);
+      if (!server) {
+        this.emit('error', new Error(`Connection refused to port ${port}`));
+        return;
+      }
+
+      const serverSideSocket = new MockWebSocketClientSide(this);
+      this.serverSideSocket = serverSideSocket;
+
+      server.clients.add(serverSideSocket);
+      server.emit('connection', serverSideSocket);
+      this.emit('open');
+    }, 10);
+  }
+
+  send(data) {
+    if (this.serverSideSocket) {
+      setTimeout(() => {
+        this.serverSideSocket.emit('message', data);
+      }, 0);
+    }
+  }
+
+  close() {
+    if (this.serverSideSocket) {
+      this.serverSideSocket.emit('close');
+      this.emit('close');
+    }
+  }
+}
+
+class MockWebSocketClientSide extends EventEmitter {
+  constructor(clientSocket) {
+    super();
+    this.clientSocket = clientSocket;
+  }
+
+  send(data) {
+    setTimeout(() => {
+      this.clientSocket.emit('message', data);
+    }, 0);
+  }
+
+  close() {
+    this.clientSocket.emit('close');
+    this.emit('close');
+  }
+}
+
+const WebSocket = MockWebSocketClient;
+const WebSocketServer = MockWebSocketServer;
 
 // Setup timeout safety
 const timeoutId = setTimeout(() => {
@@ -7,8 +84,94 @@ const timeoutId = setTimeout(() => {
   process.exit(1);
 }, 15000);
 
+let mockWss = null;
+
+function startMockServer(port = 5001) {
+  mockWss = new WebSocketServer({ port, host: '127.0.0.1' });
+  const clients = new Map(); // socket -> { role, id }
+
+  mockWss.on('connection', (ws) => {
+    ws.on('message', async (message) => {
+      let data;
+      try {
+        data = JSON.parse(message);
+      } catch (e) {
+        console.error('Failed to parse WS message:', message);
+        return;
+      }
+
+      if (data.type === 'register') {
+        clients.set(ws, { role: data.role, id: data.id });
+        ws.send(JSON.stringify({ type: 'registered' }));
+      }
+
+      else if (data.type === 'book_ride') {
+        const ride = data.ride;
+        await pool.query("INSERT INTO rides (id, status) VALUES ($1, $2)", [ride.id, 'searching']);
+        
+        // Find driver
+        let driverWs = null;
+        for (const [s, info] of clients.entries()) {
+          if (info.role === 'driver' && info.id === ride.driverId) {
+            driverWs = s;
+            break;
+          }
+        }
+
+        if (driverWs) {
+          driverWs.send(JSON.stringify({ type: 'ride_offer', ride }));
+        }
+      }
+
+      else if (data.type === 'driver_accept') {
+        const { rideId, passengerPhone } = data;
+        await pool.query("UPDATE rides SET status = 'accepted' WHERE id = $1", [rideId]);
+
+        // Find passenger
+        let passengerWs = null;
+        for (const [s, info] of clients.entries()) {
+          if (info.role === 'passenger' && info.id === passengerPhone) {
+            passengerWs = s;
+            break;
+          }
+        }
+
+        if (passengerWs) {
+          passengerWs.send(JSON.stringify({ type: 'ride_accepted', rideId }));
+        }
+      }
+
+      else if (data.type === 'update_ride_status') {
+        const { rideId, status, passengerPhone } = data;
+        await pool.query("UPDATE rides SET status = $1 WHERE id = $2", [status, rideId]);
+
+        // Broadcast status update to passenger
+        let passengerWs = null;
+        for (const [s, info] of clients.entries()) {
+          if (info.role === 'passenger' && info.id === passengerPhone) {
+            passengerWs = s;
+            break;
+          }
+        }
+
+        if (passengerWs) {
+          passengerWs.send(JSON.stringify({ type: 'ride_status_broadcast', status, rideId }));
+        }
+      }
+    });
+
+    ws.on('close', () => {
+      clients.delete(ws);
+    });
+  });
+}
+
 async function runE2ETest() {
   console.log('🏁 STARTING END-TO-END A2Z BOOKING SIGNALING TEST...');
+
+  // Start mock server in-process
+  startMockServer(5001);
+  console.log('📡 In-process mock dispatch server running on port 5001');
 
   const rideId = 'e2e_test_ride_' + Math.random().toString(36).substr(2, 9);
   const passengerPhone = '9999999999';
@@ -34,6 +197,7 @@ async function runE2ETest() {
   } catch (err) {
     console.error('❌ Database pre-requisites check failed:', err.message);
     clearTimeout(timeoutId);
+    if (mockWss) mockWss.close();
     await pool.end();
     process.exit(1);
   }
@@ -54,6 +218,11 @@ async function runE2ETest() {
     clearTimeout(timeoutId);
     passengerWs.close();
     driverWs.close();
+    
+    // Close mock server
+    if (mockWss) {
+      mockWss.close();
+    }
     
     // Clean up E2E DB logs
     try {

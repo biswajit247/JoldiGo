@@ -2408,7 +2408,7 @@ const broadcastDriversUpdate = async () => {
 };
 
 // Start the integrated HTTP and WebSockets backend server
-server.listen(port, '0.0.0.0', () => {
-  console.log(`JoldiGo Full-Stack Backend Server running on http://localhost:${port}`);
-  console.log(`WebSocket Service Listening on ws://localhost:${port}`);
+server.listen(port, '127.0.0.1', () => {
+  console.log(`JoldiGo Full-Stack Backend Server running on http://127.0.0.1:${port}`);
+  console.log(`WebSocket Service Listening on ws://127.0.0.1:${port}`);
 });

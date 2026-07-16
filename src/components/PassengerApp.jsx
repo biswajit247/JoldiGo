@@ -3394,10 +3394,21 @@ export default function PassengerApp({ isStandalone }) {
           zIndex: 10000,
           display: 'flex',
           flexDirection: 'column',
-          justifyContent: 'flex-end',
+          justifyContent: (rzpPaymentStatus === 'otp' || rzpMethod === 'card') ? 'center' : 'flex-end',
+          alignItems: 'center',
+          padding: (rzpPaymentStatus === 'otp' || rzpMethod === 'card') ? '16px' : '0',
+          boxSizing: 'border-box',
           fontFamily: 'system-ui, -apple-system, sans-serif'
         }}>
-          <div className="rzp-sandbox-container" style={{ maxHeight: '90%', overflowY: 'auto' }}>
+          <div 
+            className="rzp-sandbox-container" 
+            style={{ 
+              maxHeight: '90%', 
+              overflowY: 'auto',
+              borderRadius: (rzpPaymentStatus === 'otp' || rzpMethod === 'card') ? '16px' : '16px 16px 0 0',
+              border: (rzpPaymentStatus === 'otp' || rzpMethod === 'card') ? '1px solid rgba(255,255,255,0.1)' : 'none'
+            }}
+          >
             
             {/* Razorpay branding header */}
             <div className="rzp-sandbox-row-flex" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '8px' }}>
