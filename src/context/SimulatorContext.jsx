@@ -352,9 +352,6 @@ export const SimulatorProvider = ({ children }) => {
     return () => {
       if (remoteAudioRef.current) {
         remoteAudioRef.current.srcObject = null;
-        try {
-          document.body.removeChild(remoteAudioRef.current);
-        } catch (e) {}
       }
     };
   }, []);
@@ -371,10 +368,6 @@ export const SimulatorProvider = ({ children }) => {
     }
     if (remoteAudioRef.current) {
       remoteAudioRef.current.srcObject = null;
-      try {
-        document.body.removeChild(remoteAudioRef.current);
-        remoteAudioRef.current = null;
-      } catch (e) {}
     }
   };
 
@@ -435,14 +428,8 @@ export const SimulatorProvider = ({ children }) => {
 
       pc.ontrack = (event) => {
         console.log('[WebRTC] Received remote track!', event.streams[0]);
-        // Re-create DOM element if removed during a previous connection cleanup
         if (typeof window !== 'undefined' && !remoteAudioRef.current) {
-          const audio = document.createElement('audio');
-          audio.id = 'webrtc-remote-audio';
-          audio.autoplay = true;
-          audio.style.display = 'none';
-          document.body.appendChild(audio);
-          remoteAudioRef.current = audio;
+          remoteAudioRef.current = document.getElementById('webrtc-remote-audio');
         }
         if (remoteAudioRef.current) {
           remoteAudioRef.current.srcObject = event.streams[0];
@@ -517,6 +504,14 @@ export const SimulatorProvider = ({ children }) => {
   };
 
   const initiateCall = (targetRole, targetId, fromName) => {
+    // Unblock/unlock static remote audio playback context on iOS Safari / WebKit WebView
+    if (typeof window !== 'undefined') {
+      const audio = document.getElementById('webrtc-remote-audio') || remoteAudioRef.current;
+      if (audio) {
+        audio.play().catch(() => {});
+      }
+    }
+
     setCallState('dialing');
     setCallFrom(targetRole === 'driver' ? 'passenger' : 'driver');
     
@@ -550,6 +545,14 @@ export const SimulatorProvider = ({ children }) => {
   };
 
   const acceptCall = (targetRole, targetId) => {
+    // Unblock/unlock static remote audio playback context on iOS Safari / WebKit WebView
+    if (typeof window !== 'undefined') {
+      const audio = document.getElementById('webrtc-remote-audio') || remoteAudioRef.current;
+      if (audio) {
+        audio.play().catch(() => {});
+      }
+    }
+
     setCallState('connected');
     startCallTimer();
     
