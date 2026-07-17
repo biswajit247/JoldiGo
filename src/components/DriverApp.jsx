@@ -5068,7 +5068,13 @@ export default function DriverApp({ isStandalone }) {
                 <input 
                   type="text"
                   placeholder="https://joldigo-backend.onrender.com"
-                  defaultValue={localStorage.getItem('joldigo_server_url') || ''}
+                  defaultValue={(() => {
+                    try {
+                      return localStorage.getItem('joldigo_server_url') || '';
+                    } catch (e) {
+                      return '';
+                    }
+                  })()}
                   id="driver-settings-server-url-input"
                   style={{
                     flex: 1,
@@ -5084,11 +5090,13 @@ export default function DriverApp({ isStandalone }) {
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       const val = e.target.value.trim();
-                      if (val) {
-                        localStorage.setItem('joldigo_server_url', val);
-                      } else {
-                        localStorage.removeItem('joldigo_server_url');
-                      }
+                      try {
+                        if (val) {
+                          localStorage.setItem('joldigo_server_url', val);
+                        } else {
+                          localStorage.removeItem('joldigo_server_url');
+                        }
+                      } catch (err) {}
                       window.location.reload();
                     }
                   }}
@@ -5099,11 +5107,13 @@ export default function DriverApp({ isStandalone }) {
                     const el = document.getElementById('driver-settings-server-url-input');
                     if (el) {
                       const val = el.value.trim();
-                      if (val) {
-                        localStorage.setItem('joldigo_server_url', val);
-                      } else {
-                        localStorage.removeItem('joldigo_server_url');
-                      }
+                      try {
+                        if (val) {
+                          localStorage.setItem('joldigo_server_url', val);
+                        } else {
+                          localStorage.removeItem('joldigo_server_url');
+                        }
+                      } catch (err) {}
                       window.location.reload();
                     }
                   }}

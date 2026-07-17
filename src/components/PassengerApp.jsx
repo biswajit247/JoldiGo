@@ -2843,7 +2843,13 @@ export default function PassengerApp({ isStandalone }) {
                 <input 
                   type="text"
                   placeholder="https://joldigo-backend.onrender.com"
-                  defaultValue={localStorage.getItem('joldigo_server_url') || ''}
+                  defaultValue={(() => {
+                    try {
+                      return localStorage.getItem('joldigo_server_url') || '';
+                    } catch (e) {
+                      return '';
+                    }
+                  })()}
                   id="passenger-settings-server-url-input"
                   style={{
                     flex: 1,
@@ -2859,11 +2865,13 @@ export default function PassengerApp({ isStandalone }) {
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       const val = e.target.value.trim();
-                      if (val) {
-                        localStorage.setItem('joldigo_server_url', val);
-                      } else {
-                        localStorage.removeItem('joldigo_server_url');
-                      }
+                      try {
+                        if (val) {
+                          localStorage.setItem('joldigo_server_url', val);
+                        } else {
+                          localStorage.removeItem('joldigo_server_url');
+                        }
+                      } catch (err) {}
                       window.location.reload();
                     }
                   }}
@@ -2874,11 +2882,13 @@ export default function PassengerApp({ isStandalone }) {
                     const el = document.getElementById('passenger-settings-server-url-input');
                     if (el) {
                       const val = el.value.trim();
-                      if (val) {
-                        localStorage.setItem('joldigo_server_url', val);
-                      } else {
-                        localStorage.removeItem('joldigo_server_url');
-                      }
+                      try {
+                        if (val) {
+                          localStorage.setItem('joldigo_server_url', val);
+                        } else {
+                          localStorage.removeItem('joldigo_server_url');
+                        }
+                      } catch (err) {}
                       window.location.reload();
                     }
                   }}
