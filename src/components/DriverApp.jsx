@@ -5061,6 +5061,71 @@ export default function DriverApp({ isStandalone }) {
               </p>
             </div>
 
+            {/* Backend Server URL Setting */}
+            <div className="mt-2 pt-3 border-t border-white/5 flex flex-col gap-2">
+              <span className="text-[10px] font-black uppercase text-amber-500 tracking-wider">📡 JoldiGo Server Connection URL</span>
+              <div className="flex gap-2">
+                <input 
+                  type="text"
+                  placeholder="https://joldigo-backend.onrender.com"
+                  defaultValue={localStorage.getItem('joldigo_server_url') || ''}
+                  id="driver-settings-server-url-input"
+                  style={{
+                    flex: 1,
+                    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '8px',
+                    padding: '8px 12px',
+                    color: '#ffffff',
+                    fontSize: '11px',
+                    outline: 'none',
+                    boxSizing: 'border-box'
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      const val = e.target.value.trim();
+                      if (val) {
+                        localStorage.setItem('joldigo_server_url', val);
+                      } else {
+                        localStorage.removeItem('joldigo_server_url');
+                      }
+                      window.location.reload();
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const el = document.getElementById('driver-settings-server-url-input');
+                    if (el) {
+                      const val = el.value.trim();
+                      if (val) {
+                        localStorage.setItem('joldigo_server_url', val);
+                      } else {
+                        localStorage.removeItem('joldigo_server_url');
+                      }
+                      window.location.reload();
+                    }
+                  }}
+                  style={{
+                    backgroundColor: '#ffdd00',
+                    color: '#000',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '8px 14px',
+                    fontSize: '11px',
+                    fontWeight: 'bold',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Save
+                </button>
+              </div>
+              <span style={{ fontSize: '9px', color: '#6b7280', lineHeight: '1.4' }}>
+                For local testing, connect your phone to the same Wi-Fi network and enter your computer's local IP address (e.g. <code>http://192.168.1.100:5001</code>). Press Enter or Save to reload the app.
+              </span>
+            </div>
+
           </div>
         )}
 
