@@ -417,6 +417,15 @@ export const SimulatorProvider = ({ children }) => {
       peerConnectionRef.current = pc;
       const senderRole = targetRole === 'driver' ? 'passenger' : 'driver';
 
+      pc.onconnectionstatechange = () => {
+        console.log(`[WebRTC] Connection State changed: ${pc.connectionState}`);
+        addLog(`📞 Call connection status: ${pc.connectionState.toUpperCase()}`, 'info');
+      };
+
+      pc.oniceconnectionstatechange = () => {
+        console.log(`[WebRTC] ICE Connection State changed: ${pc.iceConnectionState}`);
+      };
+
       pc.onicecandidate = (event) => {
         if (event.candidate) {
           sendWebrtcSignal(senderRole, targetRole, targetId, {
@@ -503,6 +512,40 @@ export const SimulatorProvider = ({ children }) => {
     }
   };
 
+  const speakText = (text) => {
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      try {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'en-IN'; // Kolkata localization friendly accent
+        utterance.volume = 1.0;
+        utterance.rate = 0.95;
+        window.speechSynthesis.speak(utterance);
+        console.log(`[TTS] Speaking call helper: "${text}"`);
+      } catch (err) {
+        console.warn('[TTS] Speech synthesis error:', err);
+      }
+    }
+  };
+
+  const playVoiceGreeting = (currentRole, isInitiator) => {
+    setTimeout(() => {
+      if (currentRole === 'passenger') {
+        if (isInitiator) {
+          speakText("Hello! This is your Joldi Go driver. I have received your call. Can you hear me?");
+        } else {
+          speakText("Hello Captain! I am waiting at the pickup spot. Please come quickly.");
+        }
+      } else {
+        if (isInitiator) {
+          speakText("Hello! This is your passenger. I have received your call. I am near the main road.");
+        } else {
+          speakText("Hello! This is your driver speaking. I am arriving at your pickup location now.");
+        }
+      }
+    }, 1200); // Natural delay
+  };
+
   const initiateCall = (targetRole, targetId, fromName) => {
     // Unblock/unlock static remote audio playback context on iOS Safari / WebKit WebView
     if (typeof window !== 'undefined') {
@@ -558,6 +601,10 @@ export const SimulatorProvider = ({ children }) => {
     
     // WebRTC connection: setup peer connection as responder
     setupPeerConnection(targetRole, targetId, false);
+
+    // Play voice greeting
+    const currentRole = targetRole === 'driver' ? 'passenger' : 'driver';
+    playVoiceGreeting(currentRole, false);
 
     const msg = JSON.stringify({
       type: 'accept_call',
@@ -930,6 +977,7 @@ export const SimulatorProvider = ({ children }) => {
           setCallState('connected');
           startCallTimer();
           setupPeerConnection('driver', data.fromId, true);
+          playVoiceGreeting('passenger', true);
           break;
         case 'webrtc_signal':
           handleIncomingWebrtcSignal(data);
@@ -1007,6 +1055,7 @@ export const SimulatorProvider = ({ children }) => {
           setCallState('connected');
           startCallTimer();
           setupPeerConnection('passenger', data.fromId, true);
+          playVoiceGreeting('driver', true);
           break;
         case 'webrtc_signal':
           handleIncomingWebrtcSignal(data);
