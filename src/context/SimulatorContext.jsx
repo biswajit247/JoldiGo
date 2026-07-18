@@ -555,6 +555,14 @@ export const SimulatorProvider = ({ children }) => {
       if (audio) {
         audio.play().catch(() => {});
       }
+      
+      // Pre-unlock speech synthesis on iOS WebKit
+      if (window.speechSynthesis) {
+        try {
+          const u = new SpeechSynthesisUtterance("");
+          window.speechSynthesis.speak(u);
+        } catch (e) {}
+      }
     }
 
     setCallState('dialing');
@@ -595,6 +603,14 @@ export const SimulatorProvider = ({ children }) => {
       const audio = document.getElementById('webrtc-remote-audio') || remoteAudioRef.current;
       if (audio) {
         audio.play().catch(() => {});
+      }
+      
+      // Pre-unlock speech synthesis on iOS WebKit
+      if (window.speechSynthesis) {
+        try {
+          const u = new SpeechSynthesisUtterance("");
+          window.speechSynthesis.speak(u);
+        } catch (e) {}
       }
     }
 
