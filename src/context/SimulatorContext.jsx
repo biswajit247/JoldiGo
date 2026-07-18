@@ -333,6 +333,7 @@ export const SimulatorProvider = ({ children }) => {
   };
 
   const peerConnectionRef = useRef(null);
+  const webrtcIceBufferRef = useRef({});
   const localStreamRef = useRef(null);
   const remoteAudioRef = useRef(null);
 
@@ -484,6 +485,7 @@ export const SimulatorProvider = ({ children }) => {
     const { signal, fromRole, fromId } = data;
     const pc = peerConnectionRef.current;
     const senderRole = fromRole === 'driver' ? 'passenger' : 'driver';
+    const peerKey = `${fromRole}_${fromId}`;
 
     try {
       if (signal.type === 'offer') {
@@ -499,18 +501,59 @@ export const SimulatorProvider = ({ children }) => {
             type: 'answer',
             sdp: currentPc.localDescription
           });
+          
+          // Process any buffered candidates for this peer connection
+          const buffered = webrtcIceBufferRef.current[peerKey] || [];
+          for (const candidate of buffered) {
+            try {
+              await currentPc.addIceCandidate(new RTCIceCandidate(candidate));
+              console.log(`[WebRTC] Successfully added buffered candidate for ${peerKey}`);
+            } catch (candErr) {
+              console.warn('[WebRTC] Error adding buffered candidate:', candErr.message || candErr);
+            }
+          }
+          delete webrtcIceBufferRef.current[peerKey];
         }
       } else if (signal.type === 'answer') {
         if (pc) {
           await pc.setRemoteDescription(new RTCSessionDescription(signal.sdp));
+          
+          // Process any buffered candidates for this peer connection
+          const buffered = webrtcIceBufferRef.current[peerKey] || [];
+          for (const candidate of buffered) {
+            try {
+              await pc.addIceCandidate(new RTCIceCandidate(candidate));
+              console.log(`[WebRTC] Successfully added buffered candidate for ${peerKey}`);
+            } catch (candErr) {
+              console.warn('[WebRTC] Error adding buffered candidate:', candErr.message || candErr);
+            }
+          }
+          delete webrtcIceBufferRef.current[peerKey];
         }
       } else if (signal.type === 'candidate') {
-        if (pc && signal.candidate) {
-          await pc.addIceCandidate(new RTCIceCandidate(signal.candidate));
+        if (signal.candidate) {
+          if (pc && pc.remoteDescription && pc.remoteDescription.type) {
+            try {
+              await pc.addIceCandidate(new RTCIceCandidate(signal.candidate));
+            } catch (e) {
+              console.warn('[WebRTC] Failed to add candidate directly, buffering:', e.message || e);
+              if (!webrtcIceBufferRef.current[peerKey]) {
+                webrtcIceBufferRef.current[peerKey] = [];
+              }
+              webrtcIceBufferRef.current[peerKey].push(signal.candidate);
+            }
+          } else {
+            // Buffer candidate because RemoteDescription is not set yet
+            if (!webrtcIceBufferRef.current[peerKey]) {
+              webrtcIceBufferRef.current[peerKey] = [];
+            }
+            webrtcIceBufferRef.current[peerKey].push(signal.candidate);
+            console.log(`[WebRTC] Buffered candidate for ${peerKey}`);
+          }
         }
       }
     } catch (err) {
-      console.error('[WebRTC] Error handling incoming WebRTC signal:', err);
+      console.error('[WebRTC] Error handling incoming WebRTC signal:', err.message || err);
     }
   };
 
