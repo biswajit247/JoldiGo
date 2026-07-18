@@ -419,7 +419,9 @@ export const SimulatorProvider = ({ children }) => {
 
       pc.onconnectionstatechange = () => {
         console.log(`[WebRTC] Connection State changed: ${pc.connectionState}`);
-        addLog(`📞 Call connection status: ${pc.connectionState.toUpperCase()}`, 'info');
+        if (pc.connectionState) {
+          addLog(`📞 Call connection status: ${pc.connectionState.toUpperCase()}`, 'info');
+        }
       };
 
       pc.oniceconnectionstatechange = () => {
