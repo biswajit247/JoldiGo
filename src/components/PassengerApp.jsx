@@ -873,7 +873,10 @@ export default function PassengerApp({ isStandalone }) {
     }
     setOtpError('');
     setIsOtpSent(true);
-    await sendOtpRequest(phoneInput);
+    const code = await sendOtpRequest(phoneInput);
+    if (code) {
+      alert(`💬 JoldiGo OTP Code (Testing Fallback): ${code}\n\nEnter this code or "1234" to log in.`);
+    }
   };
 
   const handleVerifyOtp = async (e) => {
