@@ -164,6 +164,13 @@ export default function DriverApp({ isStandalone }) {
           if (!selectedVoice) {
             selectedVoice = matchingLanguageVoices[0];
           }
+        } else {
+          // Fallback to standard English voice if the target language is not available on this device
+          utterance.lang = 'en-US';
+          const englishVoices = voices.filter(v => v.lang.toLowerCase().startsWith('en'));
+          if (englishVoices.length > 0) {
+            selectedVoice = englishVoices[0];
+          }
         }
       }
 
@@ -5059,6 +5066,15 @@ export default function DriverApp({ isStandalone }) {
               <p className="text-[9px] text-gray-500 leading-normal px-1">
                 Enable hands-free dispatcher controls. Say <b className="text-gray-400">"Accept"</b>, <b className="text-gray-400">"Decline"</b>, <b className="text-gray-400">"Start"</b>, or <b className="text-gray-400">"SOS"</b> to command the JoldiGo application.
               </p>
+              <button
+                type="button"
+                onClick={() => {
+                  speakText("Hello Captain! This is Joldi Go testing your call audio channel. If you can hear this voice, your device speaker, volume, and speech synthesis engine are fully operational.", "en-US");
+                }}
+                className="bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-[10px] py-2 rounded-lg cursor-pointer border-none uppercase transition-colors"
+              >
+                🎙️ Run Call Audio Test
+              </button>
             </div>
 
             {/* Backend Server URL Setting */}

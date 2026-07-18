@@ -519,7 +519,7 @@ export const SimulatorProvider = ({ children }) => {
       try {
         window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = 'en-IN'; // Kolkata localization friendly accent
+        utterance.lang = 'en-US'; // standard fallback english voice
         utterance.volume = 1.0;
         utterance.rate = 0.95;
         window.speechSynthesis.speak(utterance);
@@ -2504,6 +2504,7 @@ export const SimulatorProvider = ({ children }) => {
         initiateCall,
         acceptCall,
         endCall,
+        speakText,
         sendOtpRequest,
         startGpsTracking,
         stopGpsTracking,

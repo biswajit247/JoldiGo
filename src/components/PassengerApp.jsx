@@ -138,6 +138,13 @@ export default function PassengerApp({ isStandalone }) {
           if (!selectedVoice) {
             selectedVoice = matchingLanguageVoices[0];
           }
+        } else {
+          // Fallback to standard English voice if the target language is not available on this device
+          utterance.lang = 'en-US';
+          const englishVoices = voices.filter(v => v.lang.toLowerCase().startsWith('en'));
+          if (englishVoices.length > 0) {
+            selectedVoice = englishVoices[0];
+          }
         }
       }
 
@@ -2833,6 +2840,15 @@ export default function PassengerApp({ isStandalone }) {
                 className="bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-[10px] py-2 rounded-lg cursor-pointer border-none uppercase transition-colors"
               >
                 🎓 Replay Onboarding Tour
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  speakText("Hello! This is Joldi Go testing your call audio channel. If you can hear this voice, your device speaker, volume, and speech synthesis engine are fully operational.", "en-US");
+                }}
+                className="bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-[10px] py-2 rounded-lg cursor-pointer border-none uppercase transition-colors"
+              >
+                🎙️ Run Call Audio Test
               </button>
             </div>
 
